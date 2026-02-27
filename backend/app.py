@@ -1,28 +1,30 @@
 """
 RESOLVIT API
 Entry point: registers all routers, CORS, background scheduler, startup events
+Production-ready for Render + Vercel
 """
 
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
 
-load_dotenv()
+# Load .env only in local dev
+if os.getenv("RENDER") is None:
+    load_dotenv()
 
-# ──────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────
 # Routers
-# ──────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────
 from routes.auth_routes import router as auth_router
 from routes.issues import router as issues_router
 from routes.audit_metrics import audit_router, metrics_router
-from routes.admin_routes import router as admin_router  # ✅ NEW
+from routes.admin_routes import router as admin_router
 
-# ──────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────
 # App Setup
-# ──────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────
 app = FastAPI(
     title="RESOLVIT API",
     description="Civic Resolution Platform — From Complaint to Completion.",
@@ -31,133 +33,56 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# ──────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────
 # CORS Configuration
-# ──────────────────────────────────────────────────────────────
-# CORS: wildcard (*) is incompatible with allow_credentials=True per browser CORS spec.
-# Use explicit origins in production via CORS_ORIGINS env var.
-_cors_origins_raw = os.getenv("CORS_ORIGINS", "")
-if _cors_origins_raw:
-    ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
-else:
-    # Development defaults — explicit origins only (no wildcard with credentials)
-    ALLOWED_ORIGINS = [
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "null",  # file:// opened directly in browser
-    ]
+# ──────────────────────────────────────────────
+CORS_ORIGINS = [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:3000",
+    "https://synaptix.vercel.app",
+    "https://your-vercel-app.vercel.app",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ──────────────────────────────────────────────────────────────
-# Register Routers
-# ──────────────────────────────────────────────────────────────
-app.include_router(auth_router)
-app.include_router(issues_router)
-app.include_router(audit_router)
-app.include_router(metrics_router)
-app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])  # ✅ NEW
+# ──────────────────────────────────────────────
+# Router Registration (VERY IMPORTANT)
+# ──────────────────────────────────────────────
+app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+app.include_router(issues_router, prefix="/api/issues", tags=["Issues"])
+app.include_router(audit_router, prefix="/api/audit", tags=["Audit"])
+app.include_router(metrics_router, prefix="/api/metrics", tags=["Metrics"])
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 
-# ──────────────────────────────────────────────────────────────
-# Background Scheduler
-# ──────────────────────────────────────────────────────────────
-scheduler = BackgroundScheduler(timezone="UTC")
+# ──────────────────────────────────────────────
+# Health Check
+# ──────────────────────────────────────────────
+@app.get("/")
+def root():
+    return {"status": "RESOLVIT API running"}
 
+@app.get("/api/health")
+def health():
+    return {"status": "healthy"}
+
+# ──────────────────────────────────────────────
+# Background Scheduler (Optional)
+# ──────────────────────────────────────────────
+scheduler = BackgroundScheduler()
 
 @app.on_event("startup")
-def startup_event():
-    """Initialize DB and start background tasks on server launch."""
-    try:
-        from database import init_pool
-        init_pool()
-        print("[RESOLVIT] Database pool initialized.")
-    except Exception as e:
-        print(f"[RESOLVIT] ⚠️  DB pool init failed: {e}")
-        print("[RESOLVIT] Server will still start — DB calls will fail until DB is reachable.")
-
-    try:
-        from services.escalation import run_escalation_check, update_authority_metrics
-        from services.priority import recalculate_all_priorities
-
-        scheduler.add_job(
-            run_escalation_check,
-            "interval",
-            hours=1,
-            id="escalation_check",
-            replace_existing=True
-        )
-
-        scheduler.add_job(
-            update_authority_metrics,
-            "interval",
-            hours=1,
-            id="metrics_update",
-            replace_existing=True
-        )
-
-        scheduler.add_job(
-            recalculate_all_priorities,
-            "interval",
-            hours=6,
-            id="priority_recalc",
-            replace_existing=True
-        )
-
-        scheduler.start()
-        print("[RESOLVIT] Background scheduler started.")
-    except Exception as e:
-        print(f"[RESOLVIT] ⚠️  Scheduler startup failed: {e}")
-
+def start_scheduler():
+    scheduler.start()
+    print("[Scheduler] Started successfully.")
 
 @app.on_event("shutdown")
-def shutdown_event():
+def shutdown_scheduler():
     scheduler.shutdown()
-    print("[RESOLVIT] Scheduler stopped.")
-
-
-# ──────────────────────────────────────────────────────────────
-# Global Error Handler
-# ──────────────────────────────────────────────────────────────
-@app.exception_handler(Exception)
-async def global_error_handler(request: Request, exc: Exception):
-    print(f"[ERROR] {exc}")  # Log to console
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
-
-
-# ──────────────────────────────────────────────────────────────
-# Health Check
-# ──────────────────────────────────────────────────────────────
-@app.get("/api/health", tags=["System"])
-def health_check():
-    return {
-        "status": "healthy",
-        "service": "RESOLVIT API",
-        "version": "1.0.0"
-    }
-
-
-# ──────────────────────────────────────────────────────────────
-# Run Entry Point
-# ──────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "app:app",
-        host="0.0.0.0",
-        port=int(os.getenv("PORT", 8000)),
-        reload=True,
-        workers=1
-    )
+    print("[Scheduler] Shutdown complete.")
