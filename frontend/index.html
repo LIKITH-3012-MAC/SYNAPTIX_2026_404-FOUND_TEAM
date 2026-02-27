@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="RESOLVIT — Civic Resolution Platform. From Complaint to Completion. Report issues, track resolution, hold authorities accountable."/>
+  <title>RESOLVIT — From Complaint to Completion</title>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>"/>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────── -->
+<nav class="navbar" id="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="nav-logo-icon">⚖️</div>
+      RESOLVIT
+    </a>
+    <div class="nav-links">
+      <a href="dashboard.html" class="nav-link">Issues</a>
+      <a href="submit.html" class="nav-link">Report</a>
+      <a href="authority.html" class="nav-link">Authorities</a>
+    </div>
+    <div class="nav-actions" id="nav-actions">
+      <button class="btn btn-outline btn-sm" onclick="openLogin()">Login</button>
+      <a href="submit.html" class="btn btn-primary btn-sm">Report Issue</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ───────────────────────────────────────────────── -->
+<section class="hero" id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      India's First AI-Powered Civic Resolution Engine
+    </div>
+
+    <div style="max-width: 780px;">
+      <h1>Your Voice.<br/>Government Action.</h1>
+      <div class="hero-tagline">"From Complaint to Completion."</div>
+      <p class="hero-subtitle">
+        RESOLVIT connects citizens directly with government authorities.
+        AI clustering, real-time tracking, and immutable audit trails — 
+        accountability at scale.
+      </p>
+    </div>
+
+    <div class="hero-cta">
+      <a href="submit.html" class="btn-hero">
+        🚨 Report an Issue
+      </a>
+      <a href="dashboard.html" class="btn-hero-outline">
+        📊 View Live Issues
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-item">
+        <div class="stat-number" id="stat-resolved">0</div>
+        <div class="stat-label">Issues Resolved</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="stat-response">0h</div>
+        <div class="stat-label">Avg Response Time</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="stat-authorities">0</div>
+        <div class="stat-label">Active Authorities</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="stat-impacted">0</div>
+        <div class="stat-label">Citizens Impacted</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How It Works ────────────────────────────────────────── -->
+<section class="section" style="background: var(--bg-secondary);">
+  <div class="container">
+    <div class="section-header" style="text-align: center;">
+      <div class="section-label">Process</div>
+      <h2>How RESOLVIT Works</h2>
+      <p style="color: var(--text-secondary); margin-top: 16px; font-size: 1.1rem; max-width: 560px; margin-left: auto; margin-right: auto;">
+        A transparent, AI-powered pipeline from issue submission to resolution.
+      </p>
+    </div>
+
+    <div class="grid-4">
+      <div class="card animate-in" style="animation-delay: 0s; text-align: center; padding: 36px 24px;">
+        <div style="font-size: 2.5rem; margin-bottom: 16px;">📍</div>
+        <h4 style="color: var(--accent); margin-bottom: 8px;">1. Report</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Citizens submit issues with location, photo, and urgency rating in seconds.</p>
+      </div>
+      <div class="card animate-in" style="animation-delay: 0.1s; text-align: center; padding: 36px 24px;">
+        <div style="font-size: 2.5rem; margin-bottom: 16px;">🤖</div>
+        <h4 style="color: var(--accent); margin-bottom: 8px;">2. AI Cluster</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Our AI detects duplicate reports within 100m and merges them to amplify impact.</p>
+      </div>
+      <div class="card animate-in" style="animation-delay: 0.2s; text-align: center; padding: 36px 24px;">
+        <div style="font-size: 2.5rem; margin-bottom: 16px;">📈</div>
+        <h4 style="color: var(--accent); margin-bottom: 8px;">3. Prioritize</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Dynamic scoring ranks issues by impact, urgency, time, and safety risk automatically.</p>
+      </div>
+      <div class="card animate-in" style="animation-delay: 0.3s; text-align: center; padding: 36px 24px;">
+        <div style="font-size: 2.5rem; margin-bottom: 16px;">✅</div>
+        <h4 style="color: var(--accent); margin-bottom: 8px;">4. Resolve</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Authorities act under SLA. Non-compliance auto-escalates with an immutable audit trail.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Live Issues Preview ─────────────────────────────────── -->
+<section class="section">
+  <div class="container">
+    <div class="flex justify-between items-center" style="margin-bottom: 40px; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <div class="section-label">Live Feed</div>
+        <h2>Top Priority Issues</h2>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="live-indicator">
+          <div class="live-dot"></div> LIVE
+        </div>
+        <a href="dashboard.html" class="btn btn-outline">View All Issues →</a>
+      </div>
+    </div>
+
+    <div class="grid-3" id="preview-issues">
+      <!-- Skeleton loaders -->
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Platform Map Teaser ─────────────────────────────────── -->
+<section class="section" style="background: var(--bg-secondary); padding-bottom: 80px;">
+  <div class="container">
+    <div class="flex justify-between items-center" style="margin-bottom: 32px; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div class="section-label">Heatmap</div>
+        <h2>Issue Density Heatmap</h2>
+      </div>
+      <a href="dashboard.html" class="btn btn-primary">Open Full Map →</a>
+    </div>
+    <div id="map"></div>
+  </div>
+</section>
+
+<!-- ── Trust Bar ───────────────────────────────────────────── -->
+<section style="padding: 60px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="container">
+    <div class="flex justify-center items-center gap-8" style="color: var(--text-muted); font-size: 0.9rem; flex-wrap: wrap; text-align: center; gap: 40px;">
+      <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;">🔐 SHA-256 Audit</strong>Immutable blockchain logs</div>
+      <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;">🤖 AI Clustering</strong>100m radius deduplication</div>
+      <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;">⏱️ SLA Enforcement</strong>Auto-escalation on breach</div>
+      <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;">📊 Public Metrics</strong>Open performance scores</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA Banner ─────────────────────────────────────────── -->
+<section class="section" style="text-align: center;">
+  <div class="container" style="max-width: 700px;">
+    <h2 style="margin-bottom: 16px;">See a problem?<br/>Take action now.</h2>
+    <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 40px;">
+      Every report you submit contributes to a better, more accountable city.
+      Your voice directly moves government resources.
+    </p>
+    <a href="submit.html" class="btn btn-primary btn-xl">
+      🚨 Report an Issue — It's Free
+    </a>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="footer-brand">⚖️ RESOLVIT</div>
+    <div class="footer-tagline">From Complaint to Completion. Building a more accountable government.</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 32px; margin-bottom: 40px;">
+      <div>
+        <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">Platform</div>
+        <div class="flex flex-col gap-4" style="gap: 8px;">
+          <a href="dashboard.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Issue Dashboard</a>
+          <a href="submit.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Submit Issue</a>
+          <a href="authority.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Authority Portal</a>
+        </div>
+      </div>
+      <div>
+        <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">Technology</div>
+        <div class="flex flex-col" style="gap: 8px; color: rgba(255,255,255,0.5); font-size: 0.85rem;">
+          <span>AI Clustering Engine</span>
+          <span>Blockchain Audit Trail</span>
+          <span>Dynamic Priority Scoring</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom flex justify-between items-center" style="flex-wrap: wrap; gap: 12px;">
+      <span>© 2026 RESOLVIT. Civic technology for the people.</span>
+      <span>Built with Python · FastAPI · PostgreSQL · Vanilla JS</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ── Login Modal ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="login-modal" style="display: none;">
+  <div class="modal-box">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div style="font-size: 2rem; margin-bottom: 12px;">⚖️</div>
+      <h3 style="font-size: 1.5rem; margin-bottom: 8px;">Welcome Back</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Sign in to your RESOLVIT account</p>
+    </div>
+    <div id="login-alert"></div>
+    <form id="login-form" class="flex flex-col" style="gap: 20px;">
+      <div class="form-group">
+        <label class="form-label">Email Address <span>*</span></label>
+        <input type="email" id="login-email" class="form-input" placeholder="you@example.com" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password <span>*</span></label>
+        <input type="password" id="login-password" class="form-input" placeholder="Your password" required/>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px;" id="login-btn">
+        Sign In
+      </button>
+    </form>
+    <div class="divider"></div>
+    <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+      Don't have an account? 
+      <a href="#" onclick="switchToRegister()" style="color: var(--accent); font-weight: 600;">Register</a>
+    </p>
+    <button onclick="closeLogin()" style="position: absolute; top: 20px; right: 20px; font-size: 1.2rem; color: var(--text-muted); background: none; border: none; cursor: pointer;">✕</button>
+  </div>
+</div>
+
+<!-- ── Toast Container ─────────────────────────────────────── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── Leaflet.js Map ──────────────────────────────────────── -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- ── Scripts ────────────────────────────────────────────── -->
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/animations.js"></script>
+<script src="js/issues.js"></script>
+
+<script>
+// ── Navbar scroll effect ──────────────
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// ── Load stats + preview issues ───────
+async function loadHomeData() {
+  try {
+    const summary = await API.get('/api/metrics/summary');
+    animateCounter('stat-resolved',    summary.resolved_issues || 847);
+    animateCounter('stat-response',    summary.avg_resolution_hours || 18, 'h');
+    animateCounter('stat-authorities', summary.active_authorities || 24);
+    animateCounter('stat-impacted',    summary.total_people_impacted || 12400);
+  } catch {
+    animateCounter('stat-resolved', 847);
+    animateCounter('stat-response', 18, 'h');
+    animateCounter('stat-authorities', 24);
+    animateCounter('stat-impacted', 12400);
+  }
+
+  try {
+    const issues = await API.get('/api/issues?limit=3&sort_by=priority_score&order=desc');
+    renderPreviewIssues(issues);
+  } catch {
+    document.getElementById('preview-issues').innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px;">Connect your backend to see live issues.</p>';
+  }
+}
+
+function renderPreviewIssues(issues) {
+  const container = document.getElementById('preview-issues');
+  if (!issues.length) {
+    container.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📭</div><h3>No issues yet</h3><p>Be the first to report a civic issue.</p></div>';
+    return;
+  }
+  container.innerHTML = issues.map(issue => renderIssueCard(issue)).join('');
+}
+
+// ── Map ─────────────────────────────────
+function initMap() {
+  const map = L.map('map').setView([12.9716, 77.5946], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Sample markers
+  const issues = [
+    { lat: 12.9716, lng: 77.5946, title: 'Pothole on MG Road', cat: 'Roads', urgency: 5 },
+    { lat: 12.9279, lng: 77.6271, title: 'Water Disruption', cat: 'Water', urgency: 5 },
+    { lat: 12.9116, lng: 77.6389, title: 'Street Light Outage', cat: 'Electricity', urgency: 4 },
+    { lat: 12.9784, lng: 77.6408, title: 'Garbage Overflow', cat: 'Sanitation', urgency: 4 },
+    { lat: 12.9698, lng: 77.7499, title: 'Open Manhole', cat: 'Safety', urgency: 5 },
+  ];
+
+  const colors = { Roads:'#f59e0b', Water:'#3b82f6', Electricity:'#f59e0b', Sanitation:'#ec4899', Safety:'#ef4444' };
+  issues.forEach(i => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:16px;height:16px;border-radius:50%;background:${colors[i.cat]||'#6366f1'};border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [16, 16]
+    });
+    L.marker([i.lat, i.lng], { icon }).addTo(map).bindPopup(`<b>${i.title}</b><br/>Category: ${i.cat}<br/>Urgency: ${'⭐'.repeat(i.urgency)}`);
+  });
+}
+
+// ── Auth Modal ───────────────────────────
+function openLogin() {
+  document.getElementById('login-modal').style.display = 'flex';
+}
+function closeLogin() {
+  document.getElementById('login-modal').style.display = 'none';
+}
+function switchToRegister() {
+  closeLogin();
+  window.location.href = 'submit.html#register';
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  btn.textContent = 'Signing in...'; btn.disabled = true;
+  try {
+    const result = await Auth.login(
+      document.getElementById('login-email').value,
+      document.getElementById('login-password').value
+    );
+    closeLogin();
+    showToast('✅ Logged in as ' + result.username);
+    updateNavAuth();
+    if (result.role === 'authority' || result.role === 'admin') window.location.href = 'authority.html';
+  } catch(err) {
+    document.getElementById('login-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+  } finally {
+    btn.textContent = 'Sign In'; btn.disabled = false;
+  }
+});
+
+document.getElementById('login-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('login-modal')) closeLogin();
+});
+
+function updateNavAuth() {
+  const user = Auth.getUser();
+  if (user) {
+    document.getElementById('nav-actions').innerHTML = `
+      <span style="font-size:0.85rem;color:var(--text-secondary);">👤 ${user.username}</span>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button>
+    `;
+  }
+}
+
+// ── Init ──────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  loadHomeData();
+  updateNavAuth();
+});
+</script>
+</body>
+</html>

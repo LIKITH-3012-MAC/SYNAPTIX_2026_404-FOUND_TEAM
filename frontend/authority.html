@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Authority Dashboard — RESOLVIT</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="nav-logo">
+                <div class="nav-logo-icon">⚖️</div>RESOLVIT
+            </a>
+            <div class="nav-links">
+                <a href="dashboard.html" class="nav-link">Public Feed</a>
+                <a href="authority.html" class="nav-link active">Authority Portal</a>
+            </div>
+            <div class="nav-actions" id="nav-actions">
+                <button class="btn btn-outline btn-sm" onclick="showLoginModal()">Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <div class="container">
+            <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px;">
+                <div>
+                    <div class="section-label">Authority Portal</div>
+                    <h1 style="font-size:2rem;margin-top:8px;">Authority Dashboard</h1>
+                    <p style="color:var(--text-secondary);margin-top:8px;">Manage assigned issues. Respond fast. Protect
+                        your performance score.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="live-indicator">
+                        <div class="live-dot"></div> LIVE
+                    </div>
+                    <div id="logged-in-user" style="font-size:0.85rem;color:var(--text-secondary);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section style="padding: 40px 0;">
+        <div class="container">
+
+            <!-- Escalation Alert Banner -->
+            <div id="escalation-alerts"></div>
+
+            <!-- Key Metrics -->
+            <div class="metrics-grid" id="authority-metrics" style="margin-bottom:40px;">
+                <div class="metric-card">
+                    <div class="metric-value" id="m-assigned">--</div>
+                    <div class="metric-label">Total Assigned</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="m-resolved" style="color:var(--green);">--</div>
+                    <div class="metric-label">Resolved</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="m-escalated" style="color:var(--red);">--</div>
+                    <div class="metric-label">Escalated</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="m-rate" style="color:var(--accent);">--</div>
+                    <div class="metric-label">Resolution Rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="m-avg-time">--</div>
+                    <div class="metric-label">Avg Resolution (hrs)</div>
+                </div>
+                <div class="metric-card" style="border:2px solid var(--accent);">
+                    <div class="metric-value" id="m-perf" style="color:var(--accent);">--</div>
+                    <div class="metric-label">Performance Score</div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+                <!-- High Priority Issues -->
+                <div>
+                    <div class="flex justify-between items-center" style="margin-bottom:20px;">
+                        <h3>🔴 High Priority Issues</h3>
+                        <div class="live-indicator" style="font-size:0.75rem;">
+                            <div class="live-dot"></div> AUTO-REFRESH
+                        </div>
+                    </div>
+                    <div id="high-priority-issues">
+                        <div class="skeleton skeleton-card"></div>
+                        <div class="skeleton skeleton-card"></div>
+                        <div class="skeleton skeleton-card"></div>
+                    </div>
+                </div>
+
+                <!-- Leaderboard -->
+                <div>
+                    <h3 style="margin-bottom:20px;">🏆 Authority Leaderboard</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">Rankings based on
+                        resolution rate, response time, and SLA compliance.</p>
+                    <div id="leaderboard-container">
+                        <div class="skeleton" style="height:280px;border-radius:var(--radius-lg);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLA Tracker -->
+            <div style="margin-top:48px;">
+                <h3 style="margin-bottom:24px;">⏱️ SLA Countdown — Issues Approaching Breach</h3>
+                <div class="grid-3" id="sla-issues">
+                    <div class="skeleton skeleton-card"></div>
+                    <div class="skeleton skeleton-card"></div>
+                </div>
+            </div>
+
+            <!-- All Issues Table -->
+            <div style="margin-top:48px;">
+                <div class="flex justify-between items-center" style="margin-bottom:20px;">
+                    <h3>All Issues</h3>
+                    <select class="form-select" id="issue-status-filter" onchange="loadIssues()"
+                        style="width:auto;padding:8px 28px 8px 12px;">
+                        <option value="">All Status</option>
+                        <option value="reported">Reported</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="escalated">Escalated</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="leaderboard-table" id="issues-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Days Open</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="issues-tbody">
+                            <tr>
+                                <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">
+                                    Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Update Issue Modal -->
+    <div class="modal-overlay" id="update-modal" style="display:none;">
+        <div class="modal-box">
+            <h3 style="margin-bottom:24px;">Update Issue Status</h3>
+            <input type="hidden" id="update-issue-id" />
+            <div class="flex flex-col" style="gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="update-status" class="form-select">
+                        <option value="verified">Verified</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Authority Note / Resolution</label>
+                    <textarea id="update-note" class="form-textarea" placeholder="Add a note for the public record..."
+                        style="min-height:100px;"></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <button class="btn btn-primary" style="flex:1;" onclick="submitUpdate()">Update Issue</button>
+                    <button class="btn btn-outline"
+                        onclick="document.getElementById('update-modal').style.display='none'">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="login-modal" style="display:none;">
+        <div class="modal-box">
+            <div style="text-align:center;margin-bottom:24px;">
+                <div style="font-size:2rem;">🏛️</div>
+                <h3 style="margin-top:12px;">Authority Login</h3>
+            </div>
+            <div id="l-alert"></div>
+            <form id="login-form" class="flex flex-col" style="gap:16px;">
+                <div class="form-group"><label class="form-label">Email</label><input type="email" id="l-email"
+                        class="form-input" placeholder="authority@resolvit.gov" required /></div>
+                <div class="form-group"><label class="form-label">Password</label><input type="password" id="l-pass"
+                        class="form-input" required /></div>
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">Login to Authority
+                    Portal</button>
+            </form>
+            <div style="margin-top:16px;font-size:0.8rem;color:var(--text-muted);text-align:center;">
+                Demo: roads@resolvit.gov / Password123!
+            </div>
+            <button onclick="document.getElementById('login-modal').style.display='none'"
+                style="position:absolute;top:16px;right:16px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);">✕</button>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/issues.js"></script>
+
+    <script>
+        let allIssues = [];
+        let currentUser = null;
+
+        function showLoginModal() { document.getElementById('login-modal').style.display = 'flex'; }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const r = await Auth.login(document.getElementById('l-email').value, document.getElementById('l-pass').value);
+                document.getElementById('login-modal').style.display = 'none';
+                currentUser = Auth.getUser();
+                updateNavAuth();
+                initDashboard();
+                showToast('✅ Welcome back, ' + r.username);
+            } catch (err) {
+                document.getElementById('l-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+            }
+        });
+
+        function updateNavAuth() {
+            const user = Auth.getUser();
+            if (user) {
+                document.getElementById('nav-actions').innerHTML = `<span style="font-size:0.85rem;color:var(--text-secondary);">👤 ${user.username}</span><button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button>`;
+                document.getElementById('logged-in-user').textContent = `Logged in as ${user.username} (${user.role})`;
+            }
+        }
+
+        async function initDashboard() {
+            await Promise.all([loadMetrics(), loadLeaderboard(), loadIssues()]);
+            setInterval(loadIssues, 15000);
+        }
+
+        async function loadMetrics() {
+            try {
+                const data = await API.get('/api/metrics/summary');
+                animateCounter2('m-assigned', data.total_issues || 0);
+                animateCounter2('m-resolved', data.resolved_issues || 0);
+                animateCounter2('m-escalated', data.escalated_issues || 0);
+            } catch { }
+            try {
+                const lb = await API.get('/api/metrics/leaderboard');
+                const user = Auth.getUser();
+                const me = lb.find(a => a.username === user?.username);
+                if (me) {
+                    document.getElementById('m-assigned').textContent = me.total_assigned;
+                    document.getElementById('m-resolved').textContent = me.total_resolved;
+                    document.getElementById('m-escalated').textContent = me.total_escalated;
+                    document.getElementById('m-rate').textContent = Math.round(me.resolution_rate * 100) + '%';
+                    document.getElementById('m-avg-time').textContent = me.avg_resolution_time.toFixed(1);
+                    document.getElementById('m-perf').textContent = me.performance_score.toFixed(1);
+                }
+            } catch { }
+        }
+
+        function animateCounter2(id, target) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            let current = 0;
+            const step = Math.ceil(target / 30);
+            const interval = setInterval(() => {
+                current = Math.min(current + step, target);
+                el.textContent = current;
+                if (current >= target) clearInterval(interval);
+            }, 50);
+        }
+
+        async function loadLeaderboard() {
+            try {
+                const data = await API.get('/api/metrics/leaderboard');
+                const container = document.getElementById('leaderboard-container');
+                if (!data.length) { container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">No data yet.</p>'; return; }
+                container.innerHTML = `
+      <table class="leaderboard-table">
+        <thead><tr><th>Rank</th><th>Authority</th><th>Dept</th><th>Resolution %</th><th>Avg Time</th><th>Score</th></tr></thead>
+        <tbody>
+          ${data.map((a, i) => `
+            <tr>
+              <td><span class="rank-badge rank-${i < 3 ? i + 1 : 'n'}">${a.rank}</span></td>
+              <td><strong>${a.full_name || a.username}</strong></td>
+              <td style="color:var(--text-muted);font-size:0.85rem;">${a.department || '—'}</td>
+              <td>
+                <div class="flex items-center gap-8" style="gap:8px;">
+                  <div class="perf-bar"><div class="perf-bar-fill" style="width:${Math.round(a.resolution_rate * 100)}%"></div></div>
+                  <span style="font-size:0.85rem;">${Math.round(a.resolution_rate * 100)}%</span>
+                </div>
+              </td>
+              <td style="font-family:'JetBrains Mono',monospace;">${a.avg_resolution_time.toFixed(1)}h</td>
+              <td><strong style="color:${a.performance_score >= 80 ? 'var(--green)' : a.performance_score >= 60 ? 'var(--yellow)' : 'var(--red)'};">${a.performance_score.toFixed(1)}</strong></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+            } catch {
+                document.getElementById('leaderboard-container').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">Could not load leaderboard.</p>';
+            }
+        }
+
+        async function loadIssues() {
+            try {
+                const statusFilter = document.getElementById('issue-status-filter').value;
+                const url = '/api/issues?limit=50&sort_by=priority_score&order=desc' + (statusFilter ? '&status=' + statusFilter : '');
+                allIssues = await API.get(url);
+
+                // High Priority Cards
+                const highPrio = allIssues.filter(i => i.priority_score >= 70).slice(0, 5);
+                const hpEl = document.getElementById('high-priority-issues');
+                if (!highPrio.length) hpEl.innerHTML = '<div class="alert alert-success">✅ No high-priority issues!</div>';
+                else hpEl.innerHTML = highPrio.map(i => `
+      <div class="issue-card priority-${i.priority_score >= 80 ? 'critical' : 'high'}" onclick="updateIssue('${i.id}')" style="margin-bottom:16px;">
+        <div class="flex justify-between items-start" style="margin-bottom:12px;">
+          <div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+              <span class="cat-badge cat-${i.category}">${i.category}</span>
+              <span class="badge badge-${i.status.replace('_', '')}">${i.status.replace('_', ' ')}</span>
+              ${i.status === 'escalated' ? '<span class="badge badge-escalated">🚨 ESCALATED</span>' : ''}
+            </div>
+            <div style="font-weight:700;font-size:0.95rem;">${i.title}</div>
+          </div>
+          <div class="priority-score priority-${i.priority_score >= 80 ? 'critical' : 'high'}" style="font-size:1.75rem;">${i.priority_score}</div>
+        </div>
+        <div style="display:flex;gap:16px;font-size:0.8rem;color:var(--text-muted);">
+          <span>👥 ${(i.impact_scale || 0).toLocaleString()} affected</span>
+          <span>📅 ${i.days_unresolved}d unresolved</span>
+        </div>
+        <div style="margin-top:8px;">
+          <div class="priority-bar"><div class="priority-bar-fill" style="width:${i.priority_score}%;background:${i.priority_score >= 80 ? 'var(--red)' : 'var(--orange)'};"></div></div>
+        </div>
+        <!-- SLA Countdown if close to breach -->
+        ${i.days_unresolved >= 5 && i.status !== 'resolved' ? `<div style="margin-top:12px;padding:8px 12px;background:#fff1f2;border-radius:8px;font-size:0.8rem;color:var(--red);display:flex;align-items:center;gap:8px;"><span>⏰</span> <strong>SLA Warning:</strong> ${7 - Math.floor(i.days_unresolved)} days until auto-escalation</div>` : ''}
+      </div>`).join('');
+
+                // Escalation alerts
+                const escalated = allIssues.filter(i => i.status === 'escalated');
+                const alertEl = document.getElementById('escalation-alerts');
+                if (escalated.length) alertEl.innerHTML = `<div class="escalation-banner" style="margin-bottom:24px;"><span style="font-size:1.5rem;">🚨</span><div><strong>${escalated.length} ESCALATED ISSUE${escalated.length > 1 ? 'S' : ''}</strong> require immediate attention. <a href="#" style="color:inherit;text-decoration:underline;margin-left:8px;" onclick="document.getElementById('issue-status-filter').value='escalated';loadIssues();">View All →</a></div></div>`;
+                else alertEl.innerHTML = '';
+
+                // Issues Table
+                const tbody = document.getElementById('issues-tbody');
+                tbody.innerHTML = allIssues.map(i => `
+      <tr>
+        <td style="max-width:200px;"><a href="issue.html?id=${i.id}" style="font-weight:600;color:var(--accent);">${i.title}</a></td>
+        <td><span class="cat-badge cat-${i.category}">${i.category}</span></td>
+        <td><span class="priority-score priority-${i.priority_score >= 80 ? 'critical' : i.priority_score >= 60 ? 'high' : i.priority_score >= 40 ? 'medium' : 'low'}" style="font-size:1rem;">${i.priority_score}</span></td>
+        <td><span class="badge badge-${i.status}">${i.status.replace('_', ' ')}</span></td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${i.days_unresolved}d</td>
+        <td><button class="btn btn-primary btn-sm" onclick="updateIssue('${i.id}')">Update</button></td>
+      </tr>`).join('');
+            } catch {
+                document.getElementById('issues-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">Could not load issues. Is the backend running?</td></tr>';
+            }
+        }
+
+        function updateIssue(id) {
+            document.getElementById('update-issue-id').value = id;
+            document.getElementById('update-modal').style.display = 'flex';
+        }
+
+        async function submitUpdate() {
+            const id = document.getElementById('update-issue-id').value;
+            const status = document.getElementById('update-status').value;
+            const note = document.getElementById('update-note').value;
+            try {
+                await API.patch('/api/issues/' + id, { status, resolution_note: note || undefined });
+                document.getElementById('update-modal').style.display = 'none';
+                showToast('✅ Issue updated successfully');
+                loadIssues();
+            } catch (err) { showToast('❌ ' + err.message); }
+        }
+
+        window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavAuth();
+            currentUser = Auth.getUser();
+            if (currentUser) initDashboard();
+            else document.getElementById('login-modal').style.display = 'flex';
+        });
+    </script>
+</body>
+
+</html>

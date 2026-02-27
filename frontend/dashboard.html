@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description"
+        content="RESOLVIT — Public Issue Dashboard. View, filter, and track all civic issues in real time." />
+    <title>Issue Dashboard — RESOLVIT</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="nav-logo">
+                <div class="nav-logo-icon">⚖️</div>RESOLVIT
+            </a>
+            <div class="nav-links">
+                <a href="dashboard.html" class="nav-link active">Issues</a>
+                <a href="submit.html" class="nav-link">Report</a>
+                <a href="authority.html" class="nav-link">Authorities</a>
+            </div>
+            <div class="nav-actions" id="nav-actions">
+                <a href="submit.html" class="btn btn-primary btn-sm">+ Report Issue</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <div class="container">
+            <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px;">
+                <div>
+                    <div class="section-label">Public Feed</div>
+                    <h1 style="font-size:2rem;margin-top:8px;">Issue Dashboard</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="live-indicator">
+                        <div class="live-dot"></div> LIVE — refreshes every 15s
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="fetchIssues()">↻ Refresh Now</button>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="metrics-grid" style="margin-top:32px;" id="summary-stats">
+                <div class="metric-card skeleton" style="height:100px;"></div>
+                <div class="metric-card skeleton" style="height:100px;"></div>
+                <div class="metric-card skeleton" style="height:100px;"></div>
+                <div class="metric-card skeleton" style="height:100px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <section style="padding: 40px 0;">
+        <div class="container">
+
+            <!-- Filter / Sort Bar -->
+            <div class="filter-bar">
+                <input type="text" id="search-input" class="search-input" placeholder="🔍 Search issues..."
+                    oninput="filterIssues()" />
+                <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cat-filters">
+                    <button class="filter-btn active" data-cat="" onclick="setCatFilter('')">All</button>
+                    <button class="filter-btn" data-cat="Roads" onclick="setCatFilter('Roads')">🛣 Roads</button>
+                    <button class="filter-btn" data-cat="Water" onclick="setCatFilter('Water')">💧 Water</button>
+                    <button class="filter-btn" data-cat="Electricity" onclick="setCatFilter('Electricity')">⚡
+                        Electric</button>
+                    <button class="filter-btn" data-cat="Sanitation" onclick="setCatFilter('Sanitation')">🗑
+                        Sanitation</button>
+                    <button class="filter-btn" data-cat="Safety" onclick="setCatFilter('Safety')">🚨 Safety</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">Sort:</label>
+                    <select class="form-select" id="sort-select" onchange="fetchIssues()"
+                        style="padding:8px 28px 8px 12px;width:auto;min-width:160px;">
+                        <option value="priority_score">Priority Score ↓</option>
+                        <option value="created_at">Newest First</option>
+                        <option value="impact_scale">Most Impacted</option>
+                        <option value="urgency">Urgency</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Status Filter Chips -->
+            <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;" id="status-filters">
+                <span
+                    style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;margin-right:4px;">Status:</span>
+                <button class="filter-btn active" data-status="" onclick="setStatusFilter('')">All</button>
+                <button class="filter-btn" data-status="reported"
+                    onclick="setStatusFilter('reported')">Reported</button>
+                <button class="filter-btn" data-status="in_progress" onclick="setStatusFilter('in_progress')">In
+                    Progress</button>
+                <button class="filter-btn" data-status="escalated" onclick="setStatusFilter('escalated')">🔴
+                    Escalated</button>
+                <button class="filter-btn" data-status="resolved" onclick="setStatusFilter('resolved')">✅
+                    Resolved</button>
+            </div>
+
+            <!-- Map Toggle -->
+            <div style="margin-bottom:24px;">
+                <button class="btn btn-outline btn-sm" onclick="toggleMap()" id="map-toggle-btn">🗺 Show Map
+                    View</button>
+            </div>
+            <div id="dashboard-map"
+                style="height:380px;border-radius:var(--radius-xl);overflow:hidden;border:1px solid var(--border);margin-bottom:24px;display:none;">
+            </div>
+
+            <!-- Issue Grid -->
+            <div class="grid-3" id="issues-grid">
+                <!-- skeleton loaders -->
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+            </div>
+
+            <div id="load-more" style="text-align:center;margin-top:32px;display:none;">
+                <button class="btn btn-outline btn-lg" onclick="loadMore()">Load More Issues</button>
+            </div>
+        </div>
+    </section>
+
+    <div class="toast-container" id="toast-container"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/issues.js"></script>
+    <script src="js/dashboard.js"></script>
+
+    <script>
+        window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
+        document.addEventListener('DOMContentLoaded', () => {
+            initDashboard();
+            updateNavAuth();
+        });
+        function updateNavAuth() {
+            const user = Auth.getUser();
+            if (user) document.getElementById('nav-actions').innerHTML = `<span style="font-size:0.85rem;color:var(--text-secondary);">👤 ${user.username}</span><button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button><a href="submit.html" class="btn btn-primary btn-sm">+ Report</a>`;
+        }
+    </script>
+</body>
+
+</html>
