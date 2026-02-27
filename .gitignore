@@ -1,2 +1,21 @@
 backend/.env
 .env
+# Python
+venv/
+backend/venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Env
+.env
+
+# Mac
+.DS_Store
+
+# VSCode
+.vscode/
+
+# Logs
+*.log
