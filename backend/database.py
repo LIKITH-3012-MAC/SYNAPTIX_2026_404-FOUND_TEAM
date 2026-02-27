@@ -11,11 +11,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Use environment variable if available, otherwise fallback to Aiven DB
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgres://avnadmin:AVNS_MMwB9rgxixn296jxJQt@pg-14c610e1-resolvit-app.j.aivencloud.com:24625/defaultdb?sslmode=require"
-)
+# DATABASE_URL must be defined in .env file — no hardcoded fallback for security.
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "[RESOLVIT] DATABASE_URL is not set.\n"
+        "Create backend/.env with: DATABASE_URL=postgres://user:pass@host:port/db?sslmode=require"
+    )
 
 _pool = None
 

@@ -34,7 +34,22 @@ app = FastAPI(
 # ──────────────────────────────────────────────────────────────
 # CORS Configuration
 # ──────────────────────────────────────────────────────────────
-ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+# CORS: wildcard (*) is incompatible with allow_credentials=True per browser CORS spec.
+# Use explicit origins in production via CORS_ORIGINS env var.
+_cors_origins_raw = os.getenv("CORS_ORIGINS", "")
+if _cors_origins_raw:
+    ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+else:
+    # Development defaults — explicit origins only (no wildcard with credentials)
+    ALLOWED_ORIGINS = [
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "null",  # file:// opened directly in browser
+    ]
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,36 +77,46 @@ scheduler = BackgroundScheduler(timezone="UTC")
 @app.on_event("startup")
 def startup_event():
     """Initialize DB and start background tasks on server launch."""
-    from database import init_pool
-    init_pool()
-    print("[RESOLVIT] Database pool initialized.")
+    try:
+        from database import init_pool
+        init_pool()
+        print("[RESOLVIT] Database pool initialized.")
+    except Exception as e:
+        print(f"[RESOLVIT] ⚠️  DB pool init failed: {e}")
+        print("[RESOLVIT] Server will still start — DB calls will fail until DB is reachable.")
 
-    from services.escalation import run_escalation_check, update_authority_metrics
-    from services.priority import recalculate_all_priorities
+    try:
+        from services.escalation import run_escalation_check, update_authority_metrics
+        from services.priority import recalculate_all_priorities
 
-    scheduler.add_job(
-        run_escalation_check,
-        "interval",
-        hours=1,
-        id="escalation_check"
-    )
+        scheduler.add_job(
+            run_escalation_check,
+            "interval",
+            hours=1,
+            id="escalation_check",
+            replace_existing=True
+        )
 
-    scheduler.add_job(
-        update_authority_metrics,
-        "interval",
-        hours=1,
-        id="metrics_update"
-    )
+        scheduler.add_job(
+            update_authority_metrics,
+            "interval",
+            hours=1,
+            id="metrics_update",
+            replace_existing=True
+        )
 
-    scheduler.add_job(
-        recalculate_all_priorities,
-        "interval",
-        hours=6,
-        id="priority_recalc"
-    )
+        scheduler.add_job(
+            recalculate_all_priorities,
+            "interval",
+            hours=6,
+            id="priority_recalc",
+            replace_existing=True
+        )
 
-    scheduler.start()
-    print("[RESOLVIT] Background scheduler started.")
+        scheduler.start()
+        print("[RESOLVIT] Background scheduler started.")
+    except Exception as e:
+        print(f"[RESOLVIT] ⚠️  Scheduler startup failed: {e}")
 
 
 @app.on_event("shutdown")

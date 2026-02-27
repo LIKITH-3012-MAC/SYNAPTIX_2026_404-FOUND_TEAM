@@ -1,10 +1,23 @@
 /**
  * RESOLVIT - API Module (api.js)
  * Base fetch wrapper with JWT injection, error handling, and retry support.
+ *
+ * CORS NOTE: When opening HTML files directly via file://, browsers send
+ * Origin: null. The backend CORS config explicitly allows "null".
+ * For best results, serve frontend via: npx serve frontend/ -p 5500
  */
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:8000'
-  : '/api-proxy'; // Production reverse proxy
+
+// ── Backend URL Configuration ──────────────────────────────────
+const API_BASE = (() => {
+  const host = window.location.hostname;
+  // - Opened via file:// in browser → null origin, target localhost:8000
+  // - Served from localhost (any port) → target localhost:8000
+  // - Production domain → use relative path (nginx reverse-proxy handles it)
+  if (!host || host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:8000';
+  }
+  return ''; // Same-origin requests for production (nginx proxies /api/*)
+})();
 
 const API = {
   /**
@@ -21,11 +34,12 @@ const API = {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const response = await fetch(`${API_BASE}${path}`, options);
-        
+
         if (response.status === 401) {
           localStorage.removeItem('resolvit_token');
           localStorage.removeItem('resolvit_user');
-          showToast('⚠️ Session expired. Please login again.');
+          showToast('⚠️ Session expired. Please login again.', 'error');
+          // Don't redirect here — let the page handle it
         }
 
         const data = await response.json().catch(() => ({}));
@@ -51,12 +65,26 @@ const API = {
 
 /* ── Toast Notification (global) ────────────────────────────── */
 function showToast(message, type = 'info', duration = 4000) {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    // Create if missing (pages that don't include it in HTML)
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
 
   const toast = document.createElement('div');
   toast.className = 'toast';
-  toast.style.background = type === 'error' ? '#b91c1c' : type === 'success' ? '#15803d' : 'var(--blue-900)';
+  if (type === 'error') {
+    toast.style.background = '#b91c1c';
+  } else if (type === 'success') {
+    toast.style.background = '#15803d';
+  } else if (type === 'warning') {
+    toast.style.background = '#b45309';
+  } else {
+    toast.style.background = 'var(--blue-900, #1e3a8a)';
+  }
   toast.innerHTML = `<span>${message}</span>`;
   container.appendChild(toast);
 

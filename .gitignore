@@ -1,21 +1,67 @@
-backend/.env
-.env
-# Python
+# ================================================================
+# RESOLVIT — .gitignore
+# ================================================================
+
+# ── Python Environment ────────────────────────────────────────
 venv/
 backend/venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.pdb
+*.so
+.Python
 
-# Env
+# ── Environment Variables / Secrets ───────────────────────────
 .env
+backend/.env
+*.env.local
+*.env.production
 
-# Mac
-.DS_Store
+# ── Python Test / Coverage ────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.tox/
 
-# VSCode
+# ── Editors ───────────────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Logs
+# ── Mac OS ────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# ── Logs ─────────────────────────────────────────────────────
 *.log
+logs/
+
+# ── Node (if ever added) ──────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Docker ────────────────────────────────────────────────────
+*.env.docker
+
+# ── Runtime / Temp ────────────────────────────────────────────
+*.pid
+*.seed
+*.pid.lock
+tmp/
+temp/
