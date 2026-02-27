@@ -1,5 +1,7 @@
 """
-RESOLVIT - Database Configurinitializedes PostgreSQL connection pool via psycopg2
+RESOLVIT - Database Configuration
+Initializes PostgreSQL connection pool via psycopg2
+Production-ready for Render deployment
 """
 
 import os
@@ -9,20 +11,33 @@ from psycopg2 import pool
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
-load_dotenv()
+# ─────────────────────────────────────────────
+# Load .env ONLY in local development
+# Render automatically injects environment vars
+# ─────────────────────────────────────────────
+if os.getenv("RENDER") is None:
+    load_dotenv()
 
-# DATABASE_URL must be defined in .env file — no hardcoded fallback for security.
+# ─────────────────────────────────────────────
+# Database URL (Required)
+# ─────────────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL")
+
 if not DATABASE_URL:
     raise RuntimeError(
         "[RESOLVIT] DATABASE_URL is not set.\n"
-        "Create backend/.env with: DATABASE_URL=postgres://user:pass@host:port/db?sslmode=require"
+        "Set DATABASE_URL in Render Environment Variables "
+        "or create backend/.env locally."
     )
 
+# ─────────────────────────────────────────────
+# Connection Pool
+# ─────────────────────────────────────────────
 _pool = None
 
 
 def init_pool():
+    """Initialize PostgreSQL connection pool."""
     global _pool
     if _pool is None:
         _pool = pool.ThreadedConnectionPool(
@@ -31,12 +46,19 @@ def init_pool():
             dsn=DATABASE_URL,
             cursor_factory=RealDictCursor
         )
+        print("[DB] Connection pool initialized.")
     return _pool
 
 
+# ─────────────────────────────────────────────
+# Database Context Manager
+# ─────────────────────────────────────────────
 @contextmanager
 def get_db():
-    """Context manager that yields a database cursor and handles commit/rollback."""
+    """
+    Provides a database cursor.
+    Automatically commits or rolls back.
+    """
     connection_pool = init_pool()
     conn = connection_pool.getconn()
 
@@ -53,8 +75,13 @@ def get_db():
         connection_pool.putconn(conn)
 
 
+# ─────────────────────────────────────────────
+# Schema Initialization (Optional)
+# ─────────────────────────────────────────────
 def execute_schema():
-    """Initialize the database schema on startup."""
+    """
+    Initialize database schema from schema.sql on startup.
+    """
     schema_path = os.path.join(
         os.path.dirname(__file__),
         '..',
@@ -67,3 +94,5 @@ def execute_schema():
             with open(schema_path, 'r') as f:
                 cursor.execute(f.read())
         print("[DB] Schema initialized successfully.")
+    else:
+        print("[DB] No schema.sql file found. Skipping schema initialization.")
