@@ -1,7 +1,8 @@
 """
-RESOLVIT - FastAPI Main Application
+RESOLVIT API
 Entry point: registers all routers, CORS, background scheduler, startup events
 """
+
 import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,12 +12,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Routers ───────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
+# Routers
+# ──────────────────────────────────────────────────────────────
 from routes.auth_routes import router as auth_router
 from routes.issues import router as issues_router
 from routes.audit_metrics import audit_router, metrics_router
+from routes.admin_routes import router as admin_router  # ✅ NEW
 
-# ── App Setup ─────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
+# App Setup
+# ──────────────────────────────────────────────────────────────
 app = FastAPI(
     title="RESOLVIT API",
     description="Civic Resolution Platform — From Complaint to Completion.",
@@ -25,8 +31,11 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# ── CORS ─────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
+# CORS Configuration
+# ──────────────────────────────────────────────────────────────
 ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -35,14 +44,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Register Routers ──────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
+# Register Routers
+# ──────────────────────────────────────────────────────────────
 app.include_router(auth_router)
 app.include_router(issues_router)
 app.include_router(audit_router)
 app.include_router(metrics_router)
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])  # ✅ NEW
 
-# ── Background Scheduler ──────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
+# Background Scheduler
+# ──────────────────────────────────────────────────────────────
 scheduler = BackgroundScheduler(timezone="UTC")
+
 
 @app.on_event("startup")
 def startup_event():
@@ -51,13 +66,30 @@ def startup_event():
     init_pool()
     print("[RESOLVIT] Database pool initialized.")
 
-    # Hourly escalation check
     from services.escalation import run_escalation_check, update_authority_metrics
     from services.priority import recalculate_all_priorities
 
-    scheduler.add_job(run_escalation_check,    "interval", hours=1,  id="escalation_check")
-    scheduler.add_job(update_authority_metrics, "interval", hours=1,  id="metrics_update")
-    scheduler.add_job(recalculate_all_priorities,"interval", hours=6, id="priority_recalc")
+    scheduler.add_job(
+        run_escalation_check,
+        "interval",
+        hours=1,
+        id="escalation_check"
+    )
+
+    scheduler.add_job(
+        update_authority_metrics,
+        "interval",
+        hours=1,
+        id="metrics_update"
+    )
+
+    scheduler.add_job(
+        recalculate_all_priorities,
+        "interval",
+        hours=6,
+        id="priority_recalc"
+    )
+
     scheduler.start()
     print("[RESOLVIT] Background scheduler started.")
 
@@ -68,15 +100,21 @@ def shutdown_event():
     print("[RESOLVIT] Scheduler stopped.")
 
 
-# ── Global Error Handler ──────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
+# Global Error Handler
+# ──────────────────────────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_error_handler(request: Request, exc: Exception):
+    print(f"[ERROR] {exc}")  # Log to console
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Internal server error: {str(exc)}"}
+        content={"detail": "Internal server error"}
     )
 
-# ── Health Check ──────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────
+# Health Check
+# ──────────────────────────────────────────────────────────────
 @app.get("/api/health", tags=["System"])
 def health_check():
     return {
@@ -85,7 +123,10 @@ def health_check():
         "version": "1.0.0"
     }
 
-# ── Run Entry Point ───────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────
+# Run Entry Point
+# ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

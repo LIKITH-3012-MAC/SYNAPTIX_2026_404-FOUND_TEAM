@@ -64,4 +64,4 @@ def execute_schema():
         with get_db() as cursor:
             with open(schema_path, 'r') as f:
                 cursor.execute(f.read())
-        print("[DB] Schema initialized successfully.")
+        print("[DB] Schema initialized successfully.”)
