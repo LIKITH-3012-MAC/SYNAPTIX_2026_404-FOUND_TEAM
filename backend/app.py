@@ -1,58 +1,65 @@
-/**
- * RESOLVIT - API Module (api.js)
- * Production-ready fetch wrapper with JWT support
- */
+"""
+RESOLVIT API
+Production-ready FastAPI entry point
+"""
 
-const BASE_URL = "https://synaptix-2026-404-found-team.onrender.com";
+import os
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
 
-const API = {
+# Load .env only locally
+if os.getenv("RENDER") is None:
+    load_dotenv()
 
-  async _fetch(method, path, body = null) {
-    const token = localStorage.getItem("resolvit_token");
+from routes.auth_routes import router as auth_router
+from routes.issues import router as issues_router
+from routes.audit_metrics import audit_router, metrics_router
+from routes.admin_routes import router as admin_router
 
-    const headers = {
-      "Content-Type": "application/json",
-    };
+app = FastAPI(
+    title="RESOLVIT API",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc"
+)
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+CORS_ORIGINS = [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:3000",
+    "https://synaptix.vercel.app",
+]
 
-    const options = {
-      method: method,   // 🔥 THIS IS CRITICAL
-      headers: headers,
-    };
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    if (body) {
-      options.body = JSON.stringify(body);
-    }
+app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+app.include_router(issues_router, prefix="/api/issues", tags=["Issues"])
+app.include_router(audit_router, prefix="/api/audit", tags=["Audit"])
+app.include_router(metrics_router, prefix="/api/metrics", tags=["Metrics"])
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 
-    const response = await fetch(`${BASE_URL}${path}`, options);
+@app.get("/")
+def root():
+    return {"status": "RESOLVIT API running"}
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Request failed (${response.status}): ${text}`);
-    }
+@app.get("/api/health")
+def health():
+    return {"status": "healthy"}
 
-    return response.json();
-  },
+scheduler = BackgroundScheduler()
 
-  // ✅ EXPLICIT METHOD WRAPPERS
+@app.on_event("startup")
+def start_scheduler():
+    scheduler.start()
 
-  get(path) {
-    return this._fetch("GET", path);
-  },
-
-  post(path, body) {
-    return this._fetch("POST", path, body);
-  },
-
-  put(path, body) {
-    return this._fetch("PUT", path, body);
-  },
-
-  delete(path) {
-    return this._fetch("DELETE", path);
-  }
-
-};
+@app.on_event("shutdown")
+def shutdown_scheduler():
+    scheduler.shutdown()
