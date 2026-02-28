@@ -103,7 +103,7 @@ function renderIssues() {
     if (_searchQuery) {
         filtered = filtered.filter(i =>
             i.title.toLowerCase().includes(_searchQuery) ||
-            i.description.toLowerCase().includes(_searchQuery) ||
+            (i.description || '').toLowerCase().includes(_searchQuery) ||
             i.category.toLowerCase().includes(_searchQuery)
         );
     }
@@ -125,7 +125,10 @@ function renderIssues() {
     }
 
     const visible = filtered.slice(0, _offset + 12);
-    grid.innerHTML = visible.map(issue => renderIssueCard(issue)).join('');
+    grid.innerHTML = visible.map(issue => renderIssueCard(issue, { showUpvote: true })).join('');
+
+    // Start live SLA countdowns
+    startSlaCountdowns(visible);
 
     // Animate priority scores on load
     setTimeout(() => animatePriorityScores(), 100);
@@ -149,11 +152,14 @@ function toggleMap() {
     btnEl.textContent = _mapVisible ? '📋 Hide Map' : '🗺 Show Map View';
 
     if (_mapVisible && !_mapInstance) {
-        _mapInstance = L.map('dashboard-map').setView([12.9716, 77.5946], 12);
+        // Default to Kavali, AP, India
+        _mapInstance = L.map('dashboard-map').setView([14.9282, 79.9900], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(_mapInstance);
         updateMapMarkers(_allIssues);
+    } else if (_mapVisible) {
+        setTimeout(() => _mapInstance.invalidateSize(), 100);
     }
 }
 
@@ -163,30 +169,53 @@ function updateMapMarkers(issues) {
         if (layer instanceof L.Marker) _mapInstance.removeLayer(layer);
     });
 
-    const colorMap = {
-        reported: '#94a3b8', verified: '#3b82f6', assigned: '#f59e0b',
-        in_progress: '#f97316', escalated: '#ef4444', resolved: '#10b981', clustered: '#8b5cf6'
-    };
+    let hasBounds = false;
+    const bounds = [];
 
     issues.forEach(issue => {
         if (!issue.latitude || !issue.longitude) return;
-        const color = colorMap[issue.status] || '#6366f1';
-        const size = Math.max(12, Math.min(24, issue.priority_score / 4));
+        const score = issue.priority_score || 0;
+        const band = typeof getPriorityBand === 'function' ? getPriorityBand(score) : { color: '#6366f1' };
+        const color = band.color;
+        const size = score >= 80 ? 22 : score >= 55 ? 18 : score >= 30 ? 14 : 12;
+        const isPulsing = score >= 80 || issue.sla_breached || issue.escalation_level > 0;
+
         const icon = L.divIcon({
             className: '',
-            html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;"></div>`,
-            iconSize: [size, size]
+            html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 2px 12px ${color}66;cursor:pointer;${isPulsing ? 'animation:pulse 1s infinite;' : ''}"></div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2]
         });
+
+        const slaLine = issue.sla_breached
+            ? '<div style="color:#dc2626;font-weight:700;">🔴 SLA BREACHED</div>'
+            : issue.sla_seconds_remaining != null && issue.sla_seconds_remaining < 3600
+                ? '<div style="color:#ea580c;font-weight:700;">⚠️ SLA &lt; 1h remaining</div>'
+                : '';
 
         L.marker([issue.latitude, issue.longitude], { icon })
             .addTo(_mapInstance)
             .bindPopup(`
-        <div style="min-width:200px;">
-          <strong>${escapeHtml(issue.title)}</strong><br/>
-          <span style="font-size:0.8rem;color:#666;">${issue.category} · Priority: <strong>${issue.priority_score}</strong></span><br/>
-          <a href="issue.html?id=${issue.id}" style="color:#1E3A8A;font-size:0.85rem;">View Details →</a>
+        <div style="min-width:220px;font-family:system-ui;">
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:6px;">${escapeHtml(issue.title)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+            <span style="background:${color}20;color:${color};padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">Score: ${score}</span>
+            <span style="background:#f1f5f9;padding:2px 8px;border-radius:10px;font-size:0.75rem;">${issue.category}</span>
+            <span style="background:#f1f5f9;padding:2px 8px;border-radius:10px;font-size:0.75rem;">${issue.status?.replace('_', ' ')}</span>
+          </div>
+          <div style="font-size:0.8rem;color:#64748b;">📢 ${issue.report_count || 1} reports · 👍 ${issue.upvotes || 0} upvotes</div>
+          ${slaLine}
+          ${issue.escalation_level > 0 ? `<div style="color:#dc2626;font-size:0.8rem;font-weight:700;margin-top:4px;">🚨 Escalated (Level ${issue.escalation_level})</div>` : ''}
+          <a href="issue.html?id=${issue.id}" style="display:block;margin-top:10px;text-align:center;background:#6366f1;color:white;padding:6px;border-radius:8px;font-size:0.82rem;text-decoration:none;">View Issue →</a>
         </div>`);
+
+        bounds.push([issue.latitude, issue.longitude]);
+        hasBounds = true;
     });
+
+    if (hasBounds && bounds.length > 0) {
+        try { _mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 }); } catch (e) { }
+    }
 }
 
 /* ── Priority Score Animation ────────────────────────────────── */

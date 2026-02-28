@@ -3,14 +3,18 @@ RESOLVIT - Auth Routes
 POST /api/auth/register
 POST /api/auth/login
 GET  /api/auth/me
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
 """
 from fastapi import APIRouter, HTTPException, status, Depends
+from pydantic import BaseModel, EmailStr, Field
 from models import UserRegister, UserLogin, TokenResponse, UserResponse, MessageResponse
 from database import get_db
-from auth import hash_password, verify_password, create_access_token, get_current_user
+from auth import hash_password, verify_password, create_access_token, get_current_user, create_password_reset_token, verify_password_reset_token
+from services.email_service import send_password_reset_email
 import uuid
 
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
@@ -109,3 +113,80 @@ def get_me(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found.")
 
     return {**dict(user), "id": str(user["id"])}
+
+
+# ── PASSWORD RESET ROUTES ─────────────────────────────────────
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+def forgot_password(payload: ForgotPasswordRequest):
+    """
+    Request a password reset. If the email exists, send a reset link.
+    This endpoint always returns success to prevent email enumeration.
+    """
+    with get_db() as cursor:
+        cursor.execute(
+            "SELECT id, username, email FROM users WHERE email = %s",
+            (payload.email,)
+        )
+        user = cursor.fetchone()
+
+    # Always return success to prevent email enumeration
+    # If the email exists, send the reset link
+    if user:
+        reset_token = create_password_reset_token(payload.email)
+        username = user["username"]
+        
+        # Try to send the email (will work if SMTP is configured)
+        send_password_reset_email(payload.email, reset_token, username)
+    
+    return {
+        "message": "If an account with that email exists, a password reset link has been sent."
+    }
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+def reset_password(payload: ResetPasswordRequest):
+    """
+    Reset the password using the token sent to the user's email.
+    """
+    # Verify the token
+    email = verify_password_reset_token(payload.token)
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token."
+        )
+
+    # Find the user by email
+    with get_db() as cursor:
+        cursor.execute(
+            "SELECT id, username, email FROM users WHERE email = %s",
+            (email,)
+        )
+        user = cursor.fetchone()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
+
+    # Update the password with the new hashed password
+    new_hash = hash_password(payload.new_password)
+    
+    with get_db() as cursor:
+        cursor.execute(
+            "UPDATE users SET password_hash = %s, updated_at = NOW() WHERE id = %s",
+            (new_hash, user["id"])
+        )
+
+    return {"message": "Password has been reset successfully. You can now login with your new password."}

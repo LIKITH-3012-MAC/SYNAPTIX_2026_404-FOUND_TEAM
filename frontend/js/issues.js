@@ -1,134 +1,210 @@
 /**
- * RESOLVIT - Issues Module (issues.js)
- * Shared issue card renderer, badge helpers, and CRUD wrappers.
+ * RESOLVIT - issues.js v2
+ * Enhanced issue card renderer with:
+ * - SLA countdown timers (live ticking)
+ * - Priority color bands (Critical/High/Medium/Low)
+ * - Escalation level badges
+ * - Breach risk indicator
+ * - Upvote support
  */
 
-/* ── Status/Priority Helpers ─────────────────────────────────── */
-function getPriorityClass(score) {
-    if (score >= 80) return 'priority-critical';
-    if (score >= 60) return 'priority-high';
-    if (score >= 40) return 'priority-medium';
-    return 'priority-low';
+// Priority band config matching backend
+const PRIORITY_BANDS = [
+  { min: 80, label: "CRITICAL", color: "#dc2626", bg: "#fff1f2", pulse: true },
+  { min: 55, label: "HIGH", color: "#ea580c", bg: "#fff7ed", pulse: false },
+  { min: 30, label: "MEDIUM", color: "#ca8a04", bg: "#fefce8", pulse: false },
+  { min: 0, label: "LOW", color: "#16a34a", bg: "#f0fdf4", pulse: false },
+];
+
+const CATEGORY_ICONS = {
+  Roads: "🛣️", Water: "💧", Electricity: "⚡",
+  Sanitation: "🗑️", Safety: "🚨", Environment: "🌿", Other: "📌"
+};
+
+const ESCALATION_LABELS = {
+  0: null,
+  1: "Dept Head",
+  2: "City Commissioner",
+  3: "Govt Oversight"
+};
+
+function getPriorityBand(score) {
+  for (const b of PRIORITY_BANDS) {
+    if (score >= b.min) return b;
+  }
+  return PRIORITY_BANDS[PRIORITY_BANDS.length - 1];
 }
 
-function getPriorityLabel(score) {
-    if (score >= 80) return 'Critical';
-    if (score >= 60) return 'High';
-    if (score >= 40) return 'Medium';
-    return 'Low';
+function formatSlaCountdown(secondsRemaining) {
+  if (secondsRemaining == null) return null;
+  if (secondsRemaining <= 0) return { text: "SLA BREACHED", urgent: true, expired: true };
+  const h = Math.floor(secondsRemaining / 3600);
+  const m = Math.floor((secondsRemaining % 3600) / 60);
+  const s = Math.floor(secondsRemaining % 60);
+  const urgent = secondsRemaining < (secondsRemaining / 1) * 0.25 || secondsRemaining < 3600;
+  if (h > 48) {
+    const d = Math.floor(h / 24);
+    return { text: `${d}d ${h % 24}h remaining`, urgent: false, expired: false };
+  }
+  return {
+    text: h > 0 ? `${h}h ${m}m remaining` : `${m}m ${s}s remaining`,
+    urgent: h < 2,
+    expired: false
+  };
 }
 
-function getPriorityColor(score) {
-    if (score >= 80) return 'var(--red)';
-    if (score >= 60) return 'var(--orange)';
-    if (score >= 40) return 'var(--yellow)';
-    return 'var(--green)';
+function renderBreachRisk(risk) {
+  if (!risk || risk < 0.3) return "";
+  const pct = Math.round(risk * 100);
+  const color = risk > 0.7 ? "#dc2626" : risk > 0.5 ? "#ea580c" : "#ca8a04";
+  return `<div class="breach-risk-badge" style="color:${color};background:${color}15;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;margin-top:6px;">
+    ⚠️ ${pct}% SLA Breach Risk
+  </div>`;
 }
 
-function formatRelativeDate(dateStr) {
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffMs = now - date;
-    const diffH = Math.floor(diffMs / 3600000);
-    const diffD = Math.floor(diffMs / 86400000);
-
-    if (diffH < 1) return 'Just now';
-    if (diffH < 24) return `${diffH}h ago`;
-    if (diffD < 7) return `${diffD}d ago`;
-    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+function renderEscalationBadge(level) {
+  if (!level || level === 0) return "";
+  const label = ESCALATION_LABELS[level] || `Level ${level}`;
+  return `<span style="background:#dc2626;color:white;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;animation:pulse 1s infinite;">🚨 ESC L${level}: ${label}</span>`;
 }
 
-function buildUrgencyDots(urgency) {
-    return Array.from({ length: 5 }, (_, i) =>
-        `<div class="urgency-dot ${i < urgency ? 'filled' : ''}"></div>`
-    ).join('');
-}
-
-/* ── Issue Card Renderer ─────────────────────────────────────── */
-function renderIssueCard(issue) {
-    const prioClass = getPriorityClass(issue.priority_score);
-    const prioColor = getPriorityColor(issue.priority_score);
-    const isEscalated = issue.status === 'escalated';
-
-    return `
-    <div class="issue-card ${prioClass}" onclick="window.location.href='issue.html?id=${issue.id}'" id="card-${issue.id}" style="position:relative;">
-      <!-- Header -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          <span class="cat-badge cat-${issue.category}">${issue.category}</span>
-          <span class="badge badge-${issue.status}" style="font-size:0.7rem;">
-            <div class="badge-dot"></div>${issue.status.replace('_', ' ')}
-          </span>
-          ${isEscalated ? '<span class="badge badge-escalated" style="font-size:0.7rem;">🚨 ESCALATED</span>' : ''}
-          ${issue.cluster_id ? '<span class="badge badge-clustered" style="font-size:0.7rem;">🤖 Clustered</span>' : ''}
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div class="priority-score ${prioClass}" style="font-size:1.6rem;transition:all 0.5s;">${issue.priority_score}</div>
-          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">${getPriorityLabel(issue.priority_score)}</div>
-        </div>
+function renderSlaBar(secondsRemaining, slaTotalHours) {
+  if (secondsRemaining == null || !slaTotalHours) return "";
+  const totalSec = slaTotalHours * 3600;
+  const pct = Math.max(0, Math.min(100, (secondsRemaining / totalSec) * 100));
+  const color = pct < 25 ? "#dc2626" : pct < 50 ? "#ea580c" : "#22c55e";
+  return `
+    <div style="margin-top:8px;">
+      <div style="height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width 1s linear;"></div>
       </div>
-
-      <!-- Title -->
-      <h4 style="margin-bottom:8px;line-height:1.4;font-size:0.95rem;color:var(--text-primary);">${escapeHtml(issue.title)}</h4>
-
-      <!-- Description preview -->
-      <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(issue.description)}</p>
-
-      <!-- Priority Bar -->
-      <div class="priority-bar" style="margin-bottom:14px;">
-        <div class="priority-bar-fill" style="width:${issue.priority_score}%;background:${prioColor};"></div>
-      </div>
-
-      <!-- Footer Meta -->
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <div style="display:flex;gap:14px;font-size:0.78rem;color:var(--text-muted);">
-          <span>👥 ${(issue.impact_scale || 0).toLocaleString()} affected</span>
-          <span>📅 ${issue.days_unresolved}d</span>
-          ${issue.reporter_name ? `<span>👤 ${escapeHtml(issue.reporter_name)}</span>` : ''}
-        </div>
-        <div class="urgency-dots">${buildUrgencyDots(issue.urgency)}</div>
-      </div>
-
-      ${isEscalated ? `
-        <div style="margin-top:12px;padding:8px 12px;background:#fff1f2;border-radius:8px;font-size:0.75rem;color:var(--red);display:flex;align-items:center;gap:6px;">
-          <span>🚨</span> Escalated due to SLA breach — awaiting senior authority action
-        </div>` : ''}
     </div>`;
 }
 
-/* ── Security ──────────────────────────────────────────────── */
-function escapeHtml(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+/**
+ * Main issue card renderer.
+ * @param {Object} issue - Issue object from API
+ * @param {Object} opts - { showUpdateBtn, showUpvote }
+ */
+function renderIssueCard(issue, opts = {}) {
+  const band = getPriorityBand(issue.priority_score || 0);
+  const icon = CATEGORY_ICONS[issue.category] || "📌";
+  const slaInfo = formatSlaCountdown(issue.sla_seconds_remaining);
+  const slaCountdownId = `sla-${issue.id}`;
+
+  const statusLabels = {
+    reported: "Reported", verified: "Verified", clustered: "Clustered",
+    assigned: "Assigned", in_progress: "In Progress", escalated: "🚨 Escalated", resolved: "✅ Resolved"
+  };
+
+  const breachRisk = renderBreachRisk(issue.breach_risk);
+  const escalationBadge = renderEscalationBadge(issue.escalation_level);
+  const slaBar = renderSlaBar(issue.sla_seconds_remaining, issue.sla_hours);
+
+  const slaHtml = slaInfo ? `
+    <div id="${slaCountdownId}" class="sla-countdown ${slaInfo.expired ? 'sla-expired' : slaInfo.urgent ? 'sla-urgent' : ''}"
+         style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;
+                color:${slaInfo.expired ? '#dc2626' : slaInfo.urgent ? '#ea580c' : '#16a34a'};
+                ${slaInfo.expired ? 'animation:pulse 0.8s infinite;' : ''}">
+      ⏱️ ${slaInfo.text}
+    </div>` : "";
+
+  return `
+<div class="issue-card" style="border-left:4px solid ${band.color};background:${band.bg}20;"
+     data-issue-id="${issue.id}"
+     onclick="window.location.href='issue.html?id=${issue.id}'"
+     style="cursor:pointer;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+    <div style="flex:1;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
+        <span class="cat-badge cat-${issue.category}" style="font-size:0.78rem;">${icon} ${issue.category}</span>
+        <span class="badge badge-${issue.status}" style="font-size:0.75rem;">${statusLabels[issue.status] || issue.status}</span>
+        ${escalationBadge}
+      </div>
+      <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);line-height:1.3;">${issue.title}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;min-width:52px;">
+      <div class="priority-score priority-${band.label.toLowerCase()}"
+           style="font-size:1.5rem;font-weight:900;color:${band.color};${band.pulse ? 'animation:pulse 1.2s infinite;' : ''}">
+        ${issue.priority_score || 0}
+      </div>
+      <div style="font-size:0.65rem;font-weight:700;color:${band.color};text-transform:uppercase;">${band.label}</div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:16px;font-size:0.78rem;color:var(--text-muted);flex-wrap:wrap;margin-bottom:8px;">
+    <span>👥 ${(issue.impact_scale || 0).toLocaleString()}</span>
+    <span>📅 ${issue.days_unresolved || 0}d open</span>
+    ${issue.report_count > 1 ? `<span>📢 ${issue.report_count} reports</span>` : ""}
+    ${issue.upvotes > 0 ? `<span>👍 ${issue.upvotes}</span>` : ""}
+  </div>
+
+  ${slaHtml}
+  ${slaBar}
+  ${breachRisk}
+
+  ${opts.showUpdateBtn ? `<div style="margin-top:12px;" onclick="event.stopPropagation();">
+    <button class="btn btn-primary btn-sm" onclick="updateIssue('${issue.id}')">Update Status</button>
+  </div>` : ""}
+  ${opts.showUpvote ? `<div style="margin-top:10px;" onclick="event.stopPropagation();">
+    <button class="btn btn-outline btn-sm" onclick="upvoteIssue('${issue.id}',this)">👍 Upvote</button>
+  </div>` : ""}
+</div>`;
 }
 
-/* ── Issues API Wrappers ─────────────────────────────────────── */
-const Issues = {
-    async list({ category, status, sortBy = 'priority_score', order = 'desc', limit = 50, offset = 0 } = {}) {
-        let url = `/api/issues?sort_by=${sortBy}&order=${order}&limit=${limit}&offset=${offset}`;
-        if (category) url += `&category=${encodeURIComponent(category)}`;
-        if (status) url += `&status=${encodeURIComponent(status)}`;
-        return API.get(url);
-    },
-
-    async get(id) {
-        return API.get(`/api/issues/${id}`);
-    },
-
-    async create(payload) {
-        return API.post('/api/issues', payload);
-    },
-
-    async update(id, payload) {
-        return API.patch(`/api/issues/${id}`, payload);
-    },
-
-    async getAudit(id) {
-        return API.get(`/api/audit/${id}`);
+// ── SLA Live Ticker ─────────────────────────────────────────────
+// Call after rendering cards to start ticking all SLA countdowns on page
+const _slaTimers = {};
+function startSlaCountdowns(issues) {
+  // Build a map of issue id → remaining seconds (at render time)
+  const remaining = {};
+  issues.forEach(i => {
+    if (i.sla_seconds_remaining != null && !i.sla_breached) {
+      remaining[i.id] = i.sla_seconds_remaining;
     }
-};
+  });
+
+  // Clear old timers
+  Object.values(_slaTimers).forEach(t => clearInterval(t));
+
+  issues.forEach(issue => {
+    const el = document.getElementById(`sla-${issue.id}`);
+    if (!el || remaining[issue.id] == null) return;
+
+    _slaTimers[issue.id] = setInterval(() => {
+      remaining[issue.id] = Math.max(0, remaining[issue.id] - 1);
+      const info = formatSlaCountdown(remaining[issue.id]);
+      el.textContent = "⏱️ " + info.text;
+      el.style.color = info.expired ? "#dc2626" : info.urgent ? "#ea580c" : "#16a34a";
+      if (info.expired) {
+        el.style.animation = "pulse 0.8s infinite";
+        clearInterval(_slaTimers[issue.id]);
+      }
+
+      // Update progress bar
+      const bar = el.closest(".issue-card")?.querySelector(".priority-bar-fill");
+      if (bar && issue.sla_hours) {
+        const totalSec = issue.sla_hours * 3600;
+        const pct = Math.max(0, (remaining[issue.id] / totalSec) * 100);
+        bar.style.width = pct + "%";
+        bar.style.background = pct < 25 ? "#dc2626" : pct < 50 ? "#ea580c" : "#22c55e";
+      }
+    }, 1000);
+  });
+}
+
+// ── Upvote helper ───────────────────────────────────────────────
+async function upvoteIssue(issueId, btn) {
+  const user = typeof Auth !== "undefined" ? Auth.getUser() : null;
+  if (!user) { showToast("Please login to upvote", "warning"); return; }
+  btn.disabled = true;
+  try {
+    const res = await API.post(`/api/credits/upvote/${issueId}`, {});
+    showToast(`👍 Upvoted! +${res.points_earned} pts earned`, "success");
+    btn.textContent = "👍 Upvoted";
+    btn.style.opacity = "0.5";
+  } catch (err) {
+    showToast(err.message || "Could not upvote", "error");
+    btn.disabled = false;
+  }
+}

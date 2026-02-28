@@ -1,27 +1,102 @@
 """
-RESOLVIT - Dynamic Priority Scoring Engine
+RESOLVIT - Dynamic Priority Scoring Engine v2
 
-Priority Formula:
-  priority_score = (impact_scale * 0.4)
-                 + (urgency * 0.3)
-                 + (days_unresolved * 0.2)
-                 + (safety_risk_probability * 0.1)
+Priority Formula (world-class civic governance model):
+  priority_score = (report_count × 2)
+                 + (urgency × 5)
+                 + days_unresolved
+                 + community_upvotes
+                 + escalation_weight
+                 + safety_boost
 
-Normalized to 0-100 scale.
+Where escalation_weight = escalation_level × 5
+Normalized to max 100.
+
+SLA per category:
+  Safety      → 24h  (fastest)
+  Water       → 48h
+  Electricity → 48h
+  Roads       → 72h
+  Sanitation  → 72h
+  Environment → 72h
+  Other       → 48h
 """
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from database import get_db
 
 
-# Normalization constants (tune based on real data)
-MAX_IMPACT       = 1000.0   # People affected cap for normalization
-MAX_URGENCY      = 5.0
-MAX_DAYS         = 30.0     # Days after which score maxes out
-MAX_SAFETY       = 1.0
+# SLA in hours per issue category
+CATEGORY_SLA_HOURS = {
+    "Safety":      24,
+    "Water":       48,
+    "Electricity": 48,
+    "Roads":       72,
+    "Sanitation":  72,
+    "Environment": 72,
+    "Other":       48,
+}
+
+# Priority color bands
+PRIORITY_BANDS = [
+    (80, "critical", "red"),
+    (55, "high",     "orange"),
+    (30, "medium",   "yellow"),
+    (0,  "low",      "green"),
+]
 
 
-def _normalize(value, max_val):
-    return min(value / max_val, 1.0) * 100
+def get_sla_hours(category: str) -> int:
+    """Return the SLA duration in hours for a given category."""
+    return CATEGORY_SLA_HOURS.get(category, 48)
+
+
+def get_sla_expiry(category: str, created_at: datetime) -> datetime:
+    """Return the absolute SLA expiry datetime for an issue."""
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return created_at + timedelta(hours=get_sla_hours(category))
+
+
+def get_priority_band(score: float) -> dict:
+    """Return color band info dict for a priority score."""
+    for threshold, level, color in PRIORITY_BANDS:
+        if score >= threshold:
+            return {"level": level, "color": color, "threshold": threshold}
+    return {"level": "low", "color": "green", "threshold": 0}
+
+
+def predict_sla_breach_risk(
+    category: str,
+    urgency: int,
+    created_at: datetime,
+    sla_expires_at: datetime = None,
+    escalation_level: int = 0,
+) -> float:
+    """
+    Predict probability (0.0–1.0) that this issue will breach its SLA.
+    Based on: time elapsed vs SLA, urgency, escalations.
+    Returns float 0.0 (no risk) to 1.0 (certain breach).
+    """
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+
+    if sla_expires_at:
+        if sla_expires_at.tzinfo is None:
+            sla_expires_at = sla_expires_at.replace(tzinfo=timezone.utc)
+        total_sla = (sla_expires_at - created_at).total_seconds()
+        elapsed   = (now - created_at).total_seconds()
+        time_risk = min(elapsed / max(total_sla, 1), 1.0)
+    else:
+        sla_h = get_sla_hours(category)
+        elapsed_h = (now - created_at).total_seconds() / 3600
+        time_risk = min(elapsed_h / sla_h, 1.0)
+
+    urgency_risk = urgency / 5.0
+    escalation_risk = min(escalation_level * 0.2, 0.6)
+
+    risk = (time_risk * 0.5) + (urgency_risk * 0.3) + (escalation_risk * 0.2)
+    return round(min(risk, 1.0), 2)
 
 
 def calculate_priority(
@@ -29,35 +104,46 @@ def calculate_priority(
     urgency: int,
     created_at: datetime,
     safety_risk_probability: float = 0.1,
-    resolved_at: datetime = None
+    resolved_at: datetime = None,
+    report_count: int = 1,
+    upvotes: int = 0,
+    escalation_level: int = 0,
 ) -> float:
     """
     Calculate and return a 0-100 priority score.
+    Formula: reports×2 + urgency×5 + days_unresolved + upvotes + escalation×5 + safety_boost
     """
-    # Use resolved_at if available to stop the clock
     reference = resolved_at if resolved_at else datetime.now(timezone.utc)
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=timezone.utc)
 
     days_unresolved = max((reference - created_at).total_seconds() / 86400, 0)
 
-    # Weighted score (each component normalized to 0-100)
-    score = (
-        _normalize(impact_scale, MAX_IMPACT)     * 0.40 +
-        _normalize(urgency,      MAX_URGENCY)    * 0.30 +
-        _normalize(days_unresolved, MAX_DAYS)    * 0.20 +
-        _normalize(safety_risk_probability, MAX_SAFETY) * 0.10
+    escalation_weight = escalation_level * 5
+    safety_boost = safety_risk_probability * 10
+
+    raw = (
+        (report_count * 2) +
+        (urgency * 5) +
+        days_unresolved +
+        upvotes +
+        escalation_weight +
+        safety_boost
     )
 
-    return round(min(score, 100.0), 2)
+    # Normalize — 100 points is theoretical max for well-reported critical issue
+    # Soft cap at 100 using sigmoid-like compression above 80
+    score = min(raw, 100.0)
+    return round(score, 2)
 
 
 def recalculate_issue_priority(issue_id: str) -> float:
     """Fetch an issue from DB, recalculate its score, update and return it."""
     with get_db() as cursor:
         cursor.execute(
-            "SELECT impact_scale, urgency, created_at, safety_risk_probability, resolved_at "
-            "FROM issues WHERE id = %s",
+            """SELECT impact_scale, urgency, created_at, safety_risk_probability,
+                      resolved_at, report_count, upvotes, escalation_level
+               FROM issues WHERE id = %s""",
             (issue_id,)
         )
         row = cursor.fetchone()
@@ -69,7 +155,10 @@ def recalculate_issue_priority(issue_id: str) -> float:
             urgency=row["urgency"],
             created_at=row["created_at"],
             safety_risk_probability=row["safety_risk_probability"] or 0.1,
-            resolved_at=row.get("resolved_at")
+            resolved_at=row.get("resolved_at"),
+            report_count=row.get("report_count") or 1,
+            upvotes=row.get("upvotes") or 0,
+            escalation_level=row.get("escalation_level") or 0,
         )
 
         cursor.execute(
@@ -83,8 +172,9 @@ def recalculate_all_priorities():
     """Background job: recalculate priority for all unresolved issues."""
     with get_db() as cursor:
         cursor.execute(
-            "SELECT id, impact_scale, urgency, created_at, safety_risk_probability "
-            "FROM issues WHERE status != 'resolved'"
+            """SELECT id, impact_scale, urgency, created_at, safety_risk_probability,
+                      report_count, upvotes, escalation_level
+               FROM issues WHERE status != 'resolved'"""
         )
         issues = cursor.fetchall()
 

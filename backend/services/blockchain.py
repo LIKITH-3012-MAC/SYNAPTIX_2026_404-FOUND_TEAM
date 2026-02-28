@@ -40,14 +40,15 @@ def log_event(
     with get_db() as cursor:
         previous_hash = _get_last_hash(cursor, issue_id)
 
+        # Hash payload — must match exactly what verify_chain_integrity reconstructs.
+        # title/description are NOT included because they are not stored in the DB
+        # and therefore cannot be recovered during chain verification.
         payload = {
             "issue_id":   issue_id,
             "event_type": event_type,
             "actor_id":   actor_id,
             "old_value":  old_value,
             "new_value":  new_value,
-            "title":      title,
-            "description": description,
             "timestamp":  datetime.utcnow().isoformat()
         }
 
@@ -100,10 +101,12 @@ def verify_chain_integrity(issue_id: str) -> dict:
 
     prev_hash = "0" * 64
     for i, block in enumerate(chain):
+        # Reconstruct the exact same payload that was hashed in log_event.
+        # issue_id comes back as a UUID object from psycopg2 — must convert to str.
         payload = {
-            "issue_id":   block["issue_id"],
+            "issue_id":   str(block["issue_id"]),
             "event_type": block["event_type"],
-            "actor_id":   str(block.get("actor_id")) if block.get("actor_id") else None,
+            "actor_id":   str(block["actor_id"]) if block.get("actor_id") else None,
             "old_value":  block.get("old_value"),
             "new_value":  block.get("new_value"),
             "timestamp":  block["timestamp"].isoformat() if hasattr(block["timestamp"], "isoformat") else str(block["timestamp"])

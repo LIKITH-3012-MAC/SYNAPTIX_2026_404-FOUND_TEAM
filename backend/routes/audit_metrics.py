@@ -10,7 +10,7 @@ from database import get_db
 from services.blockchain import get_audit_chain, verify_chain_integrity
 
 # ── Audit Router ──────────────────────────────────────────────
-audit_router = APIRouter(prefix="/api/audit", tags=["Audit"])
+audit_router = APIRouter()
 
 @audit_router.get("/{issue_id}")
 def get_audit_log(issue_id: str):
@@ -47,7 +47,7 @@ def get_audit_log(issue_id: str):
 
 
 # ── Metrics Router ────────────────────────────────────────────
-metrics_router = APIRouter(prefix="/api/metrics", tags=["Metrics"])
+metrics_router = APIRouter()
 
 @metrics_router.get("/leaderboard")
 def get_leaderboard():

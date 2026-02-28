@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Civic Profile — RESOLVIT</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <style>
+        body {
+            background: #f1f5f9;
+        }
+
+        .citizen-layout {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 16px;
+        }
+
+        .profile-hero {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            border-radius: 24px;
+            padding: 40px;
+            color: white;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-hero::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            pointer-events: none;
+        }
+
+        .profile-hero .badge-display {
+            font-size: 3rem;
+            margin-bottom: 8px;
+        }
+
+        .profile-hero h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .profile-hero .sub {
+            opacity: 0.8;
+            font-size: 1rem;
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .profile-stat {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 16px 20px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .profile-stat .val {
+            font-size: 2rem;
+            font-weight: 900;
+        }
+
+        .profile-stat .lbl {
+            opacity: 0.8;
+            font-size: 0.82rem;
+            margin-top: 2px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+            margin-bottom: 24px;
+        }
+
+        .panel h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 32px;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 9px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e2e8f0;
+        }
+
+        .timeline-entry {
+            position: relative;
+            margin-bottom: 24px;
+            animation: fadeUp 0.5s ease both;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -32px;
+            top: 4px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px currentColor;
+        }
+
+        .timeline-dot.created {
+            background: #6366f1;
+            color: #6366f1;
+        }
+
+        .timeline-dot.assigned {
+            background: #3b82f6;
+            color: #3b82f6;
+        }
+
+        .timeline-dot.in_progress {
+            background: #f59e0b;
+            color: #f59e0b;
+        }
+
+        .timeline-dot.escalated {
+            background: #dc2626;
+            color: #dc2626;
+        }
+
+        .timeline-dot.resolved {
+            background: #16a34a;
+            color: #16a34a;
+        }
+
+        .timeline-dot.other {
+            background: #94a3b8;
+            color: #94a3b8;
+        }
+
+        .timeline-time {
+            font-size: 0.72rem;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .timeline-label {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .timeline-detail {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* Badge progress */
+        .badge-progress-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+            height: 8px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .badge-progress-fill {
+            height: 100%;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            transition: width 1.5s ease;
+        }
+
+        /* Issue mini-card */
+        .my-issue-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .my-issue-card:hover {
+            border-color: #6366f1;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .my-issue-card.border-critical {
+            border-left: 4px solid #dc2626;
+        }
+
+        .my-issue-card.border-high {
+            border-left: 4px solid #ea580c;
+        }
+
+        .my-issue-card.border-medium {
+            border-left: 4px solid #ca8a04;
+        }
+
+        .my-issue-card.border-low {
+            border-left: 4px solid #16a34a;
+        }
+
+        /* Points feed */
+        .credit-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .credit-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .credit-pts {
+            font-weight: 800;
+            font-size: 1rem;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.5
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="nav-logo">
+                <div class="nav-logo-icon">⚖️</div>RESOLVIT
+            </a>
+            <div class="nav-links">
+                <a href="dashboard.html" class="nav-link">Issues</a>
+                <a href="submit.html" class="nav-link">Report</a>
+                <a href="citizen.html" class="nav-link active">My Profile</a>
+            </div>
+            <div class="nav-actions" id="nav-actions"></div>
+        </div>
+    </nav>
+
+    <div class="citizen-layout">
+
+        <!-- Profile Hero -->
+        <div class="profile-hero" id="profile-hero">
+            <div class="badge-display" id="hero-badge">🌱</div>
+            <h1 id="hero-name">Loading...</h1>
+            <div class="sub" id="hero-sub">Civic Credit Profile</div>
+            <div class="profile-stats">
+                <div class="profile-stat">
+                    <div class="val" id="ps-points">—</div>
+                    <div class="lbl">Total Points</div>
+                </div>
+                <div class="profile-stat">
+                    <div class="val" id="ps-rank">—</div>
+                    <div class="lbl">Global Rank</div>
+                </div>
+                <div class="profile-stat">
+                    <div class="val" id="ps-issues">—</div>
+                    <div class="lbl">Issues Reported</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Badge Progress -->
+        <div class="panel">
+            <h3>🏅 Badge Progress</h3>
+            <div id="badge-progress-area"></div>
+        </div>
+
+        <!-- My Issues + Timeline -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+            <!-- My Issues -->
+            <div class="panel">
+                <h3>📋 My Reported Issues</h3>
+                <div id="my-issues-list">
+                    <p style="color:#94a3b8;text-align:center;padding:24px;">Loading...</p>
+                </div>
+            </div>
+
+            <!-- Points Feed -->
+            <div class="panel">
+                <h3>💰 Recent Points Activity</h3>
+                <div id="credits-feed">
+                    <p style="color:#94a3b8;text-align:center;padding:24px;">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Issue Timeline Modal (shown on issue card click) -->
+        <div class="modal-overlay" id="timeline-modal" style="display:none;">
+            <div class="modal-box" style="max-width:520px;max-height:80vh;overflow-y:auto;">
+                <button onclick="document.getElementById('timeline-modal').style.display='none'"
+                    style="position:absolute;top:16px;right:16px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:#94a3b8;">✕</button>
+                <h3 style="margin-bottom:4px;" id="tm-title">Issue Timeline</h3>
+                <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:24px;" id="tm-status"></p>
+                <div id="timeline-content" class="timeline"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/issues.js"></script>
+
+    <script>
+        const BADGES = [
+            { pts: 5000, icon: "🏆", label: "Urban Champion" },
+            { pts: 1000, icon: "🦸", label: "Civic Hero" },
+            { pts: 500, icon: "🛡️", label: "City Guardian" },
+            { pts: 100, icon: "⭐", label: "Contributor" },
+            { pts: 0, icon: "🌱", label: "Newcomer" },
+        ];
+
+        const ACTION_ICONS = {
+            report_issue: { icon: "📝", color: "#6366f1", label: "Reported Issue" },
+            upvote: { icon: "👍", color: "#3b82f6", label: "Upvoted Issue" },
+            issue_resolved: { icon: "✅", color: "#16a34a", label: "Issue Resolved" },
+            helpful_evidence: { icon: "📎", color: "#f59e0b", label: "Helpful Evidence" },
+            community_mark: { icon: "🌟", color: "#ec4899", label: "Community Mark" },
+        };
+
+        const TIMELINE_EVENT_LABELS = {
+            created: { label: "Issue Created", dot: "created" },
+            updated: { label: "Status Updated", dot: "assigned" },
+            escalated: { label: "Escalated", dot: "escalated" },
+            resolved: { label: "Resolved", dot: "resolved" },
+            clustered: { label: "Merged / Clustered", dot: "in_progress" },
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const user = Auth.getUser();
+            if (!user) {
+                showToast("Please log in to view your profile", "warning");
+                setTimeout(() => location.href = "index.html", 1500);
+                return;
+            }
+            document.getElementById("nav-actions").innerHTML = `
+    <span style="font-size:0.85rem;color:var(--text-secondary);">👤 ${user.username}</span>
+    <button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button>`;
+            document.getElementById("hero-name").textContent = user.full_name || user.username;
+            initCitizenProfile(user);
+            window.addEventListener("scroll", () => document.getElementById("navbar").classList.toggle("scrolled", window.scrollY > 50));
+        });
+
+        async function initCitizenProfile(user) {
+            await Promise.all([loadCredits(user), loadMyIssues(user)]);
+        }
+
+        async function loadCredits(user) {
+            try {
+                const credits = await API.get("/api/credits/me");
+                const pts = credits.total_points || 0;
+                document.getElementById("hero-badge").textContent = BADGES.find(b => pts >= b.pts)?.icon || "🌱";
+                document.getElementById("ps-points").textContent = pts.toLocaleString();
+                document.getElementById("ps-rank").textContent = "#" + (credits.rank || "?");
+                document.getElementById("hero-sub").textContent = credits.badge + " · Rank #" + (credits.rank || "?");
+
+                // Badge progress
+                renderBadgeProgress(pts);
+
+                // Credits feed
+                const feed = document.getElementById("credits-feed");
+                if (!credits.transactions?.length) {
+                    feed.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:24px;">No activity yet. Report an issue to earn points!</p>`;
+                } else {
+                    feed.innerHTML = credits.transactions.map(t => {
+                        const a = ACTION_ICONS[t.action_type] || { icon: "💰", color: "#94a3b8", label: t.action_type };
+                        const dt = new Date(t.created_at).toLocaleDateString();
+                        return `<div class="credit-row">
+          <div class="credit-icon" style="background:${a.color}15;color:${a.color};">${a.icon}</div>
+          <div style="flex:1;"><div style="font-size:0.88rem;font-weight:600;color:#1e293b;">${t.description || a.label}</div>
+            <div style="font-size:0.75rem;color:#94a3b8;">${dt}</div></div>
+          <div class="credit-pts" style="color:${a.color};">+${t.points}</div>
+        </div>`;
+                    }).join("");
+                }
+            } catch (e) { console.warn("Credits:", e); }
+        }
+
+        function renderBadgeProgress(pts) {
+            const el = document.getElementById("badge-progress-area");
+            el.innerHTML = BADGES.slice(0, -1).map(b => {
+                const prev = BADGES[BADGES.indexOf(b) + 1] || { pts: 0 };
+                const earned = pts >= b.pts;
+                const progress = earned ? 100 : pts < prev.pts ? 0 : Math.round(((pts - prev.pts) / (b.pts - prev.pts)) * 100);
+                return `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="font-size:1.5rem;filter:${earned ? 'none' : 'grayscale(1) opacity(0.4)'};">${b.icon}</div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;font-weight:600;margin-bottom:4px;">
+          <span style="color:${earned ? '#6366f1' : '#94a3b8'};">${b.label}</span>
+          <span style="color:#94a3b8;">${b.pts.toLocaleString()} pts ${earned ? "✅" : ""}</span>
+        </div>
+        <div class="badge-progress-track">
+          <div class="badge-progress-fill" style="width:${progress}%;"></div>
+        </div>
+      </div>
+    </div>`;
+            }).join("");
+        }
+
+        async function loadMyIssues(user) {
+            try {
+                const issues = await API.get(`/api/issues?limit=50&sort_by=created_at&order=desc`);
+                // Filter to reporter's own issues client-side (simplest approach)
+                const mine = issues.filter(i => i.reporter_id === user.sub || i.reporter_name === user.username);
+                document.getElementById("ps-issues").textContent = mine.length;
+                const container = document.getElementById("my-issues-list");
+                if (!mine.length) {
+                    container.innerHTML = `<div style="text-align:center;padding:32px;color:#94a3b8;">
+        <div style="font-size:2rem;margin-bottom:8px;">📭</div>
+        <p>No issues reported yet!</p>
+        <a href="submit.html" class="btn btn-primary" style="margin-top:12px;display:inline-block;">+ Report Your First Issue</a>
+      </div>`;
+                    return;
+                }
+                container.innerHTML = mine.map(issue => {
+                    const band = getPriorityBand(issue.priority_score || 0);
+                    const statusColors = { reported: "#94a3b8", verified: "#3b82f6", in_progress: "#f59e0b", escalated: "#dc2626", resolved: "#16a34a", assigned: "#6366f1" };
+                    const sc = statusColors[issue.status] || "#94a3b8";
+                    return `<div class="my-issue-card border-${band.label.toLowerCase()}" onclick="openTimeline('${issue.id}', '${issue.title.replace(/'/g, "\\'")}', '${issue.status}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+          <div style="font-weight:700;font-size:0.9rem;line-height:1.3;flex:1;">${issue.title}</div>
+          <span style="font-weight:800;color:${band.color};margin-left:8px;">${issue.priority_score}</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:0.75rem;">
+          <span style="color:${sc};font-weight:600;">${issue.status.replace("_", " ")}</span>
+          <span style="color:#94a3b8;">${issue.category}</span>
+          <span style="color:#94a3b8;">📅 ${issue.days_unresolved}d ago</span>
+        </div>
+        ${issue.sla_seconds_remaining != null && !issue.sla_breached && issue.sla_seconds_remaining < 7200
+                            ? `<div style="color:#dc2626;font-size:0.72rem;font-weight:700;margin-top:4px;">⏰ SLA at risk!</div>` : ""}
+        ${issue.sla_breached ? `<div style="color:#dc2626;font-size:0.72rem;font-weight:700;margin-top:4px;animation:pulse 1s infinite;">🚨 SLA BREACHED</div>` : ""}
+      </div>`;
+                }).join("");
+            } catch (e) { console.warn("My issues:", e); }
+        }
+
+        async function openTimeline(issueId, title, status) {
+            document.getElementById("timeline-modal").style.display = "flex";
+            document.getElementById("tm-title").textContent = title;
+            document.getElementById("tm-status").textContent = "Current status: " + status.replace("_", " ");
+            const content = document.getElementById("timeline-content");
+            content.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px;">Loading timeline...</p>`;
+            try {
+                const logs = await API.get(`/api/audit/${issueId}`);
+                if (!logs.length) {
+                    content.innerHTML = `<p style="color:#94a3b8;">No audit log entries yet.</p>`;
+                    return;
+                }
+                const eventOrder = ["created", "updated", "clustered", "escalated", "resolved"];
+                const sorted = logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                content.innerHTML = sorted.map((log, i) => {
+                    const ev = TIMELINE_EVENT_LABELS[log.event_type] || { label: log.event_type, dot: "other" };
+                    const dt = new Date(log.timestamp);
+                    const timeStr = dt.toLocaleDateString() + " " + dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                    const detail = log.new_value?.status
+                        ? `→ ${log.new_value.status.replace("_", " ")}`
+                        : log.new_value?.priority_score
+                            ? `Priority: ${log.new_value.priority_score}`
+                            : "";
+                    return `
+      <div class="timeline-entry" style="animation-delay:${i * 0.08}s;">
+        <div class="timeline-dot ${ev.dot}"></div>
+        <div class="timeline-time">${timeStr}</div>
+        <div class="timeline-label">${ev.label}</div>
+        ${detail ? `<div class="timeline-detail">${detail}</div>` : ""}
+        ${log.actor_name ? `<div class="timeline-detail">by ${log.actor_name}</div>` : ""}
+      </div>`;
+                }).join("");
+            } catch (e) {
+                content.innerHTML = `<p style="color:#94a3b8;">Could not load timeline.</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

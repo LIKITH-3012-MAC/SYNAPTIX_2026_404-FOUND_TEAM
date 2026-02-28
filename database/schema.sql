@@ -40,15 +40,23 @@ CREATE TABLE IF NOT EXISTS issues (
     longitude               DOUBLE PRECISION,
     urgency                 SMALLINT NOT NULL DEFAULT 3
                               CHECK (urgency BETWEEN 1 AND 5),
-    impact_scale            INTEGER NOT NULL DEFAULT 1,   -- Number of people affected
+    impact_scale            INTEGER NOT NULL DEFAULT 1,
     image_url               TEXT,
     status                  VARCHAR(32) NOT NULL DEFAULT 'reported'
                               CHECK (status IN ('reported','verified','clustered','assigned',
                                                 'in_progress','escalated','resolved')),
     priority_score          FLOAT DEFAULT 0.0,
     safety_risk_probability FLOAT DEFAULT 0.1,
-    cluster_id              UUID,                          -- FK added after cluster table
-    reporter_id             UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    -- SLA Engine
+    sla_hours               INTEGER DEFAULT 48,
+    sla_expires_at          TIMESTAMPTZ,
+    -- Community engagement
+    upvotes                 INTEGER DEFAULT 0,
+    report_count            INTEGER DEFAULT 1,
+    escalation_level        SMALLINT DEFAULT 0,
+    -- Cluster / Owner
+    cluster_id              UUID,
+    reporter_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     assigned_authority_id   UUID REFERENCES users(id) ON DELETE SET NULL,
     resolution_note         TEXT,
     resolution_proof_url    TEXT,
@@ -171,3 +179,21 @@ CREATE TRIGGER update_clusters_updated_at
 CREATE TRIGGER update_metrics_updated_at
     BEFORE UPDATE ON authority_metrics
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================
+-- CIVIC CREDITS TABLE (Gamified Engagement Ledger)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS civic_credits (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    issue_id    UUID REFERENCES issues(id) ON DELETE SET NULL,
+    action_type VARCHAR(64) NOT NULL
+                  CHECK (action_type IN ('report_issue','upvote','issue_resolved','helpful_evidence','community_mark')),
+    points      INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_credits_user   ON civic_credits(user_id);
+CREATE INDEX idx_credits_issue  ON civic_credits(issue_id);
+CREATE INDEX idx_credits_time   ON civic_credits(created_at DESC);
