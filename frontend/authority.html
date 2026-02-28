@@ -20,7 +20,7 @@
                 <a href="authority.html" class="nav-link active">Authority Portal</a>
             </div>
             <div class="nav-actions" id="nav-actions">
-                <button class="btn btn-outline btn-sm" onclick="showLoginModal()">Login</button>
+                <!-- Unified Navbar -->
             </div>
         </div>
     </nav>
@@ -195,7 +195,8 @@
                 <div class="form-group"><label class="form-label">Password</label><input type="password" id="l-pass"
                         class="form-input" required /></div>
                 <div style="text-align: right; margin-top: -8px; margin-bottom: 16px;">
-                    <a href="forgot-password.html" style="font-size: 0.85rem; color: var(--accent); text-decoration: none;">Forgot Password?</a>
+                    <a href="forgot-password.html"
+                        style="font-size: 0.85rem; color: var(--accent); text-decoration: none;">Forgot Password?</a>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">Login to Authority
                     Portal</button>
@@ -235,9 +236,9 @@
         });
 
         function updateNavAuth() {
+            if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
             const user = Auth.getUser();
-            if (user) {
-                document.getElementById('nav-actions').innerHTML = `<span style="font-size:0.85rem;color:var(--text-secondary);">👤 ${user.username}</span><button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button>`;
+            if (user && document.getElementById('logged-in-user')) {
                 document.getElementById('logged-in-user').textContent = `Logged in as ${user.username} (${user.role})`;
             }
         }

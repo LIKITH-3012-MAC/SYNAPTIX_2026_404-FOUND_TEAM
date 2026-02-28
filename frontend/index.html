@@ -27,8 +27,7 @@
         <a href="authority.html" class="nav-link">Authorities</a>
       </div>
       <div class="nav-actions" id="nav-actions">
-        <button class="btn btn-outline btn-sm" onclick="openLogin()">Login</button>
-        <a href="submit.html" class="btn btn-primary btn-sm">Report Issue</a>
+        <!-- Unified Navbar updated via Auth.updateNavbar() -->
       </div>
     </div>
   </nav>
@@ -409,7 +408,24 @@
     document.addEventListener('DOMContentLoaded', () => {
       initMap();
       loadHomeData();
-      updateNavAuth();
+      if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
+
+      // Hero Entrance Animation
+      const heroContent = document.querySelector('.hero-content');
+      if (heroContent) {
+        heroContent.style.opacity = '0';
+        heroContent.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          heroContent.style.transition = 'all 1s cubic-bezier(0.2, 0.8, 0.2, 1)';
+          heroContent.style.opacity = '1';
+          heroContent.style.transform = 'translateY(0)';
+        }, 100);
+      }
+    });
+
+    // Handle back button / session changes
+    window.addEventListener('pageshow', () => {
+      if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
     });
   </script>
 </body>

@@ -28,7 +28,8 @@ def list_users(
     if role:
         conditions.append("role = %s"); params.append(role)
     if is_active is not None:
-        conditions.append("is_active = %s"); params.append(is_active)
+        conditions.append("is_active = %s")
+        params.append(bool(is_active))
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     with get_db() as cursor:
         cursor.execute(
@@ -168,11 +169,14 @@ def get_admin_dashboard(current_user: dict = Depends(require_roles("admin"))):
         d = dict(r)
         d["id"] = str(d["id"])
         sla = d.get("sla_expires_at")
-        if sla:
+        if sla and hasattr(sla, "tzinfo"):
             if sla.tzinfo is None:
                 sla = sla.replace(tzinfo=timezone.utc)
             d["sla_expires_at"] = sla.isoformat()
-            d["sla_breached"] = sla < now_ts
+            d["sla_breached"] = bool(sla < now_ts)
+        else:
+            d["sla_expires_at"] = str(sla) if sla else None
+            d["sla_breached"] = False
         return d
 
     return {
@@ -228,7 +232,7 @@ def get_escalation_monitor(current_user: dict = Depends(require_roles("admin")))
         last_esc = d.get("last_escalated_at")
         if last_esc and hasattr(last_esc, "isoformat"):
             d["last_escalated_at"] = last_esc.isoformat()
-        d["hours_overdue"] = round(float(d.get("hours_overdue") or 0), 1)
+        d["hours_overdue"] = round(float(d.get("hours_overdue") or 0.0), 1)
         result.append(d)
     return result
 

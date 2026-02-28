@@ -24,7 +24,7 @@
                 <a href="authority.html" class="nav-link">Authorities</a>
             </div>
             <div class="nav-actions" id="nav-actions">
-                <a href="submit.html" class="btn btn-primary btn-sm">+ Report Issue</a>
+                <!-- Unified Navbar -->
             </div>
         </div>
     </nav>
@@ -143,15 +143,7 @@
             if (typeof initDemoPanel === "function") initDemoPanel();
         });
         function updateNavAuth() {
-            const user = Auth.getUser();
-            if (!user) return;
-            let extra = '';
-            if (user.role === 'admin')
-                extra = `<a href="admin.html" class="btn btn-ghost btn-sm">🏛️ Admin</a>`;
-            else if (user.role === 'citizen')
-                extra = `<a href="citizen.html" class="btn btn-ghost btn-sm">⭐ My Profile</a>`;
-            document.getElementById('nav-actions').innerHTML =
-                `${extra}<span style="font-size:0.85rem;color:var(--text-secondary);">👤 ${user.username}</span><button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button><a href="submit.html" class="btn btn-primary btn-sm">+ Report</a>`;
+            if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
         }
     </script>
 </body>

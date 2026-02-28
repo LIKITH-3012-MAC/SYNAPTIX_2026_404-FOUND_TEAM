@@ -24,7 +24,7 @@
                 <a href="authority.html" class="nav-link">Authorities</a>
             </div>
             <div class="nav-actions" id="nav-actions">
-                <button class="btn btn-outline btn-sm" onclick="showAuthModal()">Login</button>
+                <!-- Unified Navbar -->
             </div>
         </div>
     </nav>
@@ -347,8 +347,7 @@
         }
 
         function updateNavAuth() {
-            const user = Auth.getUser();
-            if (user) document.getElementById('nav-actions').innerHTML = `<span style="font-size:0.85rem;color:var(--text-secondary);">👤 ${user.username}</span><button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button>`;
+            if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
         }
 
         document.getElementById('issue-form').addEventListener('submit', async (e) => {

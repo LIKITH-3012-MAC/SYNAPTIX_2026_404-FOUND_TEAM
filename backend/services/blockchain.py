@@ -4,7 +4,7 @@ SHA-256 based immutable audit log (append-only chain)
 """
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from database import get_db
 
 
@@ -44,12 +44,12 @@ def log_event(
         # title/description are NOT included because they are not stored in the DB
         # and therefore cannot be recovered during chain verification.
         payload = {
-            "issue_id":   issue_id,
+            "issue_id":   str(issue_id),
             "event_type": event_type,
-            "actor_id":   actor_id,
+            "actor_id":   str(actor_id) if actor_id else None,
             "old_value":  old_value,
             "new_value":  new_value,
-            "timestamp":  datetime.utcnow().isoformat()
+            "timestamp":  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
         }
 
         computed_hash = _compute_hash(previous_hash, payload)
@@ -57,8 +57,8 @@ def log_event(
         cursor.execute(
             """
             INSERT INTO audit_logs
-                (issue_id, event_type, actor_id, old_value, new_value, hash, previous_hash)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (issue_id, event_type, actor_id, old_value, new_value, hash, previous_hash, timestamp)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 issue_id,
@@ -67,7 +67,8 @@ def log_event(
                 json.dumps(old_value) if old_value else None,
                 json.dumps(new_value) if new_value else None,
                 computed_hash,
-                previous_hash
+                previous_hash,
+                payload["timestamp"]
             )
         )
 
@@ -102,14 +103,20 @@ def verify_chain_integrity(issue_id: str) -> dict:
     prev_hash = "0" * 64
     for i, block in enumerate(chain):
         # Reconstruct the exact same payload that was hashed in log_event.
-        # issue_id comes back as a UUID object from psycopg2 — must convert to str.
+        # Use strftime to match the format used in log_event.
+        ts = block["timestamp"]
+        if hasattr(ts, "strftime"):
+            ts_str = ts.strftime("%Y-%m-%dT%H:%M:%S")
+        else:
+            ts_str = str(ts)[:19].replace(" ", "T") # fallback for string timestamps
+
         payload = {
             "issue_id":   str(block["issue_id"]),
             "event_type": block["event_type"],
             "actor_id":   str(block["actor_id"]) if block.get("actor_id") else None,
             "old_value":  block.get("old_value"),
             "new_value":  block.get("new_value"),
-            "timestamp":  block["timestamp"].isoformat() if hasattr(block["timestamp"], "isoformat") else str(block["timestamp"])
+            "timestamp":  ts_str
         }
         expected = _compute_hash(prev_hash, payload)
         if expected != block["hash"]:

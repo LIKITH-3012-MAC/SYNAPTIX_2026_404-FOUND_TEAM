@@ -277,6 +277,10 @@
             <div style="height:1px;background:rgba(255,255,255,0.1);margin:16px;"></div>
             <a class="sidebar-link" href="authority.html">← Authority Portal</a>
             <a class="sidebar-link" href="dashboard.html">← Public Dashboard</a>
+            <div style="height:1px;background:rgba(255,255,255,0.1);margin:16px;"></div>
+            <div id="admin-profile-card" style="padding:0 20px 16px;font-size:0.85rem;color:rgba(255,255,255,0.6);">
+                <div style="margin-bottom:8px;font-weight:700;color:white;" id="sidebar-user-name">👤 Loading...</div>
+            </div>
             <a class="sidebar-link" onclick="Auth.logout();location.href='index.html'">🚪 Logout</a>
         </aside>
 
@@ -459,54 +463,55 @@
             <script src="js/simulation.js"></script>
 
             <script>
-        let dashboardData = null;
-        let adminMap = null;
+                let dashboardData = null;
+                let adminMap = null;
 
-        // Guard: admin only
-        document.addEventListener("DOMContentLoaded", () => {
-            const user = Auth.getUser();
-            if (!user || user.role !== "admin") {
-                showToast("⛔ Admin access required", "error");
-                setTimeout(() => location.href = "index.html", 1500);
-                return;
-            }
-            initAdmin();
-            // Init demo panel from simulation.js
-            if (typeof initDemoPanel === "function") initDemoPanel();
-        });
+                // Guard: admin only
+                document.addEventListener("DOMContentLoaded", () => {
+                    const user = Auth.getUser();
+                    if (!user || user.role !== "admin") {
+                        showToast("⛔ Admin access required", "error");
+                        setTimeout(() => location.href = "index.html", 1500);
+                        return;
+                    }
+                    document.getElementById('sidebar-user-name').textContent = `👤 ${user.username}`;
+                    initAdmin();
+                    // Init demo panel from simulation.js
+                    if (typeof initDemoPanel === "function") initDemoPanel();
+                });
 
-        async function initAdmin() {
-            await Promise.all([loadStats(), loadDashboard(), loadEscalations(), loadUsers(), loadGovernanceHealth(), loadPressureBoard(), loadAnomalies()]);
-        }
-
-        async function loadStats() {
-            try {
-                const s = await API.get("/api/admin/stats");
-                document.getElementById("k-total").textContent = s.issues?.total_issues ?? "—";
-                document.getElementById("k-escalated").textContent = s.issues?.escalated ?? "—";
-                document.getElementById("k-sla").textContent = s.issues?.sla_breached ?? "—";
-                document.getElementById("k-credits").textContent = s.credits?.total_awarded?.toLocaleString() ?? "—";
-            } catch (e) { console.warn("Stats:", e); }
-        }
-
-        async function loadDashboard() {
-            try {
-                dashboardData = await API.get("/api/admin/dashboard");
-                initHeatmap(dashboardData.heatmap_issues || []);
-                renderDeptPerformance(dashboardData.department_performance || []);
-                renderAnalytics(dashboardData.civic_engagement, dashboardData.category_distribution || []);
-            } catch (e) { console.warn("Dashboard:", e); }
-        }
-
-        async function loadEscalations() {
-            try {
-                const rows = await API.get("/api/admin/escalations");
-                const tbody = document.getElementById("esc-tbody");
-                if (!rows.length) {
-                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:#16a34a;">✅ No active escalations!</td></tr>`;
-                    return;
+                async function initAdmin() {
+                    await Promise.all([loadStats(), loadDashboard(), loadEscalations(), loadUsers(), loadGovernanceHealth(), loadPressureBoard(), loadAnomalies()]);
                 }
-                tbody.innerHTML = rows.map(r => `
+
+                async function loadStats() {
+                    try {
+                        const s = await API.get("/api/admin/stats");
+                        document.getElementById("k-total").textContent = s.issues?.total_issues ?? "—";
+                        document.getElementById("k-escalated").textContent = s.issues?.escalated ?? "—";
+                        document.getElementById("k-sla").textContent = s.issues?.sla_breached ?? "—";
+                        document.getElementById("k-credits").textContent = s.credits?.total_awarded?.toLocaleString() ?? "—";
+                    } catch (e) { console.warn("Stats:", e); }
+                }
+
+                async function loadDashboard() {
+                    try {
+                        dashboardData = await API.get("/api/admin/dashboard");
+                        initHeatmap(dashboardData.heatmap_issues || []);
+                        renderDeptPerformance(dashboardData.department_performance || []);
+                        renderAnalytics(dashboardData.civic_engagement, dashboardData.category_distribution || []);
+                    } catch (e) { console.warn("Dashboard:", e); }
+                }
+
+                async function loadEscalations() {
+                    try {
+                        const rows = await API.get("/api/admin/escalations");
+                        const tbody = document.getElementById("esc-tbody");
+                        if (!rows.length) {
+                            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:#16a34a;">✅ No active escalations!</td></tr>`;
+                            return;
+                        }
+                        tbody.innerHTML = rows.map(r => `
       <tr>
         <td><a href="issue.html?id=${r.id}" style="font-weight:600;color:#6366f1;">${r.title}</a></td>
         <td>${r.category}</td>
@@ -516,14 +521,14 @@
         <td><span style="font-weight:700;color:${r.priority_score >= 80 ? '#dc2626' : r.priority_score >= 55 ? '#ea580c' : '#ca8a04'}">${r.priority_score}</span></td>
         <td><a href="issue.html?id=${r.id}" class="btn btn-primary btn-sm">View</a></td>
       </tr>`).join("");
-            } catch (e) { console.warn("Escalations:", e); }
-        }
+                    } catch (e) { console.warn("Escalations:", e); }
+                }
 
-        async function loadUsers() {
-            try {
-                const users = await API.get("/api/admin/users");
-                const tbody = document.getElementById("users-tbody");
-                tbody.innerHTML = users.map(u => `
+                async function loadUsers() {
+                    try {
+                        const users = await API.get("/api/admin/users");
+                        const tbody = document.getElementById("users-tbody");
+                        tbody.innerHTML = users.map(u => `
       <tr>
         <td><strong>${u.username}</strong></td>
         <td style="color:#64748b;">${u.email}</td>
@@ -532,127 +537,127 @@
         <td>${u.is_active ? "✅ Active" : "🔴 Disabled"}</td>
         <td><button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}',this)">${u.is_active ? "Disable" : "Enable"}</button></td>
       </tr>`).join("");
-            } catch (e) { console.warn("Users:", e); }
-        }
+                    } catch (e) { console.warn("Users:", e); }
+                }
 
-        function initHeatmap(issues) {
-            if (adminMap) { adminMap.remove(); adminMap = null; }
-            adminMap = L.map("heatmap").setView([14.9282, 79.9900], 13);
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: "© OpenStreetMap contributors"
-            }).addTo(adminMap);
+                function initHeatmap(issues) {
+                    if (adminMap) { adminMap.remove(); adminMap = null; }
+                    adminMap = L.map("heatmap").setView([14.9282, 79.9900], 13);
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        attribution: "© OpenStreetMap contributors"
+                    }).addTo(adminMap);
 
-            // Use Urban Node rendering with density overlays (admin role = full data)
-            if (typeof renderUrbanNodes === "function") {
-                renderUrbanNodes(adminMap, issues, "admin");
-                if (typeof renderDensityOverlays === "function") renderDensityOverlays(adminMap, issues);
-            }
-        }
+                    // Use Urban Node rendering with density overlays (admin role = full data)
+                    if (typeof renderUrbanNodes === "function") {
+                        renderUrbanNodes(adminMap, issues, "admin");
+                        if (typeof renderDensityOverlays === "function") renderDensityOverlays(adminMap, issues);
+                    }
+                }
 
-        async function loadGovernanceHealth() {
-            try {
-                const gh = await API.get("/api/admin/governance_health");
-                document.getElementById("gov-score").textContent = gh.health_index;
-                document.getElementById("gov-label").textContent = gh.label;
-                const c = gh.components || {};
-                document.getElementById("gov-components").innerHTML = [
-                    ["SLA Compliance",     c.sla_compliance, "#16a34a"],
-                    ["Transparency",       c.transparency, "#6366f1"],
-                    ["Citizen Satisfaction", c.citizen_satisfaction, "#3b82f6"],
-                    ["Escalation Control", c.escalation_control, "#ca8a04"],
-                    ["Backlog Stability",  c.backlog_stability, "#8b5cf6"],
-                ].map(([label, val, color]) => `
+                async function loadGovernanceHealth() {
+                    try {
+                        const gh = await API.get("/api/admin/governance_health");
+                        document.getElementById("gov-score").textContent = gh.health_index;
+                        document.getElementById("gov-label").textContent = gh.label;
+                        const c = gh.components || {};
+                        document.getElementById("gov-components").innerHTML = [
+                            ["SLA Compliance", c.sla_compliance, "#16a34a"],
+                            ["Transparency", c.transparency, "#6366f1"],
+                            ["Citizen Satisfaction", c.citizen_satisfaction, "#3b82f6"],
+                            ["Escalation Control", c.escalation_control, "#ca8a04"],
+                            ["Backlog Stability", c.backlog_stability, "#8b5cf6"],
+                        ].map(([label, val, color]) => `
                   <div style="background:#f8fafc;border-radius:14px;padding:16px;text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:900;color:${color};">${(val||0).toFixed(1)}</div>
+                    <div style="font-size:1.5rem;font-weight:900;color:${color};">${(val || 0).toFixed(1)}</div>
                     <div style="color:#64748b;font-size:0.78rem;margin-top:4px;">${label}</div>
-                    <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:8px;"><div style="height:100%;width:${val||0}%;background:${color};border-radius:2px;"></div></div>
+                    <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:8px;"><div style="height:100%;width:${val || 0}%;background:${color};border-radius:2px;"></div></div>
                   </div>`).join("");
-            } catch (e) { console.warn("Gov health:", e); }
-        }
+                    } catch (e) { console.warn("Gov health:", e); }
+                }
 
-        async function loadPressureBoard() {
-            try {
-                const rows = await API.get("/api/admin/pressure_data");
-                const el = document.getElementById("pressure-list");
-                if (!rows.length) { el.innerHTML = "<p style='color:#94a3b8;text-align:center;padding:24px;'>No pressure data yet.</p>"; return; }
-                el.innerHTML = rows.map((r, i) => {
-                    const ps = parseFloat(r.pressure_score || 0);
-                    const barPct = Math.min(ps / 4, 100);
-                    const barColor = ps >= 200 ? "#dc2626" : ps >= 100 ? "#ea580c" : ps >= 50 ? "#ca8a04" : "#16a34a";
-                    return `<div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9;">
-                      <div style="width:28px;height:28px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;">${i+1}</div>
+                async function loadPressureBoard() {
+                    try {
+                        const rows = await API.get("/api/admin/pressure_data");
+                        const el = document.getElementById("pressure-list");
+                        if (!rows.length) { el.innerHTML = "<p style='color:#94a3b8;text-align:center;padding:24px;'>No pressure data yet.</p>"; return; }
+                        el.innerHTML = rows.map((r, i) => {
+                            const ps = parseFloat(r.pressure_score || 0);
+                            const barPct = Math.min(ps / 4, 100);
+                            const barColor = ps >= 200 ? "#dc2626" : ps >= 100 ? "#ea580c" : ps >= 50 ? "#ca8a04" : "#16a34a";
+                            return `<div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9;">
+                      <div style="width:28px;height:28px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;">${i + 1}</div>
                       <div style="flex:1;">
                         <div style="font-weight:600;font-size:0.88rem;"><a href="issue.html?id=${r.id}" style="color:#6366f1;">${r.title}</a></div>
                         <div style="display:flex;gap:8px;font-size:0.75rem;color:#94a3b8;margin-top:2px;">
-                          <span>${r.category}</span><span>📢 ${r.report_count||1}</span><span>👍 ${r.upvotes||0}</span>
+                          <span>${r.category}</span><span>📢 ${r.report_count || 1}</span><span>👍 ${r.upvotes || 0}</span>
                           <span style="color:${barColor};font-weight:700;">${r.pressure_label}</span>
                         </div>
                         <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:${barPct}%;background:${barColor};border-radius:2px;"></div></div>
                       </div>
                       <div style="font-weight:900;font-size:1.1rem;color:${barColor};">${Math.round(ps)}</div>
                     </div>`;
-                }).join("");
-            } catch (e) { console.warn("Pressure board:", e); }
-        }
+                        }).join("");
+                    } catch (e) { console.warn("Pressure board:", e); }
+                }
 
-        async function loadAnomalies() {
-            try {
-                const rows = await API.get("/api/admin/anomalies");
-                const el = document.getElementById("anomaly-list");
-                if (!rows.length) { el.innerHTML = "<p style='color:#16a34a;text-align:center;padding:24px;'>✅ No anomalies detected. All officers performing normally.</p>"; return; }
-                el.innerHTML = rows.map(r => `
+                async function loadAnomalies() {
+                    try {
+                        const rows = await API.get("/api/admin/anomalies");
+                        const el = document.getElementById("anomaly-list");
+                        if (!rows.length) { el.innerHTML = "<p style='color:#16a34a;text-align:center;padding:24px;'>✅ No anomalies detected. All officers performing normally.</p>"; return; }
+                        el.innerHTML = rows.map(r => `
                   <div style="padding:14px;border:1px solid #fed7aa;border-radius:12px;background:#fff7ed;margin-bottom:12px;">
                     <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                      <div style="font-weight:700;color:#ea580c;">${r.anomaly_type?.replace(/_/g,' ')} — ${r.officer_name || r.officer_username || 'Unknown'}</div>
+                      <div style="font-weight:700;color:#ea580c;">${r.anomaly_type?.replace(/_/g, ' ')} — ${r.officer_name || r.officer_username || 'Unknown'}</div>
                       <span style="background:#fed7aa;color:#9a3412;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">${r.severity}</span>
                     </div>
                     <div style="font-size:0.83rem;color:#475569;">${r.description}</div>
                     <div style="font-size:0.72rem;color:#94a3b8;margin-top:6px;">${r.department || ''} · Detected: ${new Date(r.detected_at).toLocaleString()}</div>
                   </div>`).join("");
-            } catch (e) { console.warn("Anomalies:", e); }
-        }
+                    } catch (e) { console.warn("Anomalies:", e); }
+                }
 
-        let radarMap = null;
-        async function enterRadarMode() {
-            document.getElementById("radar-overlay").style.display = "block";
-            if (!radarMap) {
-                radarMap = L.map("radar-map").setView([14.9282, 79.9900], 13);
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                    attribution: "© OpenStreetMap"
-                }).addTo(radarMap);
-            }
-            // Refresh live load
-            try {
-                const issues = await API.get("/api/issues?limit=200&sort_by=priority_score");
-                setTimeout(() => {
-                    radarMap.invalidateSize();
-                    if (typeof renderUrbanNodes === "function") renderUrbanNodes(radarMap, issues, "admin");
-                    if (typeof renderDensityOverlays === "function") renderDensityOverlays(radarMap, issues);
-                }, 200);
-                const stats = await API.get("/api/admin/stats");
-                document.getElementById("r-total").textContent = stats.issues?.total_issues ?? "—";
-                document.getElementById("r-esc").textContent = stats.issues?.escalated ?? "—";
-                document.getElementById("r-sla").textContent = stats.issues?.sla_breached ?? "—";
-                const gh = await API.get("/api/admin/governance_health");
-                document.getElementById("r-health").textContent = gh.health_index + "/100";
-            } catch (e) { console.warn("Radar mode:", e); }
-        }
+                let radarMap = null;
+                async function enterRadarMode() {
+                    document.getElementById("radar-overlay").style.display = "block";
+                    if (!radarMap) {
+                        radarMap = L.map("radar-map").setView([14.9282, 79.9900], 13);
+                        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                            attribution: "© OpenStreetMap"
+                        }).addTo(radarMap);
+                    }
+                    // Refresh live load
+                    try {
+                        const issues = await API.get("/api/issues?limit=200&sort_by=priority_score");
+                        setTimeout(() => {
+                            radarMap.invalidateSize();
+                            if (typeof renderUrbanNodes === "function") renderUrbanNodes(radarMap, issues, "admin");
+                            if (typeof renderDensityOverlays === "function") renderDensityOverlays(radarMap, issues);
+                        }, 200);
+                        const stats = await API.get("/api/admin/stats");
+                        document.getElementById("r-total").textContent = stats.issues?.total_issues ?? "—";
+                        document.getElementById("r-esc").textContent = stats.issues?.escalated ?? "—";
+                        document.getElementById("r-sla").textContent = stats.issues?.sla_breached ?? "—";
+                        const gh = await API.get("/api/admin/governance_health");
+                        document.getElementById("r-health").textContent = gh.health_index + "/100";
+                    } catch (e) { console.warn("Radar mode:", e); }
+                }
 
-        function exitRadarMode() {
-            document.getElementById("radar-overlay").style.display = "none";
-        }
+                function exitRadarMode() {
+                    document.getElementById("radar-overlay").style.display = "none";
+                }
 
-        function renderDeptPerformance(depts) {
-            const container = document.getElementById("perf-list");
-            if (!depts.length) {
-                container.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:40px;">No performance data yet.</p>`;
-                return;
-            }
-            container.innerHTML = depts.map((d, i) => {
-                const score = d.performance_score || 0;
-                const color = score >= 80 ? "#16a34a" : score >= 60 ? "#ca8a04" : "#dc2626";
-                const rankCls = i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "rank-n";
-                return `
+                function renderDeptPerformance(depts) {
+                    const container = document.getElementById("perf-list");
+                    if (!depts.length) {
+                        container.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:40px;">No performance data yet.</p>`;
+                        return;
+                    }
+                    container.innerHTML = depts.map((d, i) => {
+                        const score = d.performance_score || 0;
+                        const color = score >= 80 ? "#16a34a" : score >= 60 ? "#ca8a04" : "#dc2626";
+                        const rankCls = i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "rank-n";
+                        return `
     <div class="perf-row">
       <div class="perf-rank ${rankCls}">${i + 1}</div>
       <div class="perf-bar-wrap">
@@ -677,26 +682,26 @@
         </div>
       </div>
     </div>`;
-            }).join("");
-        }
+                    }).join("");
+                }
 
-        function renderAnalytics(engagement, categories) {
-            const kpiEl = document.getElementById("analytics-kpis");
-            if (engagement) {
-                kpiEl.innerHTML = `
+                function renderAnalytics(engagement, categories) {
+                    const kpiEl = document.getElementById("analytics-kpis");
+                    if (engagement) {
+                        kpiEl.innerHTML = `
       <div class="ctrl-card"><div class="ctrl-val" style="color:#6366f1;">${engagement.active_citizens || 0}</div><div class="ctrl-lbl">Active Citizens</div></div>
       <div class="ctrl-card"><div class="ctrl-val" style="color:#16a34a;">${(engagement.total_points_awarded || 0).toLocaleString()}</div><div class="ctrl-lbl">Total Points Awarded</div></div>
       <div class="ctrl-card"><div class="ctrl-val" style="color:#ea580c;">${engagement.total_reports || 0}</div><div class="ctrl-lbl">Total Reports</div></div>`;
-            }
+                    }
 
-            const catEl = document.getElementById("category-chart");
-            const catColors = { Roads: "#f59e0b", Water: "#3b82f6", Electricity: "#eab308", Sanitation: "#ec4899", Safety: "#ef4444", Environment: "#22c55e", Other: "#8b5cf6" };
-            const total = categories.reduce((s, c) => s + parseInt(c.count), 0) || 1;
+                    const catEl = document.getElementById("category-chart");
+                    const catColors = { Roads: "#f59e0b", Water: "#3b82f6", Electricity: "#eab308", Sanitation: "#ec4899", Safety: "#ef4444", Environment: "#22c55e", Other: "#8b5cf6" };
+                    const total = categories.reduce((s, c) => s + parseInt(c.count), 0) || 1;
 
-            catEl.innerHTML = categories.map(c => {
-                const pct = Math.round((c.count / total) * 100);
-                const color = catColors[c.category] || "#94a3b8";
-                return `
+                    catEl.innerHTML = categories.map(c => {
+                        const pct = Math.round((c.count / total) * 100);
+                        const color = catColors[c.category] || "#94a3b8";
+                        return `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
       <div style="width:100px;color:#475569;font-size:0.85rem;font-weight:600;">${c.category}</div>
       <div style="flex:1;height:24px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
@@ -704,46 +709,46 @@
       </div>
       <div style="color:#475569;font-size:0.82rem;width:80px;text-align:right;">${c.count} issues (${c.resolved || 0} resolved)</div>
     </div>`;
-            }).join("");
-        }
+                    }).join("");
+                }
 
-        async function toggleUser(userId, btn) {
-            try {
-                const res = await API.patch(`/api/admin/users/${userId}/toggle`, {});
-                showToast(res.message, "success");
-                await loadUsers();
-            } catch (e) { showToast(e.message, "error"); }
-        }
+                async function toggleUser(userId, btn) {
+                    try {
+                        const res = await API.patch(`/api/admin/users/${userId}/toggle`, {});
+                        showToast(res.message, "success");
+                        await loadUsers();
+                    } catch (e) { showToast(e.message, "error"); }
+                }
 
-        const panels = ["heatmap-panel", "governance-panel", "pressure-panel", "escalation-panel", "performance-panel", "analytics-panel", "anomaly-panel", "users-panel"];
-        const panelTitles = {
-            "heatmap-panel":   ["🗺️ City Heatmap",           "Urban Nodes pulse with severity. Hover for full intelligence."],
-            "governance-panel":["📊 Governance Health Index", "Real-time city governance score across 5 dimensions."],
-            "pressure-panel":  ["⚠️ Pressure Board",          "Issues ranked by Governance Pressure Score."],
-            "escalation-panel":["🚨 Escalation Monitor",      "All active SLA breaches and escalated issues."],
-            "performance-panel":["🏛️ Department Performance", "Live rankings by resolution rate, speed, and SLA compliance."],
-            "analytics-panel": ["📡 Civic Engagement Analytics", "Participation metrics and issue category distribution."],
-            "anomaly-panel":   ["🔍 Anomaly Board",           "Detected performance anomalies and suspicious officer patterns."],
-            "users-panel":     ["👥 User Management",         "Enable or disable citizen and authority accounts."],
-        };
+                const panels = ["heatmap-panel", "governance-panel", "pressure-panel", "escalation-panel", "performance-panel", "analytics-panel", "anomaly-panel", "users-panel"];
+                const panelTitles = {
+                    "heatmap-panel": ["🗺️ City Heatmap", "Urban Nodes pulse with severity. Hover for full intelligence."],
+                    "governance-panel": ["📊 Governance Health Index", "Real-time city governance score across 5 dimensions."],
+                    "pressure-panel": ["⚠️ Pressure Board", "Issues ranked by Governance Pressure Score."],
+                    "escalation-panel": ["🚨 Escalation Monitor", "All active SLA breaches and escalated issues."],
+                    "performance-panel": ["🏛️ Department Performance", "Live rankings by resolution rate, speed, and SLA compliance."],
+                    "analytics-panel": ["📡 Civic Engagement Analytics", "Participation metrics and issue category distribution."],
+                    "anomaly-panel": ["🔍 Anomaly Board", "Detected performance anomalies and suspicious officer patterns."],
+                    "users-panel": ["👥 User Management", "Enable or disable citizen and authority accounts."],
+                };
 
-        function showPanel(id) {
-            panels.forEach(p => {
-                const el = document.getElementById(p);
-                el.classList[p === id ? "remove" : "add"]("hidden");
-            });
-            document.querySelectorAll(".sidebar-link").forEach((a, i) => {
-                a.classList.toggle("active", panels[i] === id);
-            });
-            const titles = panelTitles[id] || ["Admin", ""];
-            document.getElementById("panel-title").textContent = titles[0];
-            document.getElementById("panel-sub").textContent = titles[1];
+                function showPanel(id) {
+                    panels.forEach(p => {
+                        const el = document.getElementById(p);
+                        el.classList[p === id ? "remove" : "add"]("hidden");
+                    });
+                    document.querySelectorAll(".sidebar-link").forEach((a, i) => {
+                        a.classList.toggle("active", panels[i] === id);
+                    });
+                    const titles = panelTitles[id] || ["Admin", ""];
+                    document.getElementById("panel-title").textContent = titles[0];
+                    document.getElementById("panel-sub").textContent = titles[1];
 
-            // Re-init map when shown (Leaflet needs visible container)
-            if (id === "heatmap-panel" && dashboardData) {
-                setTimeout(() => { if (adminMap) adminMap.invalidateSize(); }, 100);
-            }
-        }
+                    // Re-init map when shown (Leaflet needs visible container)
+                    if (id === "heatmap-panel" && dashboardData) {
+                        setTimeout(() => { if (adminMap) adminMap.invalidateSize(); }, 100);
+                    }
+                }
             </script>
 </body>
 
