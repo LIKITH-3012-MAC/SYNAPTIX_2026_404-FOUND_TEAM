@@ -13,7 +13,7 @@ class Settings(BaseSettings):
         "http://localhost:5500",
         "http://127.0.0.1:5500",
         "http://localhost:3000",
-        "https://synaptix.vercel.app",
+        "https://resolvit-app-2026.vercel.app",
     ]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
