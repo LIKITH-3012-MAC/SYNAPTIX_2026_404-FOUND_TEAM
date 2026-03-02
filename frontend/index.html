@@ -278,6 +278,7 @@
   <script src="js/auth.js"></script>
   <script src="js/animations.js"></script>
   <script src="js/issues.js"></script>
+  <script src="js/simulation.js"></script>
 
   <script>
     // ── Navbar scroll effect ──────────────
@@ -320,8 +321,8 @@
     // ── Map ─────────────────────────────────
     function initMap() {
       const map = L.map('map').setView([12.9716, 77.5946], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap contributors, © CARTO'
       }).addTo(map);
 
       // Sample markers
@@ -407,8 +408,10 @@
     // ── Init ──────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       initMap();
+      if (typeof initDemoPanel === "function") initDemoPanel();
       loadHomeData();
       if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
+      if (typeof initDemoPanel === 'function') initDemoPanel();
 
       // Hero Entrance Animation
       const heroContent = document.querySelector('.hero-content');

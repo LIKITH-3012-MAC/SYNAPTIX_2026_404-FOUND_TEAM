@@ -543,7 +543,7 @@
                 function initHeatmap(issues) {
                     if (adminMap) { adminMap.remove(); adminMap = null; }
                     adminMap = L.map("heatmap").setView([14.9282, 79.9900], 13);
-                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
                         attribution: "© OpenStreetMap contributors"
                     }).addTo(adminMap);
 
@@ -622,7 +622,7 @@
                     document.getElementById("radar-overlay").style.display = "block";
                     if (!radarMap) {
                         radarMap = L.map("radar-map").setView([14.9282, 79.9900], 13);
-                        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
                             attribution: "© OpenStreetMap"
                         }).addTo(radarMap);
                     }

@@ -17,8 +17,12 @@ echo ""
 # ── 1. Create venv if missing ──────────────────────────────────
 if [ ! -d "$VENV_DIR" ]; then
     echo "  📦 Creating virtual environment..."
-    python3 -m venv "$VENV_DIR"
-    echo "  ✅ venv created."
+    PYTHON_CMD="python3"
+    if command -v python3.11 &> /dev/null; then
+        PYTHON_CMD="python3.11"
+    fi
+    $PYTHON_CMD -m venv "$VENV_DIR"
+    echo "  ✅ venv created using $PYTHON_CMD."
 fi
 
 # ── 2. Activate venv ──────────────────────────────────────────

@@ -12,7 +12,9 @@ from models import UserRegister, UserLogin, TokenResponse, UserResponse, Message
 from database import get_db
 from auth import hash_password, verify_password, create_access_token, get_current_user, create_password_reset_token, verify_password_reset_token
 from services.email_service import send_password_reset_email
+from core.security import limiter
 import uuid
+from fastapi import Request
 
 router = APIRouter()
 
@@ -63,7 +65,8 @@ def register(payload: UserRegister):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: UserLogin):
+@limiter.limit("5/minute")
+def login(payload: UserLogin, request: Request):
     """Authenticate and return a JWT token."""
     with get_db() as cursor:
         cursor.execute(

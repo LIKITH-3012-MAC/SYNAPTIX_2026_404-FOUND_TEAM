@@ -13,6 +13,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 if os.getenv("RENDER") is None:
     load_dotenv()
 
+
+from core.exceptions import global_exception_handler, value_error_handler
+from core.security import limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from core.config import settings
+
 from routes.auth_routes import router as auth_router
 from routes.issues import router as issues_router
 from routes.audit_metrics import audit_router, metrics_router
@@ -27,16 +34,14 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-CORS_ORIGINS = [
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://localhost:3000",
-    "https://synaptix.vercel.app",
-]
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(Exception, global_exception_handler)
+app.add_exception_handler(ValueError, value_error_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

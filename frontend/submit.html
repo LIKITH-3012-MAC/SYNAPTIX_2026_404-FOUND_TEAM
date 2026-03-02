@@ -302,7 +302,7 @@
 
         function initSubmitMap() {
             submitMap = L.map('submit-map').setView([12.9716, 77.5946], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(submitMap);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OSM' }).addTo(submitMap);
             submitMap.on('click', (e) => {
                 const { lat, lng } = e.latlng;
                 document.getElementById('latitude').value = lat.toFixed(6);
