@@ -65,7 +65,7 @@ def register(payload: UserRegister):
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 def login(payload: UserLogin, request: Request):
     """Authenticate and return a JWT token."""
     with get_db() as cursor:

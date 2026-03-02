@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
     is_active   BOOLEAN DEFAULT TRUE,
     created_at  TIMESTAMPTZ DEFAULT NOW(),
     updated_at  TIMESTAMPTZ DEFAULT NOW()
+    
 );
 
 CREATE INDEX idx_users_email  ON users(email);
@@ -197,3 +198,18 @@ CREATE TABLE IF NOT EXISTS civic_credits (
 CREATE INDEX idx_credits_user   ON civic_credits(user_id);
 CREATE INDEX idx_credits_issue  ON civic_credits(issue_id);
 CREATE INDEX idx_credits_time   ON civic_credits(created_at DESC);
+
+-- ============================================================
+-- APP FEEDBACK TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS app_feedback (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ui_rating       SMALLINT NOT NULL CHECK (ui_rating BETWEEN 1 AND 5),
+    ux_rating       SMALLINT NOT NULL CHECK (ux_rating BETWEEN 1 AND 5),
+    experience_rating SMALLINT NOT NULL CHECK (experience_rating BETWEEN 1 AND 5),
+    comment         TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_feedback_user ON app_feedback(user_id);

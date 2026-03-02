@@ -1,0 +1,46 @@
+databases:
+  - name: resolvit-db
+    plan: free
+    region: singapore
+
+services:
+  # 1. API Backend
+  - type: web
+    name: synaptix-2026-404-found-team
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "uvicorn app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: CORS_ORIGINS
+        value: '["*"]'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: resolvit-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        value: "['*']"
+
+  # 2. Static Frontend
+  - type: static
+    name: resolvit-frontend
+    region: singapore
+    plan: free
+    publishPath: ./frontend
+    envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: true
+

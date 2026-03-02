@@ -276,12 +276,21 @@ def update_issue(
     fields = {}
     if payload.title is not None:             fields["title"] = payload.title
     if payload.description is not None:       fields["description"] = payload.description
-    if payload.status is not None:            fields["status"] = payload.status.value
+    if payload.status is not None and role in ("authority", "admin"):
+        fields["status"] = payload.status.value
+    elif payload.status is not None:
+        raise HTTPException(status_code=403, detail="Only authorities can update issue status.")
+
     if payload.urgency is not None:           fields["urgency"] = payload.urgency
     if payload.impact_scale is not None:      fields["impact_scale"] = payload.impact_scale
-    if payload.resolution_note is not None:   fields["resolution_note"] = payload.resolution_note
-    if payload.resolution_proof_url is not None: fields["resolution_proof_url"] = payload.resolution_proof_url
+    
+    if payload.resolution_note is not None and role in ("authority", "admin"):
+        fields["resolution_note"] = payload.resolution_note
+    if payload.resolution_proof_url is not None and role in ("authority", "admin"):
+        fields["resolution_proof_url"] = payload.resolution_proof_url
+        
     if payload.safety_risk_probability is not None: fields["safety_risk_probability"] = payload.safety_risk_probability
+    
     if payload.assigned_authority_id is not None and role in ("authority", "admin"):
         fields["assigned_authority_id"] = payload.assigned_authority_id
 

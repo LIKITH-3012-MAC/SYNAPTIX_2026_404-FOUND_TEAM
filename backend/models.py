@@ -160,3 +160,11 @@ class AuditLogResponse(BaseModel):
 class MessageResponse(BaseModel):
     message: str
     detail:  Optional[Any] = None
+
+
+# ── Feedback Schemas ──────────────────────────────────────────
+class AppFeedbackCreate(BaseModel):
+    ui_rating:         int = Field(..., ge=1, le=5)
+    ux_rating:         int = Field(..., ge=1, le=5)
+    experience_rating: int = Field(..., ge=1, le=5)
+    comment:           Optional[str] = None
