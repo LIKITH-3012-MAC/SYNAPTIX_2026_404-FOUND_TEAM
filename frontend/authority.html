@@ -78,6 +78,16 @@
                 </div>
             </div>
 
+            <!-- Authority Map View -->
+            <div class="card" style="margin-bottom:40px; padding:0; overflow:hidden;">
+                <div
+                    style="padding:16px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:between; align-items:center;">
+                    <h3 style="font-size:1.1rem;">📍 Live Infrastructure Map</h3>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">Real-time cluster visualization</div>
+                </div>
+                <div id="authority-map" style="height:400px; background:var(--bg-secondary);"></div>
+            </div>
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
                 <!-- High Priority Issues -->
                 <div>
@@ -210,11 +220,20 @@
     </div>
 
     <div class="toast-container" id="toast-container"></div>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/theme-manager.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/animations.js"></script>
     <script src="js/issues.js"></script>
-  <script src="js/simulation.js"></script>
+    <script src="js/map-manager.js"></script>
+    <script src="js/map_intelligence.js"></script>
+    <script src="js/ui-enhancements.js"></script>
 
     <script>
         let allIssues = [];
@@ -237,7 +256,7 @@
         });
 
         function updateNavAuth() {
-            if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
+            if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
             const user = Auth.getUser();
             if (user && document.getElementById('logged-in-user')) {
                 document.getElementById('logged-in-user').textContent = `Logged in as ${user.username} (${user.role})`;
@@ -246,6 +265,11 @@
 
         async function initDashboard() {
             await Promise.all([loadMetrics(), loadLeaderboard(), loadIssues()]);
+
+            // Init Global Map
+            MapManager.init('authority-map');
+            MapManager.updateData(allIssues, 'authority');
+
             setInterval(loadIssues, 15000);
         }
 
@@ -313,39 +337,37 @@
             }
         }
 
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavAuth();
+            if (!Auth.requireRole('authority')) return;
+
+            currentUser = Auth.getUser();
+            if (currentUser) {
+                initDashboard();
+            } else {
+                showLoginModal();
+            }
+        });
+
+        // Enhanced loadIssues with conditional Actions column
         async function loadIssues() {
             try {
                 const statusFilter = document.getElementById('issue-status-filter').value;
                 const url = '/api/issues?limit=50&sort_by=priority_score&order=desc' + (statusFilter ? '&status=' + statusFilter : '');
                 allIssues = await API.get(url);
 
+                const user = Auth.getUser();
+                const isAuth = user && (user.role === 'authority' || user.role === 'admin');
+
+                // Toggle visibility of Actions header based on role
+                const actionsHeader = document.querySelector('#issues-table th:last-child');
+                if (actionsHeader) actionsHeader.style.display = isAuth ? '' : 'none';
+
                 // High Priority Cards
                 const highPrio = allIssues.filter(i => i.priority_score >= 70).slice(0, 5);
                 const hpEl = document.getElementById('high-priority-issues');
                 if (!highPrio.length) hpEl.innerHTML = '<div class="alert alert-success">✅ No high-priority issues!</div>';
-                else hpEl.innerHTML = highPrio.map(i => `
-      <div class="issue-card priority-${i.priority_score >= 80 ? 'critical' : 'high'}" onclick="updateIssue('${i.id}')" style="margin-bottom:16px;">
-        <div class="flex justify-between items-start" style="margin-bottom:12px;">
-          <div>
-            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-              <span class="cat-badge cat-${i.category}">${i.category}</span>
-              <span class="badge badge-${i.status.replace('_', '')}">${i.status.replace('_', ' ')}</span>
-              ${i.status === 'escalated' ? '<span class="badge badge-escalated">🚨 ESCALATED</span>' : ''}
-            </div>
-            <div style="font-weight:700;font-size:0.95rem;">${i.title}</div>
-          </div>
-          <div class="priority-score priority-${i.priority_score >= 80 ? 'critical' : 'high'}" style="font-size:1.75rem;">${i.priority_score}</div>
-        </div>
-        <div style="display:flex;gap:16px;font-size:0.8rem;color:var(--text-muted);">
-          <span>👥 ${(i.impact_scale || 0).toLocaleString()} affected</span>
-          <span>📅 ${i.days_unresolved}d unresolved</span>
-        </div>
-        <div style="margin-top:8px;">
-          <div class="priority-bar"><div class="priority-bar-fill" style="width:${i.priority_score}%;background:${i.priority_score >= 80 ? 'var(--red)' : 'var(--orange)'};"></div></div>
-        </div>
-        <!-- SLA Countdown if close to breach -->
-        ${i.days_unresolved >= 5 && i.status !== 'resolved' ? `<div style="margin-top:12px;padding:8px 12px;background:#fff1f2;border-radius:8px;font-size:0.8rem;color:var(--red);display:flex;align-items:center;gap:8px;"><span>⏰</span> <strong>SLA Warning:</strong> ${7 - Math.floor(i.days_unresolved)} days until auto-escalation</div>` : ''}
-      </div>`).join('');
+                else hpEl.innerHTML = highPrio.map(i => renderIssueCard(i, { showUpdateBtn: isAuth })).join('');
 
                 // Escalation alerts
                 const escalated = allIssues.filter(i => i.status === 'escalated');
@@ -362,37 +384,13 @@
         <td><span class="priority-score priority-${i.priority_score >= 80 ? 'critical' : i.priority_score >= 60 ? 'high' : i.priority_score >= 40 ? 'medium' : 'low'}" style="font-size:1rem;">${i.priority_score}</span></td>
         <td><span class="badge badge-${i.status}">${i.status.replace('_', ' ')}</span></td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${i.days_unresolved}d</td>
-        <td><button class="btn btn-primary btn-sm" onclick="updateIssue('${i.id}')">Update</button></td>
+        <td style="display: ${isAuth ? '' : 'none'}"><button class="btn btn-primary btn-sm" onclick="updateIssue('${i.id}')">Update</button></td>
       </tr>`).join('');
-            } catch {
+            } catch (err) {
+                console.error(err);
                 document.getElementById('issues-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">Could not load issues. Is the backend running?</td></tr>';
             }
         }
-
-        function updateIssue(id) {
-            document.getElementById('update-issue-id').value = id;
-            document.getElementById('update-modal').style.display = 'flex';
-        }
-
-        async function submitUpdate() {
-            const id = document.getElementById('update-issue-id').value;
-            const status = document.getElementById('update-status').value;
-            const note = document.getElementById('update-note').value;
-            try {
-                await API.patch('/api/issues/' + id, { status, resolution_note: note || undefined });
-                document.getElementById('update-modal').style.display = 'none';
-                showToast('✅ Issue updated successfully');
-                loadIssues();
-            } catch (err) { showToast('❌ ' + err.message); }
-        }
-
-        window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
-        document.addEventListener('DOMContentLoaded', () => {
-            updateNavAuth();
-            currentUser = Auth.getUser();
-            if (currentUser) initDashboard();
-            else document.getElementById('login-modal').style.display = 'flex';
-        });
     </script>
 </body>
 

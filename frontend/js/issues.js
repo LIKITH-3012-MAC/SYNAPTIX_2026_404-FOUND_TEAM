@@ -8,12 +8,12 @@
  * - Upvote support
  */
 
-// Priority band config matching backend
+// Priority band config matching backend — using dynamic CSS variables for mode compatibility
 const PRIORITY_BANDS = [
-  { min: 80, label: "CRITICAL", color: "#dc2626", bg: "#fff1f2", pulse: true },
-  { min: 55, label: "HIGH", color: "#ea580c", bg: "#fff7ed", pulse: false },
-  { min: 30, label: "MEDIUM", color: "#ca8a04", bg: "#fefce8", pulse: false },
-  { min: 0, label: "LOW", color: "#16a34a", bg: "#f0fdf4", pulse: false },
+  { min: 80, label: "CRITICAL", color: "var(--red)", bg: "var(--red)", pulse: true },
+  { min: 55, label: "HIGH", color: "var(--orange, #f97316)", bg: "var(--orange, #f97316)", pulse: false },
+  { min: 30, label: "MEDIUM", color: "var(--yellow)", bg: "var(--yellow)", pulse: false },
+  { min: 0, label: "LOW", color: "var(--green)", bg: "var(--green)", pulse: false },
 ];
 
 const CATEGORY_ICONS = {
@@ -110,10 +110,9 @@ function renderIssueCard(issue, opts = {}) {
     </div>` : "";
 
   return `
-<div class="issue-card" style="border-left:4px solid ${band.color};background:${band.bg}20;"
+<div class="issue-card hover-glow" style="border-left:4px solid ${band.color}; background: var(--glass);"
      data-issue-id="${issue.id}"
-     onclick="window.location.href='issue.html?id=${issue.id}'"
-     style="cursor:pointer;">
+     onclick="window.location.href='issue.html?id=${issue.id}'">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
     <div style="flex:1;">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
@@ -193,18 +192,58 @@ function startSlaCountdowns(issues) {
   });
 }
 
-// ── Upvote helper ───────────────────────────────────────────────
-async function upvoteIssue(issueId, btn) {
-  const user = typeof Auth !== "undefined" ? Auth.getUser() : null;
-  if (!user) { showToast("Please login to upvote", "warning"); return; }
-  btn.disabled = true;
+async function updateIssue(id) {
+  const user = Auth.getUser();
+  if (!user || (user.role !== 'authority' && user.role !== 'admin')) {
+    showToast('🚫 Only authorities can update issue status.');
+    return;
+  }
+
+  const status = prompt("Update Status (verified, assigned, in_progress, escalated, resolved):");
+  if (!status) return;
+
+  const valid = ['reported', 'verified', 'clustered', 'assigned', 'in_progress', 'escalated', 'resolved'];
+  if (!valid.includes(status)) {
+    showToast('❌ Invalid status level.');
+    return;
+  }
+
+  const note = prompt("Resolution/Update Note (Required for 'resolved'):");
+  if (status === 'resolved' && !note) {
+    showToast('❌ Resolution note is required.');
+    return;
+  }
+
   try {
-    const res = await API.post(`/api/credits/upvote/${issueId}`, {});
-    showToast(`👍 Upvoted! +${res.points_earned} pts earned`, "success");
-    btn.textContent = "👍 Upvoted";
-    btn.style.opacity = "0.5";
+    await API.patch(`/api/issues/${id}`, { status, resolution_note: note });
+    showToast('✅ Issue updated successfully!');
+
+    // Refresh if in dashboard or authority view
+    if (typeof fetchIssues === 'function') fetchIssues();
+    if (typeof loadIssues === 'function') loadIssues();
+
+    // Refresh Global Map
+    const map = MapManager.getMap();
+    if (map) {
+      const issues = await API.getIssues();
+      MapManager.updateData(issues, user.role);
+    }
   } catch (err) {
-    showToast(err.message || "Could not upvote", "error");
-    btn.disabled = false;
+    showToast('❌ ' + err.message);
   }
 }
+
+// ── Issues Namespace ───────────────────────────────────────────
+const Issues = {
+  list: (params) => API.getIssues(params),
+  get: (id) => API.getIssue(id),
+  update: (id, data) => API.updateIssue(id, data),
+  delete: (id) => API.deleteIssue(id),
+  upvote: (id) => API.post(`/api/credits/upvote/${id}`, {}),
+};
+
+window.Issues = Issues;
+window.getPriorityBand = getPriorityBand;
+window.renderIssueCard = renderIssueCard;
+window.startSlaCountdowns = startSlaCountdowns;
+window.updateIssue = updateIssue;

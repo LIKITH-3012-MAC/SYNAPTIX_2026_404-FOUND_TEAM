@@ -14,101 +14,110 @@ const PRODUCTION_URL = "https://synaptix-2026-404-found-team.onrender.com";
 
 const BASE_URL = (() => {
   const host = window.location.hostname;
-  // file:// protocol → hostname is empty string
-  // localhost / 127.0.0.1 → local dev server
   if (!host || host === "localhost" || host === "127.0.0.1") {
+    // If we want to force production test even on localhost:
+    // return PRODUCTION_URL;
     return "http://localhost:8000";
   }
-  // Any real domain (including Render static, Vercel, etc.) → production API
   return PRODUCTION_URL;
 })();
 
-// ────────────────────────────────────────────────────────────────
-// Core API Wrapper
-// ────────────────────────────────────────────────────────────────
 const API = {
-  async _fetch(method, path, body = null, retries = 2) {
+  // NEW: track backend status
+  status: 'connecting', // 'connecting', 'online', 'waking', 'offline'
+
+  async _fetch(method, path, body = null, retries = 3) {
     const token = localStorage.getItem("resolvit_token");
-
-    const headers = {
-      "Content-Type": "application/json",
-    };
-
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
     const options = { method, headers };
-
-    if (body) {
-      options.body = JSON.stringify(body);
-    }
+    if (body) options.body = JSON.stringify(body);
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const response = await fetch(`${BASE_URL}${path}`, options);
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("TIMEOUT")), 10000);
+        });
+
+        const fetchPromise = fetch(`${BASE_URL}${path}`, options);
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (response.status === 401) {
           localStorage.removeItem("resolvit_token");
           localStorage.removeItem("resolvit_user");
           showToast("⚠️ Session expired. Please login again.", "error");
-          // Don't force-redirect — let page handle it
         }
 
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
           const msg = data.detail || data.message || `Request failed (${response.status})`;
-          throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+          throw new Error(msg);
         }
 
+        this.status = 'online';
+        this._emitStatus();
         return data;
+
       } catch (error) {
+        if (error.message === "TIMEOUT" || error.name === "AbortError" || error.message.includes("failed to fetch")) {
+          this.status = 'waking'; // Probably Render cold start
+          this._emitStatus();
+        }
+
         if (attempt === retries) {
+          this.status = 'offline';
+          this._emitStatus();
           throw error;
         }
-        // Exponential backoff between retries
-        await new Promise((resolve) =>
-          setTimeout(resolve, 500 * (attempt + 1))
-        );
+
+        // Exponential backoff
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
       }
     }
   },
 
-  // ── Generic HTTP methods (used by auth.js, dashboard.js, issues.js, HTML pages) ──
+  _emitStatus() {
+    window.dispatchEvent(new CustomEvent('resolvit-api-status', { detail: this.status }));
+  },
+
+  async checkHealth() {
+    try {
+      const resp = await fetch(`${BASE_URL}/api/health`);
+      const data = await resp.json();
+      if (data.status === 'online') {
+        this.status = 'online';
+      } else {
+        this.status = 'waking';
+      }
+    } catch (e) {
+      this.status = 'waking';
+    }
+    this._emitStatus();
+  },
+
   get: (path) => API._fetch("GET", path),
   post: (path, body) => API._fetch("POST", path, body),
   patch: (path, body) => API._fetch("PATCH", path, body),
   delete: (path) => API._fetch("DELETE", path),
 
-  // ── Named convenience methods (optional, for cleaner call-sites) ──
-
-  // Auth
-  register(data) { return this._fetch("POST", "/api/auth/register", data); },
-  login(data) { return this._fetch("POST", "/api/auth/login", data); },
-  getCurrentUser() { return this._fetch("GET", "/api/auth/me"); },
-
-  // Issues
-  createIssue(data) { return this._fetch("POST", "/api/issues", data); },
-  getIssues(params) {
+  // Legacy Named Methods (Restored for compatibility)
+  getSummary: () => API._fetch("GET", "/api/metrics/summary"),
+  getIssues: (params) => {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return this._fetch("GET", `/api/issues${qs}`);
+    return API._fetch("GET", `/api/issues${qs}`);
   },
-  getIssue(id) { return this._fetch("GET", `/api/issues/${id}`); },
-  updateIssue(id, data) { return this._fetch("PATCH", `/api/issues/${id}`, data); },
-  deleteIssue(id) { return this._fetch("DELETE", `/api/issues/${id}`); },
+  getIssue: (id) => API._fetch("GET", `/api/issues/${id}`),
+  updateIssue: (id, data) => API._fetch("PATCH", `/api/issues/${id}`, data),
+  deleteIssue: (id) => API._fetch("DELETE", `/api/issues/${id}`),
+  getAudit: (id) => API._fetch("GET", `/api/audit/issue/${id}`),
+  getLeaderboard: () => API._fetch("GET", "/api/credits/leaderboard"),
 
-  // Metrics & Audit
-  getSummary() { return this._fetch("GET", "/api/metrics/summary"); },
-  getLeaderboard() { return this._fetch("GET", "/api/metrics/leaderboard"); },
-  getAudit(issueId) { return this._fetch("GET", `/api/audit/${issueId}`); },
-
-  // Admin
-  getAdminStats() { return this._fetch("GET", "/api/admin/stats"); },
-  listUsers(params) {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return this._fetch("GET", `/api/admin/users${qs}`);
-  },
+  register: (data) => API._fetch("POST", "/api/auth/register", data),
+  login: (data) => API._fetch("POST", "/api/auth/login", data, 0),
+  getCurrentUser: () => API._fetch("GET", "/api/auth/me"),
+  getAdminStats: () => API._fetch("GET", "/api/admin/stats"),
 };
 
 // Expose globally

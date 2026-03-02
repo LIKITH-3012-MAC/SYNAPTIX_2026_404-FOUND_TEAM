@@ -11,7 +11,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 
-<body>
+</head>
+
+<body data-theme="dark">
 
     <nav class="navbar" id="navbar">
         <div class="navbar-inner">
@@ -224,6 +226,54 @@
         </div>
     </section>
 
+    <!-- Feedback Modal -->
+    <div class="modal-overlay" id="feedback-modal" style="display:none;">
+        <div class="modal-box" style="max-width:500px;">
+            <div style="text-align:center;margin-bottom:24px;">
+                <div style="font-size:2rem;margin-bottom:8px;">✨</div>
+                <h3>How was your experience?</h3>
+                <p style="color:var(--text-muted);font-size:0.9rem;">Your feedback helps us improve the platform.</p>
+            </div>
+            <div id="feedback-alert"></div>
+            <form id="feedback-form" class="flex flex-col" style="gap:20px;">
+                <div class="form-group">
+                    <label class="form-label" style="display:block;margin-bottom:8px;">Interface Design (UI)</label>
+                    <div class="rating-group" id="ui-rating-group" style="display:flex;gap:8px;justify-content:center;">
+                        ${[1,2,3,4,5].map(n => `<button type="button" class="btn btn-outline btn-sm rating-btn"
+                            data-val="${n}">${n} ★</button>`).join('')}
+                    </div>
+                    <input type="hidden" id="ui_rating" value="5" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:block;margin-bottom:8px;">Usability (UX)</label>
+                    <div class="rating-group" id="ux-rating-group" style="display:flex;gap:8px;justify-content:center;">
+                        ${[1,2,3,4,5].map(n => `<button type="button" class="btn btn-outline btn-sm rating-btn"
+                            data-val="${n}">${n} ★</button>`).join('')}
+                    </div>
+                    <input type="hidden" id="ux_rating" value="5" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:block;margin-bottom:8px;">Overall Experience</label>
+                    <div class="rating-group" id="experience-rating-group"
+                        style="display:flex;gap:8px;justify-content:center;">
+                        ${[1,2,3,4,5].map(n => `<button type="button" class="btn btn-outline btn-sm rating-btn"
+                            data-val="${n}">${n} ★</button>`).join('')}
+                    </div>
+                    <input type="hidden" id="experience_rating" value="5" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Additional Comments (Optional)</label>
+                    <textarea id="feedback_comment" class="form-textarea" placeholder="Tell us more..."
+                        style="min-height:80px;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;"
+                    id="feedback-submit-btn">Submit Feedback</button>
+            </form>
+            <button onclick="document.getElementById('feedback-modal').style.display='none'"
+                style="position:absolute;top:20px;right:20px;font-size:1.2rem;color:var(--text-muted);background:none;border:none;cursor:pointer;">✕</button>
+        </div>
+    </div>
+
     <!-- Auth Modal -->
     <div class="modal-overlay" id="auth-modal" style="display:none;">
         <div class="modal-box" style="max-width:520px;">
@@ -239,11 +289,14 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/theme-manager.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/animations.js"></script>
+    <script src="js/map-manager.js"></script>
+    <script src="js/ui-enhancements.js"></script>
 
     <script>
-        let submitMap, submitMarker;
+        let submitMarker;
         const urgencyDescs = {
             1: 'Minor inconvenience. Not urgent.',
             2: 'Moderate issue. Should be addressed soon.',
@@ -291,24 +344,24 @@
                 const { latitude, longitude } = pos.coords;
                 document.getElementById('latitude').value = latitude.toFixed(6);
                 document.getElementById('longitude').value = longitude.toFixed(6);
-                if (submitMap) {
-                    submitMap.setView([latitude, longitude], 15);
+                const map = MapManager.getMap();
+                if (map) {
+                    map.setView([latitude, longitude], 15);
                     if (submitMarker) submitMarker.setLatLng([latitude, longitude]);
-                    else submitMarker = L.marker([latitude, longitude]).addTo(submitMap);
+                    else submitMarker = L.marker([latitude, longitude]).addTo(map);
                 }
                 showToast('📍 Location detected!');
             }, () => showToast('❌ Could not get location'));
         }
 
         function initSubmitMap() {
-            submitMap = L.map('submit-map').setView([12.9716, 77.5946], 12);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OSM' }).addTo(submitMap);
-            submitMap.on('click', (e) => {
+            const map = MapManager.init('submit-map', [12.9716, 77.5946]);
+            map.on('click', (e) => {
                 const { lat, lng } = e.latlng;
                 document.getElementById('latitude').value = lat.toFixed(6);
                 document.getElementById('longitude').value = lng.toFixed(6);
                 if (submitMarker) submitMarker.setLatLng([lat, lng]);
-                else submitMarker = L.marker([lat, lng]).addTo(submitMap);
+                else submitMarker = L.marker([lat, lng]).addTo(map);
             });
         }
 
@@ -347,7 +400,7 @@
         }
 
         function showRegisterView() {
-    document.getElementById('modal-content').innerHTML = `
+            document.getElementById('modal-content').innerHTML = `
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:2rem;margin-bottom:8px;">🚀</div>
       <h3>Create Free Account</h3>
@@ -362,44 +415,44 @@
       <div style="font-size:0.8rem;color:var(--text-muted);text-align:center;">By creating an account you agree to our terms of civic engagement.</div>
     </form>`;
 
-    document.getElementById('modal-register').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('btn-register');
-        btn.textContent = '⏳ Creating Account...';
-        btn.disabled = true;
+            document.getElementById('modal-register').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('btn-register');
+                btn.textContent = '⏳ Creating Account...';
+                btn.disabled = true;
 
-        const payload = {
-            username: document.getElementById('r-user').value,
-            email: document.getElementById('r-email').value,
-            password: document.getElementById('r-pass').value,
-            role: 'citizen'
-        };
+                const payload = {
+                    username: document.getElementById('r-user').value,
+                    email: document.getElementById('r-email').value,
+                    password: document.getElementById('r-pass').value,
+                    role: 'citizen'
+                };
 
-        try {
-            await Auth.register(payload);
-            // Auto login after successful registration
-            const r = await Auth.login(payload.email, payload.password);
-            
-            document.getElementById('auth-modal').style.display = 'none';
-            if (document.getElementById('auth-notice')) {
-                document.getElementById('auth-notice').style.display = 'none';
-            }
-            if (document.getElementById('issue-form')) {
-                document.getElementById('issue-form').style.opacity = '1';
-            }
-            updateNavAuth();
-            showToast('✅ Account created! Welcome ' + r.username);
-        } catch (err) {
-            document.getElementById('modal-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message || 'Registration failed'}</div>`;
-            btn.textContent = 'Create Account';
-            btn.disabled = false;
+                try {
+                    await Auth.register(payload);
+                    // Auto login after successful registration
+                    const r = await Auth.login(payload.email, payload.password);
+
+                    document.getElementById('auth-modal').style.display = 'none';
+                    if (document.getElementById('auth-notice')) {
+                        document.getElementById('auth-notice').style.display = 'none';
+                    }
+                    if (document.getElementById('issue-form')) {
+                        document.getElementById('issue-form').style.opacity = '1';
+                    }
+                    updateNavAuth();
+                    showToast('✅ Account created! Welcome ' + r.username);
+                } catch (err) {
+                    document.getElementById('modal-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message || 'Registration failed'}</div>`;
+                    btn.textContent = 'Create Account';
+                    btn.disabled = false;
+                }
+            });
         }
-    });
-}
 
 
         function updateNavAuth() {
-            if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
+            if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
         }
 
         document.getElementById('issue-form').addEventListener('submit', async (e) => {
@@ -425,13 +478,24 @@
             try {
                 const issue = await API.post('/api/issues', payload);
                 document.getElementById('submit-alert').innerHTML = `
-      <div class="alert alert-success" style="font-size:1rem;">
-        ✅ <strong>Issue submitted successfully!</strong> Priority Score: <strong>${issue.priority_score}</strong>
-        ${issue.cluster_id ? '<br/>🤖 <strong>AI clustered</strong> with a nearby similar issue — combined impact amplified!' : ''}
-        <br/><br/>
-        <a href="issue.html?id=${issue.id}" class="btn btn-primary btn-sm">View Issue Details →</a>
+      <div class="alert alert-success" style="font-size:1rem; border:1px solid var(--green); background:var(--bg-secondary);">
+        <div style="margin-bottom:12px;">✅ <strong>Issue submitted successfully!</strong> Priority Score: <strong style="color:var(--accent);">${issue.priority_score}</strong></div>
+        ${issue.cluster_id ? '<div style="margin-bottom:12px; font-size:0.9rem;">🤖 <strong>AI clustered</strong> with a nearby similar issue — combined impact amplified!</div>' : ''}
+        <div class="flex gap-4" style="margin-top:16px;">
+            <a href="issue.html?id=${issue.id}" class="btn btn-primary btn-sm">View Issue Details</a>
+            <button type="button" class="btn btn-outline btn-sm" onclick="showFeedbackModal()" style="border-color:var(--accent); color:var(--accent);">✨ Give Feedback</button>
+        </div>
       </div>`;
                 document.getElementById('issue-form').reset();
+
+                // Clear and re-fetch from backend (Integrity Flow)
+                const map = MapManager.getMap();
+                if (map) {
+                    MapManager.clear();
+                    const freshIssues = await API.getIssues();
+                    MapManager.updateData(freshIssues, Auth.getUser()?.role);
+                }
+
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } catch (err) {
                 document.getElementById('submit-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
@@ -440,12 +504,71 @@
             }
         });
 
+        function showFeedbackModal() {
+            const user = Auth.getUser();
+            if (!user) {
+                showToast("🚫 Please sign in to provide feedback.");
+                return;
+            }
+            document.getElementById('feedback-modal').style.display = 'flex';
+            initRatingBtns();
+        }
+
+        function initRatingBtns() {
+            document.querySelectorAll('.rating-group').forEach(group => {
+                const btns = group.querySelectorAll('.rating-btn');
+                const hiddenInput = group.nextElementSibling;
+
+                btns.forEach(btn => {
+                    btn.onclick = () => {
+                        btns.forEach(b => b.classList.replace('btn-primary', 'btn-outline'));
+                        btn.classList.replace('btn-outline', 'btn-primary');
+                        hiddenInput.value = btn.dataset.val;
+                    };
+
+                    // Set default (5)
+                    if (btn.dataset.val == "5") {
+                        btn.classList.replace('btn-outline', 'btn-primary');
+                    }
+                });
+            });
+        }
+
+        document.getElementById('feedback-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('feedback-submit-btn');
+            btn.textContent = '⏳ Processing...'; btn.disabled = true;
+
+            const payload = {
+                ui_rating: parseInt(document.getElementById('ui_rating').value),
+                ux_rating: parseInt(document.getElementById('ux_rating').value),
+                experience_rating: parseInt(document.getElementById('experience_rating').value),
+                comment: document.getElementById('feedback_comment').value || null
+            };
+
+            try {
+                await API.post('/api/feedback', payload);
+                document.getElementById('feedback-modal').style.display = 'none';
+                showToast('✨ Thank you for your feedback!', 'success');
+                // Remove the feedback button from success alert to prevent duplicate submissions
+                const feedbackBtn = document.querySelector('[onclick="showFeedbackModal()"]');
+                if (feedbackBtn) feedbackBtn.remove();
+            } catch (err) {
+                document.getElementById('feedback-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+            } finally {
+                btn.textContent = 'Submit Feedback'; btn.disabled = false;
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             initSubmitMap();
             updatePriorityPreview();
             updateNavAuth();
             const user = Auth.getUser();
-            if (!user) { document.getElementById('auth-notice').style.display = 'flex'; }
+            if (!user) {
+                const notice = document.getElementById('auth-notice');
+                if (notice) notice.style.display = 'flex';
+            }
             window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
         });
     </script>

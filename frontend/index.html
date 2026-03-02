@@ -275,9 +275,13 @@
 
   <!-- ── Scripts ────────────────────────────────────────────── -->
   <script src="js/api.js"></script>
+  <script src="js/theme-manager.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/animations.js"></script>
+  <script src="js/ui-enhancements.js"></script>
   <script src="js/issues.js"></script>
+  <script src="js/map-manager.js"></script>
+  <script src="js/map_intelligence.js"></script>
   <script src="js/simulation.js"></script>
 
   <script>
@@ -304,6 +308,10 @@
       try {
         const issues = await API.get('/api/issues?limit=3&sort_by=priority_score&order=desc');
         renderPreviewIssues(issues);
+
+        // Use Global MapManager for Teaser
+        MapManager.init('map');
+        MapManager.updateData(issues);
       } catch {
         document.getElementById('preview-issues').innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px;">Connect your backend to see live issues.</p>';
       }
@@ -318,32 +326,8 @@
       container.innerHTML = issues.map(issue => renderIssueCard(issue)).join('');
     }
 
-    // ── Map ─────────────────────────────────
-    function initMap() {
-      const map = L.map('map').setView([12.9716, 77.5946], 12);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap contributors, © CARTO'
-      }).addTo(map);
-
-      // Sample markers
-      const issues = [
-        { lat: 12.9716, lng: 77.5946, title: 'Pothole on MG Road', cat: 'Roads', urgency: 5 },
-        { lat: 12.9279, lng: 77.6271, title: 'Water Disruption', cat: 'Water', urgency: 5 },
-        { lat: 12.9116, lng: 77.6389, title: 'Street Light Outage', cat: 'Electricity', urgency: 4 },
-        { lat: 12.9784, lng: 77.6408, title: 'Garbage Overflow', cat: 'Sanitation', urgency: 4 },
-        { lat: 12.9698, lng: 77.7499, title: 'Open Manhole', cat: 'Safety', urgency: 5 },
-      ];
-
-      const colors = { Roads: '#f59e0b', Water: '#3b82f6', Electricity: '#f59e0b', Sanitation: '#ec4899', Safety: '#ef4444' };
-      issues.forEach(i => {
-        const icon = L.divIcon({
-          className: '',
-          html: `<div style="width:16px;height:16px;border-radius:50%;background:${colors[i.cat] || '#6366f1'};border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
-          iconSize: [16, 16]
-        });
-        L.marker([i.lat, i.lng], { icon }).addTo(map).bindPopup(`<b>${i.title}</b><br/>Category: ${i.cat}<br/>Urgency: ${'⭐'.repeat(i.urgency)}`);
-      });
-    }
+    // ── Map Integration (Using Global MapManager) ─────────────────
+    // Map is now initialized within loadHomeData()
 
     // ── Auth Modal ───────────────────────────
     function openLogin() {
@@ -382,38 +366,22 @@
     });
 
     function updateNavAuth() {
-      const user = Auth.getUser();
-      if (user) {
-        let extraLink = '';
-        if (user.role === 'citizen') {
-          extraLink = `<a href="citizen.html" class="btn btn-ghost btn-sm">⭐ My Profile</a>`;
-        } else if (user.role === 'admin') {
-          extraLink = `<a href="admin.html" class="btn btn-ghost btn-sm">🏛️ Admin Tower</a>`;
-        }
-        document.getElementById('nav-actions').innerHTML = `
-      ${extraLink}
-      <span style="font-size:0.85rem;color:var(--text-secondary);">👤 ${user.username}</span>
-      <button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button>
-    `;
-        // Load credits for citizen navbar badge
-        if (user.role === 'citizen') {
-          API.get('/api/credits/me').then(c => {
-            const badge = document.querySelector('[href="citizen.html"]');
-            if (badge && c.total_points > 0) badge.textContent = `⭐ ${c.total_points} pts`;
-          }).catch(() => { });
-        }
-      }
+      // Logic moved to Auth.updateNavbar() in auth.js
+      if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
     }
 
     // ── Init ──────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
-      initMap();
-      if (typeof initDemoPanel === "function") initDemoPanel();
+      // 1. Theme and Navbar (Critical)
+      if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
+
+      // 2. Map initialized within loadHomeData()
+
+      // 3. Stats and Demo
       loadHomeData();
-      if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
       if (typeof initDemoPanel === 'function') initDemoPanel();
 
-      // Hero Entrance Animation
+      // 4. Hero Entrance Animation
       const heroContent = document.querySelector('.hero-content');
       if (heroContent) {
         heroContent.style.opacity = '0';

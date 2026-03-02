@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 
-<body>
+</head>
+
+<body data-theme="dark">
 
     <nav class="navbar" id="navbar">
         <div class="navbar-inner">
@@ -175,10 +177,11 @@
 
     <div class="toast-container" id="toast-container"></div>
     <script src="js/api.js"></script>
+    <script src="js/theme-manager.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/animations.js"></script>
     <script src="js/issues.js"></script>
-  <script src="js/simulation.js"></script>
+    <script src="js/simulation.js"></script>
 
     <script>
         const TIMELINE_STEPS = [
@@ -343,7 +346,10 @@
         }
 
         window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
-        document.addEventListener('DOMContentLoaded', () => { loadIssue(); });
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
+            loadIssue();
+        });
     </script>
 </body>
 
