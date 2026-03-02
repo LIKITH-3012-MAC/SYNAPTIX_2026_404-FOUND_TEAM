@@ -346,6 +346,58 @@
             });
         }
 
+        function showRegisterView() {
+    document.getElementById('modal-content').innerHTML = `
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:2rem;margin-bottom:8px;">🚀</div>
+      <h3>Create Free Account</h3>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-top:8px;">Already have an account? <a href="#" onclick="showAuthModal()" style="color:var(--accent);font-weight:600;">Sign In</a></p>
+    </div>
+    <div id="modal-alert"></div>
+    <form id="modal-register" class="flex flex-col" style="gap:16px;">
+      <div class="form-group"><label class="form-label">Username</label><input type="text" id="r-user" class="form-input" placeholder="citizen_john" required minlength="3"/></div>
+      <div class="form-group"><label class="form-label">Email</label><input type="email" id="r-email" class="form-input" placeholder="you@example.com" required/></div>
+      <div class="form-group"><label class="form-label">Password</label><input type="password" id="r-pass" class="form-input" placeholder="Min 8 chars, 1 Uppercase, 1 Number" required minlength="8"/></div>
+      <button type="submit" class="btn btn-primary" id="btn-register" style="width:100%;padding:14px;margin-top:8px;">Create Account</button>
+      <div style="font-size:0.8rem;color:var(--text-muted);text-align:center;">By creating an account you agree to our terms of civic engagement.</div>
+    </form>`;
+
+    document.getElementById('modal-register').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-register');
+        btn.textContent = '⏳ Creating Account...';
+        btn.disabled = true;
+
+        const payload = {
+            username: document.getElementById('r-user').value,
+            email: document.getElementById('r-email').value,
+            password: document.getElementById('r-pass').value,
+            role: 'citizen'
+        };
+
+        try {
+            await Auth.register(payload);
+            // Auto login after successful registration
+            const r = await Auth.login(payload.email, payload.password);
+            
+            document.getElementById('auth-modal').style.display = 'none';
+            if (document.getElementById('auth-notice')) {
+                document.getElementById('auth-notice').style.display = 'none';
+            }
+            if (document.getElementById('issue-form')) {
+                document.getElementById('issue-form').style.opacity = '1';
+            }
+            updateNavAuth();
+            showToast('✅ Account created! Welcome ' + r.username);
+        } catch (err) {
+            document.getElementById('modal-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message || 'Registration failed'}</div>`;
+            btn.textContent = 'Create Account';
+            btn.disabled = false;
+        }
+    });
+}
+
+
         function updateNavAuth() {
             if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
         }
