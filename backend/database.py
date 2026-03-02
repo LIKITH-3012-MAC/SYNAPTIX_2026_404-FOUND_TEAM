@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 # Render automatically injects environment vars
 # ─────────────────────────────────────────────
 if os.getenv("RENDER") is None:
-    load_dotenv()
+    load_dotenv(override=True)
 
 # ─────────────────────────────────────────────
 # Database URL (Required)
