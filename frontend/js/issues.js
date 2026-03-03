@@ -87,68 +87,71 @@ function renderSlaBar(secondsRemaining, slaTotalHours) {
  * @param {Object} opts - { showUpdateBtn, showUpvote }
  */
 function renderIssueCard(issue, opts = {}) {
-  const band = getPriorityBand(issue.priority_score || 0);
+  const score = issue.priority_score || 0;
+  const band = getPriorityBand(score);
   const icon = CATEGORY_ICONS[issue.category] || "📌";
+  const likelihood = issue.breach_risk ? Math.round(issue.breach_risk * 100) : 15;
   const slaInfo = formatSlaCountdown(issue.sla_seconds_remaining);
   const slaCountdownId = `sla-${issue.id}`;
 
   const statusLabels = {
-    reported: "Reported", verified: "Verified", clustered: "Clustered",
-    assigned: "Assigned", in_progress: "In Progress", escalated: "🚨 Escalated", resolved: "✅ Resolved"
+    reported: "REPOR", verified: "VERIF", clustered: "CLUS",
+    assigned: "ASSIG", in_progress: "PROGR", escalated: "ESCAL", resolved: "RESOL"
   };
 
-  const breachRisk = renderBreachRisk(issue.breach_risk);
-  const escalationBadge = renderEscalationBadge(issue.escalation_level);
-  const slaBar = renderSlaBar(issue.sla_seconds_remaining, issue.sla_hours);
-
-  const slaHtml = slaInfo ? `
-    <div id="${slaCountdownId}" class="sla-countdown ${slaInfo.expired ? 'sla-expired' : slaInfo.urgent ? 'sla-urgent' : ''}"
-         style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;
-                color:${slaInfo.expired ? '#dc2626' : slaInfo.urgent ? '#ea580c' : '#16a34a'};
-                ${slaInfo.expired ? 'animation:pulse 0.8s infinite;' : ''}">
-      ⏱️ ${slaInfo.text}
-    </div>` : "";
+  const badgeClass = `badge-${issue.status || 'reported'}`;
+  const isCritical = score >= 80;
 
   return `
-<div class="issue-card hover-glow" style="border-left:4px solid ${band.color}; background: var(--glass);"
-     data-issue-id="${issue.id}"
-     onclick="window.location.href='issue.html?id=${issue.id}'">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-    <div style="flex:1;">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
-        <span class="cat-badge cat-${issue.category}" style="font-size:0.78rem;">${icon} ${issue.category}</span>
-        <span class="badge badge-${issue.status}" style="font-size:0.75rem;">${statusLabels[issue.status] || issue.status}</span>
-        ${escalationBadge}
+    <div class="glass card issue-card-v2 ${isCritical ? 'pulse-critical' : ''}" 
+         style="border-left: 5px solid ${band.color}; cursor:pointer;" 
+         onclick="window.location.href='issue.html?id=${issue.id}'">
+      
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="font-size:1.5rem; background:rgba(255,255,255,0.05); padding:8px; border-radius:12px;">${icon}</div>
+          <div>
+            <div style="color:${band.color}; font-size:1.4rem; font-weight:900; line-height:1;">${score}</div>
+            <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:800; margin-top:2px;">PRIORITY</div>
+          </div>
+        </div>
+        <div class="badge ${badgeClass}" style="font-size:0.6rem; letter-spacing:1px; border:1px solid currentColor; background:transparent; padding:4px 10px;">
+          ${(statusLabels[issue.status] || issue.status).toUpperCase()}
+        </div>
       </div>
-      <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);line-height:1.3;">${issue.title}</div>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:center;min-width:52px;">
-      <div class="priority-score priority-${band.label.toLowerCase()}"
-           style="font-size:1.5rem;font-weight:900;color:${band.color};${band.pulse ? 'animation:pulse 1.2s infinite;' : ''}">
-        ${issue.priority_score || 0}
+
+      <h3 style="margin-bottom:12px; font-size:1.05rem; line-height:1.4; color:white; font-weight:700;">${issue.title}</h3>
+      
+      <div class="sla-preview-row glass" style="background:rgba(255,255,255,0.02); padding:12px; border-radius:12px; border:1px solid var(--border); margin-top:auto;">
+         <div style="display:flex; align-items:center; gap:12px;">
+            <div style="position:relative; width:28px; height:28px;">
+               <svg width="28" height="28" style="transform:rotate(-90deg);">
+                  <circle cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+                  <circle cx="14" cy="14" r="12" fill="none" stroke="${slaInfo?.urgent ? 'var(--red)' : 'var(--accent)'}" 
+                          stroke-width="2" stroke-dasharray="75" stroke-dashoffset="${75 - (likelihood / 100) * 75}" stroke-linecap="round"/>
+               </svg>
+            </div>
+            <div id="${slaCountdownId}" style="font-size:0.75rem; font-weight:700; color:${slaInfo?.urgent ? 'var(--red)' : 'var(--text-secondary)'};">
+               ${slaInfo?.text || 'SLA PENDING'}
+            </div>
+         </div>
+         <div style="font-size:0.6rem; color:var(--text-muted); margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+               <div style="width:6px; height:6px; background:${likelihood > 50 ? 'var(--red)' : 'var(--green)'}; border-radius:50%;"></div>
+               <span>AI RISK: ${likelihood}%</span>
+            </div>
+            <span>📢 ${issue.report_count || 1} REPORTS</span>
+         </div>
       </div>
-      <div style="font-size:0.65rem;font-weight:700;color:${band.color};text-transform:uppercase;">${band.label}</div>
+
+      <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px;">
+         <div style="display:flex; gap:8px;">
+            ${opts.showUpvote ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); upvoteIssue('${issue.id}', this)">👍 ${issue.upvotes || 0}</button>` : ''}
+         </div>
+         <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">#${issue.id.slice(-6)}</span>
+      </div>
     </div>
-  </div>
-
-  <div style="display:flex;gap:16px;font-size:0.78rem;color:var(--text-muted);flex-wrap:wrap;margin-bottom:8px;">
-    <span>👥 ${(issue.impact_scale || 0).toLocaleString()}</span>
-    <span>📅 ${issue.days_unresolved || 0}d open</span>
-    ${issue.report_count > 1 ? `<span>📢 ${issue.report_count} reports</span>` : ""}
-    ${issue.upvotes > 0 ? `<span>👍 ${issue.upvotes}</span>` : ""}
-  </div>
-
-  ${slaHtml}
-  ${slaBar}
-  ${breachRisk}
-
-  ${opts.showUpdateBtn ? `<div style="margin-top:12px;" onclick="event.stopPropagation();">
-    <button class="btn btn-primary btn-sm" onclick="updateIssue('${issue.id}')">Update Status</button>
-  </div>` : ""}
-  ${opts.showUpvote ? `<div style="margin-top:10px;" onclick="event.stopPropagation();">
-    <button class="btn btn-outline btn-sm" onclick="upvoteIssue('${issue.id}',this)">👍 Upvote</button>
-  </div>` : ""}
-</div>`;
+  `;
 }
 
 // ── SLA Live Ticker ─────────────────────────────────────────────

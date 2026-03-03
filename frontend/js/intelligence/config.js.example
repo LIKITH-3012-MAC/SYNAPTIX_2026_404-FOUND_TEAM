@@ -1,0 +1,8 @@
+/**
+ * ELITE URBAN INTELLIGENCE - Environment Configuration Example
+ * Rename this file to config.js and add your real Mapbox token.
+ */
+
+export const ENV = {
+    MAPBOX_TOKEN: 'pk.YOUR_MAPBOX_ACCESS_TOKEN_HERE'
+};

@@ -24,6 +24,7 @@ __pycache__/
 backend/.env
 *.env.local
 *.env.production
+frontend/js/intelligence/config.js
 
 # ── Python Test / Coverage ────────────────────────────────────
 .pytest_cache/

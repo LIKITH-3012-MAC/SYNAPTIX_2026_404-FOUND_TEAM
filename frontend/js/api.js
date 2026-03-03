@@ -14,9 +14,15 @@ const PRODUCTION_URL = "https://synaptix-2026-404-found-team.onrender.com";
 
 const BASE_URL = (() => {
   const host = window.location.hostname;
-  if (!host || host === "localhost" || host === "127.0.0.1") {
-    // If we want to force production test even on localhost:
-    // return PRODUCTION_URL;
+  const isLocal = !host ||
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host.startsWith("192.168.") ||
+    host.startsWith("10.") ||
+    host.endsWith(".local");
+
+  if (isLocal) {
     return "http://localhost:8000";
   }
   return PRODUCTION_URL;
@@ -84,15 +90,12 @@ const API = {
 
   async checkHealth() {
     try {
-      const resp = await fetch(`${BASE_URL}/api/health`);
+      const resp = await fetch(`${BASE_URL}/api/health`, { cache: 'no-store' });
+      if (!resp.ok) { this.status = 'waking'; this._emitStatus(); return; }
       const data = await resp.json();
-      if (data.status === 'online') {
-        this.status = 'online';
-      } else {
-        this.status = 'waking';
-      }
+      this.status = (data.status === 'online' || data.status === 'RESOLVIT API running') ? 'online' : 'waking';
     } catch (e) {
-      this.status = 'waking';
+      this.status = BASE_URL.includes('localhost') ? 'offline' : 'waking';
     }
     this._emitStatus();
   },
@@ -104,8 +107,12 @@ const API = {
 
   // Legacy Named Methods (Restored for compatibility)
   getSummary: () => API._fetch("GET", "/api/metrics/summary"),
-  getIssues: (params) => {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+  getIssues: (params = {}) => {
+    // Filter out null/undefined to avoid "?category=undefined"
+    const cleaned = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v != null && v !== "")
+    );
+    const qs = Object.keys(cleaned).length ? "?" + new URLSearchParams(cleaned).toString() : "";
     return API._fetch("GET", `/api/issues${qs}`);
   },
   getIssue: (id) => API._fetch("GET", `/api/issues/${id}`),

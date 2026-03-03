@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite Urban Intelligence — RESOLVIT</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0f172a;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #map-view {
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .intelligence-overlay {
+            position: absolute;
+            z-index: 100;
+            pointer-events: none;
+            width: 100%;
+        }
+
+        .header-overlay {
+            top: 20px;
+            text-align: center;
+        }
+
+        .header-bg {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-title {
+            color: white;
+            margin: 0;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.5);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .controls-overlay {
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px 24px;
+            color: white;
+            pointer-events: auto;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 900;
+        }
+
+        .back-btn {
+            top: 30px;
+            right: 30px;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map-view"></div>
+
+    <div class="intelligence-overlay header-overlay">
+        <div class="header-bg">
+            <h1 class="header-title"><span class="pulse-dot"></span> ELITE URBAN INTELLIGENCE CENTER</h1>
+        </div>
+    </div>
+
+    <div class="intelligence-overlay back-btn">
+        <a href="admin.html" class="btn btn-primary btn-sm" style="text-decoration:none;">← EXIT COMMAND CENTER</a>
+    </div>
+
+    <div class="intelligence-overlay controls-overlay">
+        <div class="stat-card">
+            <div class="stat-label">NETWORK STATE</div>
+            <div class="stat-value" id="network-state" style="color:#22c55e;">ENCRYPTED / LIVE</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">ACTIVE NODES</div>
+            <div class="stat-value" id="active-nodes">...</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">URBAN PRESSURE</div>
+            <div class="stat-value" id="urban-pressure">MEDIUM</div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/issues.js"></script>
+    <script src="js/map-manager.js"></script>
+    <script src="js/map_intelligence.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = Auth.getUser();
+            if (!user) {
+                location.href = 'index.html#login';
+                return;
+            }
+
+            // Initialize Map
+            const map = MapManager.init('map-view', [12.9716, 77.5946]);
+
+            async function refreshIntelligence() {
+                try {
+                    const issues = await API.getIssues({ limit: 1000 });
+                    document.getElementById('active-nodes').textContent = issues.length;
+
+                    // Use the custom renderer from map_intelligence.js
+                    renderUrbanNodes(map, issues, user.role);
+                    renderDensityOverlays(map, issues);
+
+                } catch (err) {
+                    console.error('Intelligence Refresh Failed:', err);
+                    document.getElementById('network-state').textContent = 'OFFLINE';
+                    document.getElementById('network-state').style.color = '#ef4444';
+                }
+            }
+
+            refreshIntelligence();
+            setInterval(refreshIntelligence, 30000); // Pulse every 30s
+        });
+    </script>
+</body>
+
+</html>

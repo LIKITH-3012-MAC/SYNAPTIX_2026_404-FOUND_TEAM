@@ -477,6 +477,12 @@
 
             try {
                 const issue = await API.post('/api/issues', payload);
+                if (payload.image_url) {
+                    await Gamification.awardPoints('EVIDENCE_ADDED');
+                } else {
+                    await Gamification.awardPoints('REPORT_SUBMITTED');
+                }
+
                 document.getElementById('submit-alert').innerHTML = `
       <div class="alert alert-success" style="font-size:1rem; border:1px solid var(--green); background:var(--bg-secondary);">
         <div style="margin-bottom:12px;">✅ <strong>Issue submitted successfully!</strong> Priority Score: <strong style="color:var(--accent);">${issue.priority_score}</strong></div>

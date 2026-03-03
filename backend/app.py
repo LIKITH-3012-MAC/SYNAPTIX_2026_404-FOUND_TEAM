@@ -57,7 +57,7 @@ app.add_exception_handler(ValueError, value_error_handler)
 # -----------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,  # Must contain your Vercel URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

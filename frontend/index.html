@@ -230,44 +230,9 @@
     </div>
   </footer>
 
-  <!-- ── Login Modal ─────────────────────────────────────────── -->
-  <div class="modal-overlay" id="login-modal" style="display: none;">
-    <div class="modal-box">
-      <div style="text-align: center; margin-bottom: 32px;">
-        <div style="font-size: 2rem; margin-bottom: 12px;">⚖️</div>
-        <h3 style="font-size: 1.5rem; margin-bottom: 8px;">Welcome Back</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Sign in to your RESOLVIT account</p>
-      </div>
-      <div id="login-alert"></div>
-      <form id="login-form" class="flex flex-col" style="gap: 20px;">
-        <div class="form-group">
-          <label class="form-label">Email Address <span>*</span></label>
-          <input type="email" id="login-email" class="form-input" placeholder="you@example.com" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password <span>*</span></label>
-          <input type="password" id="login-password" class="form-input" placeholder="Your password" required />
-        </div>
-        <div style="text-align: right; margin-top: -12px; margin-bottom: 16px;">
-          <a href="forgot-password.html" style="font-size: 0.85rem; color: var(--accent); text-decoration: none;">Forgot
-            Password?</a>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px;" id="login-btn">
-          Sign In
-        </button>
-      </form>
-      <div class="divider"></div>
-      <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">
-        Don't have an account?
-        <a href="#" onclick="switchToRegister()" style="color: var(--accent); font-weight: 600;">Register</a>
-      </p>
-      <button onclick="closeLogin()"
-        style="position: absolute; top: 20px; right: 20px; font-size: 1.2rem; color: var(--text-muted); background: none; border: none; cursor: pointer;">✕</button>
-    </div>
-  </div>
-
-  <!-- ── Toast Container ─────────────────────────────────────── -->
   <div class="toast-container" id="toast-container"></div>
+
+  <!-- ── Leaflet.js Map ──────────────────────────────────────── -->
 
   <!-- ── Leaflet.js Map ──────────────────────────────────────── -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -279,6 +244,7 @@
   <script src="js/auth.js"></script>
   <script src="js/animations.js"></script>
   <script src="js/ui-enhancements.js"></script>
+  <script src="js/gamification.js"></script>
   <script src="js/issues.js"></script>
   <script src="js/map-manager.js"></script>
   <script src="js/map_intelligence.js"></script>
@@ -329,44 +295,7 @@
     // ── Map Integration (Using Global MapManager) ─────────────────
     // Map is now initialized within loadHomeData()
 
-    // ── Auth Modal ───────────────────────────
-    function openLogin() {
-      document.getElementById('login-modal').style.display = 'flex';
-    }
-    function closeLogin() {
-      document.getElementById('login-modal').style.display = 'none';
-    }
-    function switchToRegister() {
-      closeLogin();
-      window.location.href = 'submit.html#register';
-    }
-
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('login-btn');
-      btn.textContent = 'Signing in...'; btn.disabled = true;
-      try {
-        const result = await Auth.login(
-          document.getElementById('login-email').value,
-          document.getElementById('login-password').value
-        );
-        closeLogin();
-        showToast('✅ Logged in as ' + result.username);
-        updateNavAuth();
-        if (result.role === 'authority' || result.role === 'admin') window.location.href = 'authority.html';
-      } catch (err) {
-        document.getElementById('login-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
-      } finally {
-        btn.textContent = 'Sign In'; btn.disabled = false;
-      }
-    });
-
-    document.getElementById('login-modal').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('login-modal')) closeLogin();
-    });
-
     function updateNavAuth() {
-      // Logic moved to Auth.updateNavbar() in auth.js
       if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
     }
 

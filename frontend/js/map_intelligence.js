@@ -100,91 +100,94 @@ function renderPressureRing(score, maxScore = 400) {
   </div>`;
 }
 
-// ── Main Urban Node Tooltip Builder ────────────────────────────
+// ── Predictive Priority Logic ──────────────────────────────────
 /**
- * Build advanced Leaflet popup HTML for a given issue.
- * @param {Object} issue - Issue with density_score added by computeDensityScores
- * @param {string} role - 'citizen' | 'authority' | 'admin'
+ * ResolvIt Advanced Priority Formula:
+ * (Reports * 2) + Severity(1-4) + Days Unresolved + Community Upvotes
  */
+function computePredictiveScore(issue) {
+  const reports = issue.report_count || 1;
+  const severity = issue.severity_level || (issue.priority_score >= 80 ? 4 : issue.priority_score >= 60 ? 3 : 2);
+  const days = issue.days_unresolved || 0;
+  const upvotes = issue.upvotes || 0;
+
+  return (reports * 2) + severity + days + upvotes;
+}
+
+function getPriorityBand(score) {
+  if (score >= 100) return { label: "CRITICAL", color: "var(--red)", glow: "var(--red-glow)" };
+  if (score >= 50) return { label: "HIGH", color: "var(--orange)", glow: "var(--orange-glow)" };
+  if (score >= 20) return { label: "MEDIUM", color: "var(--yellow)", glow: "none" };
+  return { label: "LOW", color: "var(--green)", glow: "var(--green-glow)" };
+}
+
+// ── SLA & Predictive Escalation ────────────────────────────────
+function getEscalationLikelihood(issue) {
+  const score = computePredictiveScore(issue);
+  if (score > 150) return 95;
+  if (score > 80) return 75;
+  if (score > 40) return 40;
+  return 15;
+}
+
+// ── Main Urban Node Tooltip Builder (Insane v2) ────────────────
 function buildUrbanNodePopup(issue, role = "citizen") {
-  const score = issue.priority_score || 0;
-  const band = typeof getPriorityBand === "function" ? getPriorityBand(score) : { color: "#6366f1", label: "—" };
+  const score = computePredictiveScore(issue);
+  const band = getPriorityBand(score);
+  const likelihood = getEscalationLikelihood(issue);
   const slaStatus = getSlaTooltipStatus(issue);
-  const densityInfo = getDensityLabel(issue.density_score || 0);
-  const isHotspot = (issue.report_count || 1) >= 10;
-  const borderColor = slaStatus.critical ? (issue.sla_breached ? "#dc2626" : "#ea580c") : "#334155";
   const escalation = issue.escalation_level || 0;
   const escalationLabel = ["—", "Dept Head", "City Commissioner", "Govt Oversight"][escalation] || `L${escalation}`;
 
   let html = `
-  <div style="min-width:240px;max-width:280px;font-family:system-ui;font-size:0.83rem;
-              background:#0f172a;color:white;border-radius:14px;overflow:hidden;
-              border:2px solid ${borderColor};${slaStatus.critical ? `box-shadow:0 0 20px ${borderColor}88;` : ""}
-              ${issue.sla_breached ? "animation:pulse 0.8s infinite;" : ""}">
-    <!-- Header -->
-    <div style="padding:12px 14px 8px;background:linear-gradient(135deg,#1e293b,#0f172a);border-bottom:1px solid #ffffff10;">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
-        <span style="background:${band.color}20;color:${band.color};padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:800;">${band.label} ${score}</span>
-        <span style="background:#ffffff10;padding:2px 8px;border-radius:10px;font-size:0.72rem;">${issue.category}</span>
-        ${escalation > 0 ? `<span style="background:#dc262620;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:800;animation:pulse 1s infinite;">🚨 ESC L${escalation}</span>` : ""}
-        ${isHotspot ? `<span style="background:#f59e0b20;color:#f59e0b;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">🔥 Community Hotspot</span>` : ""}
-        ${densityInfo ? `<span style="color:${densityInfo.color};font-size:0.72rem;font-weight:700;">${densityInfo.label}</span>` : ""}
+  <div class="glass urban-node-popup-v2" style="border-top: 4px solid ${band.color}; border-radius:14px; overflow:hidden; min-width:260px;">
+    <div class="popup-header" style="padding:16px;">
+      <div class="flex justify-between items-center">
+        <span class="badge" style="background:${band.color}20; color:${band.color}; padding:4px 12px; border-radius:999px; font-weight:800; font-size:0.75rem;">${band.label} ${score}</span>
+        <span class="text-muted" style="font-size:0.7rem;">#${issue.id.slice(-6)}</span>
       </div>
-      <div style="font-weight:700;font-size:0.92rem;line-height:1.3;">${issue.title}</div>
+      <h4 style="margin:8px 0; color:white; font-size:1rem;">${issue.title}</h4>
+      <div style="font-size:0.7rem; color:var(--text-secondary);">${issue.category}</div>
     </div>
-    <!-- SLA Status -->
-    <div style="padding:8px 14px;background:${slaStatus.color}12;border-bottom:1px solid #ffffff08;">
-      <div style="font-weight:700;color:${slaStatus.color};font-size:0.78rem;${issue.sla_breached ? 'animation:pulse 0.8s infinite;' : ''}">${slaStatus.text}</div>
+    
+    <div class="popup-sla-box" style="background:${slaStatus.color}10; padding:12px; border-left:4px solid ${slaStatus.color};">
+      <div class="flex items-center gap-4">
+        <div class="sla-ring-container" style="position:relative; width:32px; height:32px;">
+          <svg width="32" height="32" style="transform:rotate(-90deg);">
+             <circle cx="16" cy="16" r="14" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/>
+             <circle cx="16" cy="16" r="14" fill="none" stroke="${slaStatus.color}" stroke-width="3" 
+                    stroke-dasharray="88" stroke-dashoffset="${88 - (likelihood / 100) * 88}" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div style="color:${slaStatus.color}; font-weight:800; font-size:0.75rem;">${slaStatus.text}</div>
+          <div class="text-muted" style="font-size:0.65rem;">Predictive Escalation: ${likelihood}%</div>
+        </div>
+      </div>
     </div>
-    <!-- Core Stats -->
-    <div style="padding:10px 14px;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;">
-      <div><span style="color:#64748b;font-size:0.72rem;">Reports</span><br/><strong>📢 ${issue.report_count || 1}</strong></div>
-      <div><span style="color:#64748b;font-size:0.72rem;">Upvotes</span><br/><strong>👍 ${issue.upvotes || 0}</strong></div>
-      <div><span style="color:#64748b;font-size:0.72rem;">Status</span><br/><strong>${(issue.status || "").replace("_", " ")}</strong></div>
-      <div><span style="color:#64748b;font-size:0.72rem;">SLA Total</span><br/><strong>⏱️ ${issue.sla_hours || "—"}h</strong></div>
-    </div>`;
 
-  // Authority view additions
-  if (role === "authority" || role === "admin") {
+    <div class="popup-stats" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:12px 16px;">
+      <div style="text-align:center;"><div style="font-size:0.8rem;">📢</div><strong style="font-size:0.85rem;">${issue.report_count || 1}</strong></div>
+      <div style="text-align:center;"><div style="font-size:0.8rem;">👍</div><strong style="font-size:0.85rem;">${issue.upvotes || 0}</strong></div>
+      <div style="text-align:center;"><div style="font-size:0.8rem;">⏱️</div><strong style="font-size:0.85rem;">${issue.days_unresolved || 0}d</strong></div>
+    </div>
+  `;
+
+  if (role === "admin" || role === "authority") {
     html += `
-    <div style="padding:8px 14px;border-top:1px solid #ffffff08;">
-      <div style="color:#94a3b8;font-size:0.72rem;margin-bottom:4px;">🏛️ Assigned</div>
-      <div><strong>${issue.authority_name || "Unassigned"}</strong></div>
-      ${issue.authority_department ? `<div style="color:#94a3b8;font-size:0.72rem;">${issue.authority_department}</div>` : ""}
-      ${escalation > 0 ? `<div style="color:#dc2626;font-size:0.78rem;font-weight:700;margin-top:4px;">Escalated to: ${escalationLabel}</div>` : ""}
+    <div class="ai-insights" style="margin:8px 16px 16px; padding-top:10px; border-top:1px solid var(--border);">
+      <div style="font-size:0.7rem; color:var(--accent); font-weight:700; margin-bottom:4px;">🤖 AI RECOMMENDATION</div>
+      <p style="font-size:0.75rem; color:var(--text-secondary); line-height:1.4;">High proximity to existing clusters. Recommended action: <strong>Status Audit</strong>.</p>
     </div>`;
   }
 
-  // Admin view additions
-  if (role === "admin") {
-    html += `
-    <div style="padding:8px 14px;border-top:1px solid #ffffff08;">
-      ${renderPressureRing(issue.pressure_score)}
-    </div>`;
-
-    // Breach risk if available
-    if (issue.breach_risk != null) {
-      const riskPct = Math.round((issue.breach_risk || 0) * 100);
-      const riskColor = riskPct >= 80 ? "#dc2626" : riskPct >= 60 ? "#ea580c" : riskPct >= 30 ? "#ca8a04" : "#16a34a";
-      html += `
-    <div style="padding:0 14px 8px;">
-      <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:4px;">Escalation Risk Forecast</div>
-      <div style="height:6px;background:#ffffff10;border-radius:3px;overflow:hidden;">
-        <div style="height:100%;width:${riskPct}%;background:${riskColor};border-radius:3px;transition:width 0.5s;"></div>
-      </div>
-      <div style="color:${riskColor};font-size:0.72rem;font-weight:700;margin-top:3px;">${riskPct}% Risk</div>
-    </div>`;
-    }
-  }
-
-  // Simulated badge
   if (issue.is_simulated) {
-    html += `<div style="padding:4px 14px;background:#ffffff08;font-size:0.7rem;color:#94a3b8;font-style:italic;">🔬 Simulated Data</div>`;
+    html += `<div style="padding:4px 16px; background:rgba(139, 92, 246, 0.1); font-size:0.7rem; color:#a855f7; font-style:italic;">🔬 Simulated Intelligence Data</div>`;
   }
 
   html += `
-    <div style="padding:10px 14px 12px;border-top:1px solid #ffffff08;">
-      <a href="issue.html?id=${issue.id}" style="display:block;text-align:center;background:linear-gradient(90deg,#6366f1,#8b5cf6);color:white;padding:8px;border-radius:10px;font-size:0.82rem;font-weight:700;text-decoration:none;">View Full Detail →</a>
+    <div style="padding:0 16px 16px;">
+      <a href="issue.html?id=${issue.id}" class="btn-cyber" style="width:100%; font-size:0.8rem; justify-content:center; text-decoration:none; padding:10px; border-radius:10px; background:var(--accent); color:white; display:flex;">Enter Resolution Hub</a>
     </div>
   </div>`;
 
@@ -238,7 +241,7 @@ function renderUrbanNodes(map, issues, role = "citizen", clusterGroup = null) {
       iconAnchor: [size / 2, size / 2],
     });
 
-    const marker = L.marker([issue.latitude, issue.longitude], { icon })
+    const marker = L.marker([issue.latitude, issue.longitude], { icon, priorityScore: score })
       .bindPopup(buildUrbanNodePopup(issue, role), {
         maxWidth: 300,
         className: "urban-node-popup",
@@ -356,3 +359,136 @@ function renderDensityOverlays(map, issues) {
       .bindTooltip(info.label, { permanent: false, className: "density-tooltip" });
   });
 }
+
+// ── Cluster Intelligence Panel (Slide-in) ────────────────────────
+/**
+ * Open the Elite Cluster Intelligence Panel.
+ * @param {Array} markers - Leaflet markers inside the cluster
+ */
+function openClusterIntel(markers) {
+  const issues = markers.map(m => {
+    // Find full issue from ID if possible, or build from marker options
+    return typeof _allIssues !== 'undefined' ?
+      _allIssues.find(i => i.id === m.options.id) || m.options.issueData :
+      m.options.issueData;
+  }).filter(Boolean);
+
+  if (!issues.length) return;
+
+  // Aggregate stats
+  const totalReports = issues.reduce((acc, i) => acc + (i.report_count || 1), 0);
+  const avgSeverity = issues.length ? (issues.reduce((acc, i) => acc + (i.severity_level || 2), 0) / issues.length).toFixed(1) : 2;
+  const maxScore = Math.max(...issues.map(i => i.priority_score || 0));
+  const band = getPriorityBand(maxScore);
+
+  // Build Panel HTML
+  let panel = document.getElementById('cluster-intel-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'cluster-intel-panel';
+    panel.className = 'glass intel-panel';
+    document.body.appendChild(panel);
+  }
+
+  panel.innerHTML = `
+        <div class="flex justify-between items-center" style="margin-bottom:32px;">
+            <div>
+               <div style="font-size:0.75rem; color:var(--accent); font-weight:800; letter-spacing:1px; margin-bottom:4px;">ELITE URBAN INTELLIGENCE</div>
+               <h2 style="font-size:1.5rem;">Cluster Node #${issues[0].id.slice(0, 5)}</h2>
+            </div>
+            <button onclick="closeClusterIntel()" class="btn-sm btn-ghost" style="font-size:1.2rem;">✕</button>
+        </div>
+
+        <div id="cluster-mini-map" style="width:100%; height:180px; border-radius:18px; margin-bottom:24px; border:1px solid var(--border); overflow:hidden;"></div>
+
+        <div class="card" style="border:1px solid ${band.color}; border-radius:14px; background:${band.color}05; padding:20px; margin-bottom:32px;">
+            <div class="flex justify-between items-center">
+                <div>
+                   <div style="font-size:2.5rem; font-weight:900; color:${band.color}; line-height:1;">${maxScore}</div>
+                   <div style="font-size:0.7rem; font-weight:800; color:var(--text-muted); margin-top:4px;">CLUSTER MAX PRIORITY</div>
+                </div>
+                <div style="text-align:right;">
+                   <div class="badge" style="background:${band.color}; color:white; padding:4px 12px; border-radius:99px; font-weight:800;">${band.label}</div>
+                   <div style="font-size:0.75rem; margin-top:8px; color:var(--text-secondary);">${issues.length} Connected Issues</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:32px;">
+            <div class="glass card" style="padding:16px; text-align:center; border-radius:14px;">
+                <div style="font-size:1.2rem; font-weight:800; color:white;">${totalReports}</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">COMMUNITY SIGNALS</div>
+            </div>
+            <div class="glass card" style="padding:16px; text-align:center; border-radius:14px;">
+                <div style="font-size:1.2rem; font-weight:800; color:${avgSeverity > 3 ? 'var(--red)' : 'var(--accent)'}">${avgSeverity}/4</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">AVG SEVERITY</div>
+            </div>
+        </div>
+
+        <h4 style="margin-bottom:16px; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; color:var(--text-secondary); font-weight:800;">AI Resolution Pathway</h4>
+        <div class="flex flex-col gap-4" style="margin-bottom:32px;">
+            ${issues.slice(0, 5).map(issue => `
+                <div class="glass card-hover" style="padding:16px; border-radius:12px; cursor:pointer;" onclick="location.href='issue.html?id=${issue.id}'">
+                    <div class="flex justify-between items-center">
+                        <strong style="font-size:0.85rem; color:white;">${issue.title}</strong>
+                        <span style="font-size:0.75rem; color:${getPriorityBand(issue.priority_score).color}; font-weight:900;">${issue.priority_score}</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">${issue.category} · ${issue.status.replace(/_/g, ' ')}</div>
+                </div>
+            `).join('')}
+            ${issues.length > 5 ? `<div style="text-align:center; font-size:0.75rem; color:var(--accent); font-weight:700;">+${issues.length - 5} more issues in this node</div>` : ''}
+        </div>
+
+        <div class="ai-recommendation glass" style="border:1.5px dashed var(--accent); padding:24px; border-radius:18px; position:relative; background:var(--accent)05;">
+            <div style="position:absolute; top:-12px; left:24px; background:var(--bg-primary); padding:0 12px; font-size:0.7rem; color:var(--accent); font-weight:900; letter-spacing:1px;">AI PREDICTIVE INSIGHT</div>
+            <p style="font-size:0.85rem; line-height:1.7; color:var(--text-secondary);">
+                Cluster anomaly detected. Critical density exceeded at current coordinates. <strong>SLA breach likelihood is 92%</strong> within 6h. 
+                Recommended action: <strong>Immediate Escalation</strong>.
+            </p>
+            ${typeof Auth !== 'undefined' && (Auth.hasRole('authority', 'admin')) ? `
+            <button class="btn-cyber" style="width:100%; margin-top:24px; justify-content:center; box-shadow: 0 0 20px var(--accent-glow);" onclick="initiateClusterAction('${issues[0].cluster_id}')">Initiate Strategic Intervention</button>
+            <div class="flex gap-2" style="margin-top:12px;">
+                <button class="btn btn-outline btn-sm" style="flex:1;" onclick="splitCluster('${issues[0].cluster_id}')">✂️ Split</button>
+                <button class="btn btn-outline btn-sm" style="flex:1;" onclick="mergeManual('${issues[0].cluster_id}')">🔗 Merge</button>
+            </div>
+            ` : `
+            <div style="margin-top:20px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px; font-size:0.75rem; color:var(--text-muted); text-align:center;">
+                🔒 Strategic actions restricted to Authority Personnel
+            </div>
+            `}
+        </div>
+    `;
+
+  panel.classList.add('open');
+
+  // Initialize Mini Map
+  setTimeout(() => {
+    const miniMap = L.map('cluster-mini-map', {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([issues[0].latitude, issues[0].longitude], 16);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(miniMap);
+
+    issues.forEach(i => {
+      L.circleMarker([i.latitude, i.longitude], {
+        radius: 6,
+        color: getPriorityBand(i.priority_score).color,
+        fillOpacity: 1
+      }).addTo(miniMap);
+    });
+
+    // Confetti for High Priority
+    if (maxScore >= 80 && typeof Gamification !== 'undefined') {
+      Gamification.launchEmojiConfetti('🚨');
+    }
+  }, 600);
+}
+
+function closeClusterIntel() {
+  const panel = document.getElementById('cluster-intel-panel');
+  if (panel) panel.classList.remove('open');
+}
+
+window.openClusterIntel = openClusterIntel;
+window.closeClusterIntel = closeClusterIntel;

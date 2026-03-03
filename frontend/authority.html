@@ -191,34 +191,7 @@
         </div>
     </div>
 
-    <!-- Login Modal -->
-    <div class="modal-overlay" id="login-modal" style="display:none;">
-        <div class="modal-box">
-            <div style="text-align:center;margin-bottom:24px;">
-                <div style="font-size:2rem;">🏛️</div>
-                <h3 style="margin-top:12px;">Authority Login</h3>
-            </div>
-            <div id="l-alert"></div>
-            <form id="login-form" class="flex flex-col" style="gap:16px;">
-                <div class="form-group"><label class="form-label">Email</label><input type="email" id="l-email"
-                        class="form-input" placeholder="authority@resolvit.gov" required /></div>
-                <div class="form-group"><label class="form-label">Password</label><input type="password" id="l-pass"
-                        class="form-input" required /></div>
-                <div style="text-align: right; margin-top: -8px; margin-bottom: 16px;">
-                    <a href="forgot-password.html"
-                        style="font-size: 0.85rem; color: var(--accent); text-decoration: none;">Forgot Password?</a>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">Login to Authority
-                    Portal</button>
-            </form>
-            <div style="margin-top:16px;font-size:0.8rem;color:var(--text-muted);text-align:center;">
-                Demo: roads@resolvit.gov / Password123!
-            </div>
-            <button onclick="document.getElementById('login-modal').style.display='none'"
-                style="position:absolute;top:16px;right:16px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);">✕</button>
-        </div>
-    </div>
-
+    <!-- Global toast container -->
     <div class="toast-container" id="toast-container"></div>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -239,31 +212,22 @@
         let allIssues = [];
         let currentUser = null;
 
-        function showLoginModal() { document.getElementById('login-modal').style.display = 'flex'; }
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const r = await Auth.login(document.getElementById('l-email').value, document.getElementById('l-pass').value);
-                document.getElementById('login-modal').style.display = 'none';
-                currentUser = Auth.getUser();
-                updateNavAuth();
-                initDashboard();
-                showToast('✅ Welcome back, ' + r.username);
-            } catch (err) {
-                document.getElementById('l-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.getUser()) {
+                Auth.showModal('login');
+                return;
             }
+            if (!Auth.requireRole('authority', 'index.html')) return;
+
+            currentUser = Auth.getUser();
+            initDashboard();
         });
 
-        function updateNavAuth() {
-            if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
-            const user = Auth.getUser();
-            if (user && document.getElementById('logged-in-user')) {
-                document.getElementById('logged-in-user').textContent = `Logged in as ${user.username} (${user.role})`;
-            }
-        }
-
         async function initDashboard() {
+            if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
+            if (currentUser && document.getElementById('logged-in-user')) {
+                document.getElementById('logged-in-user').textContent = `Logged in as ${currentUser.username} (${currentUser.role})`;
+            }
             await Promise.all([loadMetrics(), loadLeaderboard(), loadIssues()]);
 
             // Init Global Map
@@ -280,6 +244,7 @@
                 animateCounter2('m-resolved', data.resolved_issues || 0);
                 animateCounter2('m-escalated', data.escalated_issues || 0);
             } catch { }
+
             try {
                 const lb = await API.get('/api/metrics/leaderboard');
                 const user = Auth.getUser();
@@ -289,7 +254,7 @@
                     document.getElementById('m-resolved').textContent = me.total_resolved;
                     document.getElementById('m-escalated').textContent = me.total_escalated;
                     document.getElementById('m-rate').textContent = Math.round(me.resolution_rate * 100) + '%';
-                    document.getElementById('m-avg-time').textContent = me.avg_resolution_time.toFixed(1);
+                    document.getElementById('m-avg_time').textContent = me.avg_resolution_time.toFixed(1);
                     document.getElementById('m-perf').textContent = me.performance_score.toFixed(1);
                 }
             } catch { }
@@ -337,17 +302,7 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            updateNavAuth();
-            if (!Auth.requireRole('authority')) return;
-
-            currentUser = Auth.getUser();
-            if (currentUser) {
-                initDashboard();
-            } else {
-                showLoginModal();
-            }
-        });
+        // Initialized via first DOMContentLoaded listener
 
         // Enhanced loadIssues with conditional Actions column
         async function loadIssues() {

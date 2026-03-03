@@ -56,15 +56,38 @@ const MapManager = (() => {
                 showCoverageOnHover: false,
                 maxClusterRadius: 50,
                 iconCreateFunction: (cluster) => {
+                    const markers = cluster.getAllChildMarkers();
+                    let maxScore = 0;
+                    markers.forEach(m => {
+                        const s = m.options.priorityScore || 0;
+                        maxScore = Math.max(maxScore, s);
+                    });
+
+                    // Priority-based pulsing logic
+                    let priorityClass = 'cluster-pulse-low';
+                    let type = 'low';
+
+                    if (maxScore >= 100) { priorityClass = 'cluster-blink-critical'; type = 'high'; }
+                    else if (maxScore >= 80) { priorityClass = 'cluster-pulse-high'; type = 'high'; }
+                    else if (maxScore >= 50) { priorityClass = 'cluster-pulse-medium'; type = 'medium'; }
+
                     const count = cluster.getChildCount();
-                    let size = count < 10 ? 'small' : count < 50 ? 'medium' : 'large';
                     return L.divIcon({
-                        html: `<div class="cluster-shield cluster-${size}"><span>${count}</span></div>`,
+                        html: `<div class="cluster-shield cluster-${type}-priority ${priorityClass}"><span>${count}</span></div>`,
                         className: 'cluster-icon-wrapper',
                         iconSize: L.point(40, 40)
                     });
                 }
             });
+
+            // Interaction: Trigger Intelligence Panel on Cluster Click
+            _clusterGroup.on('clusterclick', (a) => {
+                const markers = a.layer.getAllChildMarkers();
+                if (typeof window.openClusterIntel === 'function') {
+                    window.openClusterIntel(markers);
+                }
+            });
+
             _map.addLayer(_clusterGroup);
 
             _isInitialized = true;
@@ -121,9 +144,9 @@ const MapManager = (() => {
                     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                     border: 2px solid rgba(255,255,255,0.3);
                 }
-                .cluster-small { background: var(--blue-600, #2563eb); }
-                .cluster-medium { background: var(--orange, #f97316); }
-                .cluster-large { background: var(--red, #dc2626); }
+                .cluster-high-priority { background: var(--red, #dc2626) !important; border-color: #ffcccc; }
+                .cluster-medium-priority { background: var(--orange, #f97316) !important; border-color: #ffe4cc; }
+                .cluster-low-priority { background: var(--green, #16a34a) !important; border-color: #ccffcc; }
                 
                 .cluster-icon-wrapper {
                     background: transparent !important;

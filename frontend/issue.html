@@ -156,6 +156,48 @@
                             </div>
                         </div>
 
+                        <!-- Authority Control (RBAC Masked) -->
+                        <div class="card" id="authority-control-card"
+                            style="display:none; border: 1px solid var(--accent);">
+                            <div
+                                style="font-size:0.7rem; color:var(--accent); font-weight:800; margin-bottom:12px; letter-spacing:1px;">
+                                OFFICER CONTROL PANEL</div>
+                            <h4 style="margin-bottom:16px;">Update Resolution State</h4>
+                            <div class="flex flex-col" style="gap:16px;">
+                                <div class="form-group">
+                                    <label class="form-label">Current Status</label>
+                                    <select id="action-status" class="form-select">
+                                        <option value="verified">Verified</option>
+                                        <option value="assigned">Assigned</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="resolved">Resolved</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Resolution Note</label>
+                                    <textarea id="action-note" class="form-textarea"
+                                        placeholder="Describe the action taken..." style="min-height:80px;"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Proof URL (Image/Video)</label>
+                                    <input type="text" id="action-proof" class="form-input" placeholder="https://..." />
+                                </div>
+                                <button class="btn btn-primary" style="width:100%;"
+                                    onclick="submitOfficerUpdate()">Execute Status Update</button>
+                            </div>
+                        </div>
+
+                        <!-- Admin Controls (RBAC Masked) -->
+                        <div class="card" id="admin-control-card" style="display:none; border: 1px solid var(--red);">
+                            <div
+                                style="font-size:0.7rem; color:var(--red); font-weight:800; margin-bottom:12px; letter-spacing:1px;">
+                                ADMIN OVERRIDE</div>
+                            <button class="btn btn-danger btn-sm" style="width:100%;" onclick="deleteIssue()">🔴 Delete
+                                Submission</button>
+                            <button class="btn btn-outline btn-sm" style="width:100%; margin-top:10px;"
+                                onclick="escalateManually()">🚨 Manual Escalation</button>
+                        </div>
+
                         <!-- Resolution Proof -->
                         <div class="card" id="d-resolution-section" style="display:none;">
                             <h4 style="margin-bottom:12px;">✅ Resolution</h4>
@@ -323,6 +365,7 @@
                     document.getElementById('d-image').src = issue.image_url;
                 }
 
+                loadRBAC(issue);
                 startTimer(issue);
 
                 // Load Audit Chain
@@ -342,6 +385,68 @@
 
             } catch (err) {
                 document.getElementById('skeleton-detail').innerHTML = `<div class="alert alert-error">❌ Failed to load issue: ${err.message}</div>`;
+            }
+        }
+
+        function loadRBAC(issue) {
+            const user = Auth.getUser();
+            if (!user) return;
+
+            const isAuth = user.role === 'authority' || user.role === 'admin';
+            const isAdmin = user.role === 'admin';
+
+            if (isAuth) {
+                document.getElementById('authority-control-card').style.display = 'block';
+                document.getElementById('action-status').value = issue.status;
+            }
+
+            if (isAdmin) {
+                document.getElementById('admin-control-card').style.display = 'block';
+            }
+        }
+
+        async function submitOfficerUpdate() {
+            const params = new URLSearchParams(location.search);
+            const id = params.get('id');
+            const status = document.getElementById('action-status').value;
+            const resolution_note = document.getElementById('action-note').value;
+            const resolution_proof_url = document.getElementById('action-proof').value;
+
+            try {
+                await API.patch(`/api/issues/${id}`, {
+                    status,
+                    resolution_note,
+                    resolution_proof_url
+                });
+                showToast('🚀 Issue state updated successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } catch (err) {
+                showToast('❌ Update failed: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteIssue() {
+            if (!confirm('🚨 Are you sure? This will PERMANENTLY remove this civic submission.')) return;
+            const params = new URLSearchParams(location.search);
+            const id = params.get('id');
+            try {
+                await API.post(`/api/simulation/clear`, { issue_id: id }); // Fallback or direct delete
+                showToast('🗑️ Issue purged from system.', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 1000);
+            } catch (err) {
+                showToast('❌ Deletion failed.', 'error');
+            }
+        }
+
+        async function escalateManually() {
+            const params = new URLSearchParams(location.search);
+            const id = params.get('id');
+            try {
+                await API.patch(`/api/issues/${id}`, { status: 'escalated' });
+                showToast('🚨 Manual escalation triggered.', 'warning');
+                setTimeout(() => location.reload(), 1000);
+            } catch (err) {
+                showToast('❌ Escalation failed.', 'error');
             }
         }
 

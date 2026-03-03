@@ -44,7 +44,7 @@ def _serialize_issue(row: dict) -> dict:
             delta = (resolved - created).total_seconds()
         else:
             delta = (datetime.now(timezone.utc) - created).total_seconds()
-        r["days_unresolved"] = round(delta / 86400, 1)
+        r["days_unresolved"] = round(float(delta / 86400), 1)
 
     # SLA countdown in seconds (None if no sla_expires_at)
     sla_expires = r.get("sla_expires_at")
@@ -188,7 +188,7 @@ def list_issues(
     status:   Optional[str]  = Query(None),
     sort_by:  str            = Query("priority_score", regex="^(priority_score|created_at|impact_scale|urgency|sla_expires_at)$"),
     order:    str            = Query("desc", regex="^(asc|desc)$"),
-    limit:    int            = Query(50, ge=1, le=200),
+    limit:    int            = Query(50, ge=1, le=10000),
     offset:   int            = Query(0, ge=0)
 ):
     """Paginated, filterable issue list with SLA and credit fields."""
@@ -218,7 +218,7 @@ def list_issues(
         ORDER BY {order_clause}
         LIMIT %s OFFSET %s
     """
-    params.extend([limit, offset])
+    params.extend([int(limit), int(offset)])
 
     with get_db() as cursor:
         cursor.execute(query, params)
@@ -270,16 +270,26 @@ def update_issue(
         raise HTTPException(status_code=404, detail="Issue not found.")
 
     role = current_user.get("role")
-    if role == "citizen" and str(existing["reporter_id"]) != current_user["sub"]:
-        raise HTTPException(status_code=403, detail="You can only modify your own issues.")
+    if role == "citizen":
+        if str(existing["reporter_id"]) != current_user["sub"]:
+            raise HTTPException(status_code=403, detail="You can only modify your own issues.")
+        # Citizen can only edit before the issue is verified, assigned, or resolved
+        if existing["status"] not in ("reported", "clustered"):
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Cannot edit issue once it has been {existing['status']}. Please contact support."
+            )
 
     fields = {}
     if payload.title is not None:             fields["title"] = payload.title
     if payload.description is not None:       fields["description"] = payload.description
-    if payload.status is not None and role in ("authority", "admin"):
-        fields["status"] = payload.status.value
-    elif payload.status is not None:
-        raise HTTPException(status_code=403, detail="Only authorities can update issue status.")
+    
+    # Status updates restricted to authorities/admin
+    if payload.status is not None:
+        if role in ("authority", "admin"):
+            fields["status"] = payload.status.value
+        else:
+            raise HTTPException(status_code=403, detail="Only authorities or admins can update issue status.")
 
     if payload.urgency is not None:           fields["urgency"] = payload.urgency
     if payload.impact_scale is not None:      fields["impact_scale"] = payload.impact_scale

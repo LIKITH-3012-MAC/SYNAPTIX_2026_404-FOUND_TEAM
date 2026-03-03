@@ -55,72 +55,101 @@
     </div>
 
     <section style="padding: 40px 0;">
-        <div class="container">
-
-            <!-- Filter / Sort Bar -->
-            <div class="filter-bar">
-                <input type="text" id="search-input" class="search-input" placeholder="🔍 Search issues..."
-                    oninput="filterIssues()" />
-                <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cat-filters">
-                    <button class="filter-btn active" data-cat="" onclick="setCatFilter('')">All</button>
-                    <button class="filter-btn" data-cat="Roads" onclick="setCatFilter('Roads')">🛣 Roads</button>
-                    <button class="filter-btn" data-cat="Water" onclick="setCatFilter('Water')">💧 Water</button>
-                    <button class="filter-btn" data-cat="Electricity" onclick="setCatFilter('Electricity')">⚡
-                        Electric</button>
-                    <button class="filter-btn" data-cat="Sanitation" onclick="setCatFilter('Sanitation')">🗑
-                        Sanitation</button>
-                    <button class="filter-btn" data-cat="Safety" onclick="setCatFilter('Safety')">🚨 Safety</button>
+        <div class="container dashboard-grid" style="display:grid; grid-template-columns: 1fr 320px; gap:40px;">
+            <div class="main-dashboard-column">
+                <!-- Filter / Sort Bar -->
+                <div class="filter-bar">
+                    <input type="text" id="search-input" class="search-input" placeholder="🔍 Search issues..."
+                        oninput="filterIssues()" />
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cat-filters">
+                        <button class="filter-btn active" data-cat="" onclick="setCatFilter('')">All</button>
+                        <button class="filter-btn" data-cat="Roads" onclick="setCatFilter('Roads')">🛣 Roads</button>
+                        <button class="filter-btn" data-cat="Water" onclick="setCatFilter('Water')">💧 Water</button>
+                        <button class="filter-btn" data-cat="Electricity" onclick="setCatFilter('Electricity')">⚡
+                            Electric</button>
+                        <button class="filter-btn" data-cat="Sanitation" onclick="setCatFilter('Sanitation')">🗑
+                            Sanitation</button>
+                        <button class="filter-btn" data-cat="Safety" onclick="setCatFilter('Safety')">🚨 Safety</button>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+                        <label style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">Sort:</label>
+                        <select class="form-select" id="sort-select" onchange="fetchIssues()"
+                            style="padding:8px 28px 8px 12px;width:auto;min-width:160px;">
+                            <option value="priority_score">Priority Score ↓</option>
+                            <option value="created_at">Newest First</option>
+                            <option value="impact_scale">Most Impacted</option>
+                            <option value="urgency">Urgency</option>
+                        </select>
+                    </div>
                 </div>
-                <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">Sort:</label>
-                    <select class="form-select" id="sort-select" onchange="fetchIssues()"
-                        style="padding:8px 28px 8px 12px;width:auto;min-width:160px;">
-                        <option value="priority_score">Priority Score ↓</option>
-                        <option value="created_at">Newest First</option>
-                        <option value="impact_scale">Most Impacted</option>
-                        <option value="urgency">Urgency</option>
-                    </select>
+
+                <!-- Status Filter Chips -->
+                <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;" id="status-filters">
+                    <span
+                        style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;margin-right:4px;">Status:</span>
+                    <button class="filter-btn active" data-status="" onclick="setStatusFilter('')">All</button>
+                    <button class="filter-btn" data-status="reported"
+                        onclick="setStatusFilter('reported')">Reported</button>
+                    <button class="filter-btn" data-status="in_progress" onclick="setStatusFilter('in_progress')">In
+                        Progress</button>
+                    <button class="filter-btn" data-status="escalated" onclick="setStatusFilter('escalated')">🔴
+                        Escalated</button>
+                    <button class="filter-btn" data-status="resolved" onclick="setStatusFilter('resolved')">✅
+                        Resolved</button>
+                </div>
+
+                <!-- Map Toggle -->
+                <div style="margin-bottom:24px;">
+                    <button class="btn btn-outline btn-sm" onclick="toggleMap()" id="map-toggle-btn">🗺 Show Map
+                        View</button>
+                </div>
+                <div id="dashboard-map"
+                    style="height:380px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);margin-bottom:24px;display:none;">
+                </div>
+
+                <!-- Issue Grid -->
+                <div class="grid-3" id="issues-grid">
+                    <div class="skeleton skeleton-card"></div>
+                    <div class="skeleton skeleton-card"></div>
+                    <div class="skeleton skeleton-card"></div>
+                </div>
+
+                <div id="load-more" style="text-align:center;margin-top:32px;display:none;">
+                    <button class="btn btn-outline btn-lg" onclick="loadMore()">Load More Issues</button>
                 </div>
             </div>
 
-            <!-- Status Filter Chips -->
-            <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;" id="status-filters">
-                <span
-                    style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;margin-right:4px;">Status:</span>
-                <button class="filter-btn active" data-status="" onclick="setStatusFilter('')">All</button>
-                <button class="filter-btn" data-status="reported"
-                    onclick="setStatusFilter('reported')">Reported</button>
-                <button class="filter-btn" data-status="in_progress" onclick="setStatusFilter('in_progress')">In
-                    Progress</button>
-                <button class="filter-btn" data-status="escalated" onclick="setStatusFilter('escalated')">🔴
-                    Escalated</button>
-                <button class="filter-btn" data-status="resolved" onclick="setStatusFilter('resolved')">✅
-                    Resolved</button>
-            </div>
+            <!-- Gamified Sidebar -->
+            <aside class="dashboard-sidebar">
+                <div class="glass card"
+                    style="margin-bottom:24px; border:1px solid var(--accent); position:relative; overflow:hidden;">
+                    <div style="font-size:0.7rem; color:var(--accent); font-weight:800; margin-bottom:12px;">CIVIC
+                        CREDIT STATUS</div>
+                    <div class="flex items-center gap-4" id="user-gamify-info">
+                        <div style="font-size:2.5rem;">🆕</div>
+                        <div>
+                            <div style="font-size:1.5rem; font-weight:900;" id="user-points">0</div>
+                            <div class="text-secondary" style="font-size:0.75rem;">Total Credits</div>
+                        </div>
+                    </div>
+                    <div class="progress-arc" style="margin-top:20px;">
+                        <div class="progress-fill" id="user-progress" style="width: 5%;"></div>
+                    </div>
+                    <p style="font-size:0.65rem; color:var(--text-muted); margin-top:8px;">85 pts to "Active Citizen"
+                        rank</p>
+                </div>
 
-            <!-- Map Toggle -->
-            <div style="margin-bottom:24px;">
-                <button class="btn btn-outline btn-sm" onclick="toggleMap()" id="map-toggle-btn">🗺 Show Map
-                    View</button>
-            </div>
-            <div id="dashboard-map"
-                style="height:380px;border-radius:var(--radius-xl);overflow:hidden;border:1px solid var(--border);margin-bottom:24px;display:none;">
-            </div>
-
-            <!-- Issue Grid -->
-            <div class="grid-3" id="issues-grid">
-                <!-- skeleton loaders -->
-                <div class="skeleton skeleton-card"></div>
-                <div class="skeleton skeleton-card"></div>
-                <div class="skeleton skeleton-card"></div>
-                <div class="skeleton skeleton-card"></div>
-                <div class="skeleton skeleton-card"></div>
-                <div class="skeleton skeleton-card"></div>
-            </div>
-
-            <div id="load-more" style="text-align:center;margin-top:32px;display:none;">
-                <button class="btn btn-outline btn-lg" onclick="loadMore()">Load More Issues</button>
-            </div>
+                <div class="glass card">
+                    <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:8px;">🏆 Leaderboard</h3>
+                    <div id="leaderboard-list" class="flex flex-col gap-4">
+                        <!-- Populated by JS -->
+                        <div class="skeleton" style="height:40px;"></div>
+                        <div class="skeleton" style="height:40px;"></div>
+                        <div class="skeleton" style="height:40px;"></div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" style="width:100%; margin-top:16px;">View All Citizens</button>
+                </div>
+            </aside>
         </div>
     </section>
 
@@ -129,6 +158,7 @@
     <script src="js/api.js"></script>
     <script src="js/theme-manager.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/gamification.js"></script>
     <script src="js/issues.js"></script>
     <script src="js/simulation.js"></script>
     <script src="js/map-manager.js"></script>

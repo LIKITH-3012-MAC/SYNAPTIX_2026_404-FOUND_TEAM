@@ -51,14 +51,15 @@ async function fetchSummary() {
 async function fetchIssues() {
     const sortBy = document.getElementById('sort-select')?.value || 'priority_score';
     try {
-        const issues = await Issues.list({
-            category: _catFilter || undefined,
-            status: _statusFilter || undefined,
-            sortBy,
+        const params = {
+            category: _catFilter && _catFilter !== 'undefined' ? _catFilter : undefined,
+            status: _statusFilter && _statusFilter !== 'undefined' ? _statusFilter : undefined,
+            sort_by: sortBy,
             order: 'desc',
             limit: 100,
             offset: 0
-        });
+        };
+        const issues = await Issues.list(params);
         _allIssues = issues;
         _offset = 0;
         renderIssues();
@@ -160,17 +161,56 @@ function toggleMap() {
     }
 }
 
-/* ── Priority Score Animation ────────────────────────────────── */
-function animatePriorityScores() {
-    document.querySelectorAll('.priority-score').forEach(el => {
-        const target = parseFloat(el.textContent);
-        if (isNaN(target)) return;
-        let current = 0;
-        const step = target / 20;
-        const interval = setInterval(() => {
-            current = Math.min(current + step, target);
-            el.textContent = current.toFixed(1);
-            if (current >= target) clearInterval(interval);
-        }, 30);
-    });
+/* ── Gamification Integration ──────────────────────────────────── */
+async function initGamificationUI() {
+    const profile = await Gamification.getProfile();
+    const user = Auth.getUser();
+    if (!profile || !user) return;
+
+    const pointsEl = document.getElementById('user-points');
+    const progressEl = document.getElementById('user-progress');
+    const infoEl = document.getElementById('user-gamify-info');
+
+    if (pointsEl) pointsEl.textContent = profile.points.toLocaleString();
+    if (progressEl) {
+        const pct = Math.min(100, (profile.points / 1000) * 100);
+        progressEl.style.width = pct + '%';
+    }
+
+    // Render Leaderboard
+    const leaderboardList = document.getElementById('leaderboard-list');
+    if (leaderboardList) {
+        // Mock data for hackathon
+        const mockLeaders = [
+            { name: "Likith Naidu", pts: 2450, icon: "🛡️" },
+            { name: "Srujan", pts: 1820, icon: "⚔️" },
+            { name: "Civic_Guardian", pts: 1200, icon: "🎖️" },
+            { name: user.username, pts: profile.points, icon: "👤", current: true }
+        ].sort((a, b) => b.pts - a.pts);
+
+        leaderboardList.innerHTML = mockLeaders.map((u, idx) => `
+            <div class="flex justify-between items-center" style="padding:8px; border-radius:8px; ${u.current ? 'background:rgba(99,102,241,0.2); border:1px solid var(--accent);' : ''}">
+                <div class="flex items-center gap-3">
+                    <span style="font-size:0.8rem; font-weight:800; color:var(--text-muted); width:20px;">#${idx + 1}</span>
+                    <span style="font-size:1.2rem;">${u.icon}</span>
+                    <span style="font-size:0.85rem; font-weight:700;">${u.name}</span>
+                </div>
+                <span style="font-size:0.85rem; font-weight:900; color:var(--accent);">${u.pts}</span>
+            </div>
+        `).join('');
+    }
 }
+
+/* ── Initialization ────────────────────────────────────────────── */
+async function initDashboard() {
+    await fetchIssues();
+    await fetchSummary();
+    await initGamificationUI();
+}
+
+// Re-expose to global
+window.initDashboard = initDashboard;
+window.fetchIssues = fetchIssues;
+window.filterIssues = filterIssues;
+window.toggleMap = toggleMap;
+window.loadMore = loadMore;
