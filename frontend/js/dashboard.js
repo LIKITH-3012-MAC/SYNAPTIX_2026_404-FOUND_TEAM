@@ -206,6 +206,7 @@ async function initDashboard() {
     await fetchIssues();
     await fetchSummary();
     await initGamificationUI();
+    setInterval(fetchIssues, 15000);  // Live polling restored
 }
 
 // Re-expose to global

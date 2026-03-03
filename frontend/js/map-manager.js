@@ -122,6 +122,9 @@ const MapManager = (() => {
             if (typeof renderUrbanNodes === 'function') {
                 renderUrbanNodes(_map, issues, role, _clusterGroup);
             }
+            if (typeof renderDensityOverlays === 'function') {
+                renderDensityOverlays(_map, issues);
+            }
         },
 
         injectGlobalMapStyles() {
@@ -144,10 +147,35 @@ const MapManager = (() => {
                     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                     border: 2px solid rgba(255,255,255,0.3);
                 }
-                .cluster-high-priority { background: var(--red, #dc2626) !important; border-color: #ffcccc; }
-                .cluster-medium-priority { background: var(--orange, #f97316) !important; border-color: #ffe4cc; }
-                .cluster-low-priority { background: var(--green, #16a34a) !important; border-color: #ccffcc; }
+                .cluster-high-priority { background: var(--red, #dc2626) !important; border-color: #ffcccc; position: relative; }
+                .cluster-medium-priority { background: var(--orange, #f97316) !important; border-color: #ffe4cc; position: relative; }
+                .cluster-low-priority { background: var(--green, #16a34a) !important; border-color: #ccffcc; position: relative; }
                 
+                @keyframes pulse-low {
+                    0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+                    70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+                }
+                @keyframes pulse-medium {
+                    0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.6); }
+                    70% { box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+                }
+                @keyframes pulse-high {
+                    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8); }
+                    70% { box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+                }
+                @keyframes blink-critical {
+                    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px rgba(220, 38, 38, 0.8); }
+                    50% { opacity: 0.7; transform: scale(1.1); box-shadow: 0 0 25px rgba(220, 38, 38, 1); }
+                }
+                
+                .cluster-pulse-low { animation: pulse-low 2s infinite; }
+                .cluster-pulse-medium { animation: pulse-medium 1.5s infinite; }
+                .cluster-pulse-high { animation: pulse-high 1s infinite; }
+                .cluster-blink-critical { animation: blink-critical 0.6s infinite; }
+
                 .cluster-icon-wrapper {
                     background: transparent !important;
                     border: none !important;
