@@ -15,8 +15,9 @@ const MapManager = (() => {
     let _baseLayer = null;
     let _isInitialized = false;
 
-    // Carto Light tiles - Neutral Infrastructure
-    const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    // Carto Tile URLs
+    const TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    const TILE_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     const TILE_ATTRIB = '© OpenStreetMap contributors, © CARTO';
 
     return {
@@ -45,11 +46,17 @@ const MapManager = (() => {
                 scrollWheelZoom: true
             }).setView(coords, 13);
 
-            // Lockdown Title Style: Always Light
-            _baseLayer = L.tileLayer(TILE_URL, {
+            // Support Light/Dark Theme dynamically
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            _baseLayer = L.tileLayer(isDark ? TILE_DARK : TILE_LIGHT, {
                 attribution: TILE_ATTRIB,
                 maxZoom: 20
             }).addTo(_map);
+
+            window.addEventListener('resolvit-theme-change', (e) => {
+                const currentIsDark = e.detail === 'dark';
+                if (_baseLayer) _baseLayer.setUrl(currentIsDark ? TILE_DARK : TILE_LIGHT);
+            });
 
             // Universal Cluster Group
             _clusterGroup = L.markerClusterGroup({
@@ -67,9 +74,9 @@ const MapManager = (() => {
                     let priorityClass = 'cluster-pulse-low';
                     let type = 'low';
 
-                    if (maxScore >= 100) { priorityClass = 'cluster-blink-critical'; type = 'high'; }
-                    else if (maxScore >= 80) { priorityClass = 'cluster-pulse-high'; type = 'high'; }
-                    else if (maxScore >= 50) { priorityClass = 'cluster-pulse-medium'; type = 'medium'; }
+                    if (maxScore >= 80) { priorityClass = 'cluster-blink-critical'; type = 'high'; }
+                    else if (maxScore >= 55) { priorityClass = 'cluster-pulse-high'; type = 'high'; }
+                    else if (maxScore >= 30) { priorityClass = 'cluster-pulse-medium'; type = 'medium'; }
 
                     const count = cluster.getChildCount();
                     return L.divIcon({
@@ -82,6 +89,7 @@ const MapManager = (() => {
 
             // Interaction: Trigger Intelligence Panel on Cluster Click
             _clusterGroup.on('clusterclick', (a) => {
+                a.layer.zoomToBounds({ padding: [20, 20] }); // Natively spiderfy/zoom
                 const markers = a.layer.getAllChildMarkers();
                 if (typeof window.openClusterIntel === 'function') {
                     window.openClusterIntel(markers);
@@ -97,14 +105,13 @@ const MapManager = (() => {
 
         getMap() { return _map; },
 
-        /**
-         * Clear all data from the map.
-         */
         clear() {
             if (_clusterGroup) _clusterGroup.clearLayers();
             if (_map) {
                 _map.eachLayer(layer => {
-                    if (layer instanceof L.Marker || layer instanceof L.Circle) {
+                    if (layer instanceof L.Circle) {
+                        _map.removeLayer(layer);
+                    } else if (layer instanceof L.Marker && !_clusterGroup) {
                         _map.removeLayer(layer);
                     }
                 });
