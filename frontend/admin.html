@@ -245,6 +245,11 @@
 
                 async function initAdmin() {
                     await Promise.all([loadStats(), loadDashboard(), loadEscalations(), loadUsers(), loadGovernanceHealth(), loadPressureBoard(), loadAnomalies()]);
+                    // Set live polling for Admin Real-Time updates
+                    setInterval(async () => {
+                        if (document.getElementById("radar-overlay").style.display === "block") return;
+                        await Promise.all([loadStats(), loadDashboard(), loadEscalations(), loadUsers(), loadGovernanceHealth(), loadPressureBoard(), loadAnomalies()]);
+                    }, 15000);
                 }
 
                 async function loadStats() {
@@ -308,13 +313,9 @@
                     const heatmapEl = document.getElementById("heatmap");
                     if (!heatmapEl) return;
 
-                    const map = MapManager.init("heatmap", [12.9716, 77.5946]);
-
-                    // Use Urban Node rendering with density overlays (admin role = full data)
-                    if (typeof renderUrbanNodes === "function") {
-                        renderUrbanNodes(map, issues, "admin");
-                        if (typeof renderDensityOverlays === "function") renderDensityOverlays(map, issues);
-                    }
+                    MapManager.init("heatmap", [12.9716, 77.5946]);
+                    // Let MapManager handle the clusters and layers natively:
+                    MapManager.updateData(issues, "admin");
                 }
 
                 async function loadGovernanceHealth() {
@@ -381,35 +382,71 @@
                 }
 
                 let radarMap = null;
-                async function enterRadarMode() {
-                    document.getElementById("radar-overlay").style.display = "block";
-                    const rMap = MapManager.init("radar-map", [12.9716, 77.5946], {
-                        zoom: 13,
-                    });
+                let radarCluster = null;
+                let radarInterval = null;
 
-                    // Use dark theme for radar mode explicitly
-                    const darkTiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-                        attribution: "© OpenStreetMap"
-                    }).addTo(rMap);
-                    // Refresh live load
+                async function updateRadarData() {
                     try {
-                        const issues = await API.get("/api/issues?limit=200&sort_by=priority_score");
-                        setTimeout(() => {
-                            rMap.invalidateSize();
-                            if (typeof renderUrbanNodes === "function") renderUrbanNodes(rMap, issues, "admin");
-                            if (typeof renderDensityOverlays === "function") renderDensityOverlays(rMap, issues);
-                        }, 200);
+                        const issues = await API.get("/api/issues?limit=1000&sort_by=priority_score");
+                        radarMap.invalidateSize();
+                        if (typeof renderUrbanNodes === "function") {
+                            renderUrbanNodes(radarMap, issues, "admin", radarCluster);
+                            if (typeof renderDensityOverlays === "function") renderDensityOverlays(radarMap, issues);
+                        }
                         const stats = await API.get("/api/admin/stats");
                         document.getElementById("r-total").textContent = stats.issues?.total_issues ?? "—";
                         document.getElementById("r-esc").textContent = stats.issues?.escalated ?? "—";
                         document.getElementById("r-sla").textContent = stats.issues?.sla_breached ?? "—";
                         const gh = await API.get("/api/admin/governance_health");
-                        document.getElementById("r-health").textContent = gh.health_index + "/100";
-                    } catch (e) { console.warn("Radar mode:", e); }
+                        document.getElementById("r-health").textContent = (gh.health_index || 0) + "/100";
+                    } catch (e) {
+                        console.warn("Radar update failed:", e);
+                    }
+                }
+
+                async function enterRadarMode() {
+                    document.getElementById("radar-overlay").style.display = "block";
+                    if (!radarMap) {
+                        radarMap = L.map("radar-map", { zoomControl: false }).setView([12.9716, 77.5946], 13);
+                        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+                            attribution: "© OpenStreetMap"
+                        }).addTo(radarMap);
+                        radarCluster = L.markerClusterGroup({
+                            showCoverageOnHover: false,
+                            maxClusterRadius: 50,
+                            iconCreateFunction: (cluster) => {
+                                const markers = cluster.getAllChildMarkers();
+                                let maxScore = 0;
+                                markers.forEach(m => maxScore = Math.max(maxScore, m.options.priorityScore || 0));
+                                let priorityClass = 'cluster-pulse-low';
+                                let type = 'low';
+                                if (maxScore >= 80) { priorityClass = 'cluster-blink-critical'; type = 'high'; }
+                                else if (maxScore >= 55) { priorityClass = 'cluster-pulse-high'; type = 'high'; }
+                                else if (maxScore >= 30) { priorityClass = 'cluster-pulse-medium'; type = 'medium'; }
+                                return L.divIcon({
+                                    html: `<div class="cluster-shield cluster-${type}-priority ${priorityClass}"><span>${cluster.getChildCount()}</span></div>`,
+                                    className: 'cluster-icon-wrapper',
+                                    iconSize: L.point(40, 40)
+                                });
+                            }
+                        });
+                        radarMap.addLayer(radarCluster);
+                    }
+
+                    // Initial load
+                    setTimeout(updateRadarData, 200);
+
+                    // Set up live updating for radar mode
+                    if (radarInterval) clearInterval(radarInterval);
+                    radarInterval = setInterval(updateRadarData, 5000); // 5s for fast demonstration
                 }
 
                 function exitRadarMode() {
                     document.getElementById("radar-overlay").style.display = "none";
+                    if (radarInterval) {
+                        clearInterval(radarInterval);
+                        radarInterval = null;
+                    }
                 }
 
                 function renderDeptPerformance(depts) {

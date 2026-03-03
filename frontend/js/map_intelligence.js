@@ -115,10 +115,10 @@ function computePredictiveScore(issue) {
 }
 
 function getPriorityBand(score) {
-  if (score >= 100) return { label: "CRITICAL", color: "var(--red)", glow: "var(--red-glow)" };
-  if (score >= 50) return { label: "HIGH", color: "var(--orange)", glow: "var(--orange-glow)" };
-  if (score >= 20) return { label: "MEDIUM", color: "var(--yellow)", glow: "none" };
-  return { label: "LOW", color: "var(--green)", glow: "var(--green-glow)" };
+  if (score >= 80) return { label: "CRITICAL", color: "#dc2626", glow: "var(--red-glow)" };
+  if (score >= 55) return { label: "HIGH", color: "#ea580c", glow: "var(--orange-glow)" };
+  if (score >= 30) return { label: "MEDIUM", color: "#ca8a04", glow: "var(--yellow-glow)" };
+  return { label: "LOW", color: "#16a34a", glow: "var(--green-glow)" };
 }
 
 // ── SLA & Predictive Escalation ────────────────────────────────
@@ -235,7 +235,8 @@ function renderUrbanNodes(map, issues, role = "citizen", clusterGroup = null) {
         box-shadow:0 0 12px ${glowColor}66;
         ${pulse ? `animation:mapPulse ${speed} ease-in-out infinite;` : ""}
       "></div>
-      ${issue.is_simulated ? `<div class="sim-badge"></div>` : ""}
+      ${(issue.escalation_level && issue.escalation_level >= 1) ? `<div style="position:absolute; top:-6px; right:-6px; font-size:10px; background:white; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.3); z-index:10;">🔵</div>` : ""}
+      ${issue.is_simulated ? `<div class="sim-badge" style="position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); font-size:8px;">🤖</div>` : ""}
       `,
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
@@ -246,6 +247,12 @@ function renderUrbanNodes(map, issues, role = "citizen", clusterGroup = null) {
         maxWidth: 300,
         className: "urban-node-popup",
       });
+
+    // Add Hover Interactions
+    marker.on("mouseover", function (e) { this.openPopup(); });
+    // Keep open on hover by preventing immediate close unless they leave marker bounds without entering popup bounds
+    // Alternatively, just do click for open and hover for preview. By requested interactions:
+    // marker.on("mouseout", function(e) { this.closePopup(); }); 
 
     if (clusterGroup) {
       clusterGroup.addLayer(marker);
