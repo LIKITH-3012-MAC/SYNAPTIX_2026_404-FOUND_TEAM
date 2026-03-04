@@ -243,16 +243,22 @@
                 <div class="form-group">
                     <label class="form-label" style="display:block;margin-bottom:8px;">Interface Design (UI)</label>
                     <div class="rating-group" id="ui-rating-group" style="display:flex;gap:8px;justify-content:center;">
-                        ${[1,2,3,4,5].map(n => `<button type="button" class="btn btn-outline btn-sm rating-btn"
-                            data-val="${n}">${n} ★</button>`).join('')}
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="1">1 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="2">2 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="3">3 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="4">4 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="5">5 ★</button>
                     </div>
                     <input type="hidden" id="ui_rating" value="5" />
                 </div>
                 <div class="form-group">
                     <label class="form-label" style="display:block;margin-bottom:8px;">Usability (UX)</label>
                     <div class="rating-group" id="ux-rating-group" style="display:flex;gap:8px;justify-content:center;">
-                        ${[1,2,3,4,5].map(n => `<button type="button" class="btn btn-outline btn-sm rating-btn"
-                            data-val="${n}">${n} ★</button>`).join('')}
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="1">1 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="2">2 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="3">3 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="4">4 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="5">5 ★</button>
                     </div>
                     <input type="hidden" id="ux_rating" value="5" />
                 </div>
@@ -260,8 +266,11 @@
                     <label class="form-label" style="display:block;margin-bottom:8px;">Overall Experience</label>
                     <div class="rating-group" id="experience-rating-group"
                         style="display:flex;gap:8px;justify-content:center;">
-                        ${[1,2,3,4,5].map(n => `<button type="button" class="btn btn-outline btn-sm rating-btn"
-                            data-val="${n}">${n} ★</button>`).join('')}
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="1">1 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="2">2 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="3">3 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="4">4 ★</button>
+                        <button type="button" class="btn btn-outline btn-sm rating-btn" data-val="5">5 ★</button>
                     </div>
                     <input type="hidden" id="experience_rating" value="5" />
                 </div>
