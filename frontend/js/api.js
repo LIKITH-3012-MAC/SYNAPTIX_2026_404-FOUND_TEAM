@@ -58,8 +58,17 @@ const API = {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          const msg = data.detail || data.message || `Request failed (${response.status})`;
-          throw new Error(msg);
+          let msg = `Request failed (${response.status})`;
+          if (Array.isArray(data.detail)) {
+            msg = data.detail.map(e => typeof e === 'string' ? e : e.msg).join(" | ");
+          } else if (data.detail) {
+            msg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+          } else if (data.message) {
+            msg = data.message;
+          }
+          const err = new Error(msg);
+          err.status = response.status;
+          throw err;
         }
 
         this.status = 'online';
@@ -67,6 +76,12 @@ const API = {
         return data;
 
       } catch (error) {
+        if (error.status && error.status >= 400 && error.status < 500 && error.status !== 429) {
+          this.status = 'online';
+          this._emitStatus();
+          throw error;
+        }
+
         if (error.message === "TIMEOUT" || error.name === "AbortError" || error.message.includes("failed to fetch")) {
           this.status = 'waking'; // Probably Render cold start
           this._emitStatus();

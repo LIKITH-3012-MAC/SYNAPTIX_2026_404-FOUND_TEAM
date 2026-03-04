@@ -148,7 +148,10 @@ const Auth = {
                 <form id="unified-reg-form" class="flex flex-col" style="gap:15px;">
                     <div class="form-group"><label class="form-label">Name</label><input type="text" id="u-name" class="form-input" required minlength="3"/></div>
                     <div class="form-group"><label class="form-label">Email</label><input type="email" id="u-email" class="form-input" required/></div>
-                    <div class="form-group"><label class="form-label">Password</label><input type="password" id="u-pass" class="form-input" required minlength="8"/></div>
+                    <div class="form-group"><label class="form-label">Password</label>
+                        <input type="password" id="u-pass" class="form-input" required minlength="8"/>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Minimum 8 chars, 1 uppercase, 1 digit</div>
+                    </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;">Create Account</button>
                     <p style="text-align:center;font-size:0.85rem;color:var(--text-muted);">Account exists? <a href="#" onclick="Auth.showModal('login')" style="color:var(--accent);font-weight:700;">Sign In</a></p>
                 </form>`;
