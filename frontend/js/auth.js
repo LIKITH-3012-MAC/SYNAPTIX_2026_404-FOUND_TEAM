@@ -207,7 +207,7 @@ const Auth = {
 
         if (!user) {
             el.innerHTML = `
-                <div style="display:flex;align-items:center;gap:15px;">
+                <div class="desktop-actions" style="display:flex;align-items:center;gap:15px;">
                     ${statusBadge}
                     ${themeToggle}
                     <button class="btn btn-outline btn-sm" onclick="Auth.showModal('login')">Login</button>
@@ -221,7 +221,7 @@ const Auth = {
             else portalLink = `<a href="authority.html" class="btn btn-ghost btn-sm">🏢 Portal</a>`;
 
             el.innerHTML = `
-                <div style="display:flex;align-items:center;gap:15px;">
+                <div class="desktop-actions" style="display:flex;align-items:center;gap:15px;">
                     ${statusBadge}
                     ${themeToggle}
                     ${portalLink}
@@ -229,6 +229,21 @@ const Auth = {
                     <button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button>
                 </div>
             `;
+        }
+
+        // Mobile Menu Generator — inject standard hamburger button into navbar-inner if missing
+        let mobileBtn = document.getElementById('mobile-menu-btn');
+        if (!mobileBtn) {
+            mobileBtn = document.createElement('button');
+            mobileBtn.id = 'mobile-menu-btn';
+            mobileBtn.className = 'mobile-menu-btn';
+            mobileBtn.innerHTML = '☰';
+            mobileBtn.style.display = 'none'; // Controlled via CSS Media Query
+            mobileBtn.onclick = () => {
+                document.getElementById('navbar').classList.toggle('mobile-menu-open');
+                mobileBtn.innerHTML = document.getElementById('navbar').classList.contains('mobile-menu-open') ? '✕' : '☰';
+            };
+            el.parentElement.appendChild(mobileBtn);
         }
 
         // Init Status Listener

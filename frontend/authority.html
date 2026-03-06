@@ -283,17 +283,17 @@
         <tbody>
           ${data.map((a, i) => `
             <tr>
-              <td><span class="rank-badge rank-${i < 3 ? i + 1 : 'n'}">${a.rank}</span></td>
-              <td><strong>${a.full_name || a.username}</strong></td>
-              <td style="color:var(--text-muted);font-size:0.85rem;">${a.department || '—'}</td>
-              <td>
+              <td data-label="Rank"><span class="rank-badge rank-${i < 3 ? i + 1 : 'n'}">${a.rank}</span></td>
+              <td data-label="Authority"><strong>${a.full_name || a.username}</strong></td>
+              <td data-label="Dept" style="color:var(--text-muted);font-size:0.85rem;">${a.department || '—'}</td>
+              <td data-label="Resolution %">
                 <div class="flex items-center gap-8" style="gap:8px;">
                   <div class="perf-bar"><div class="perf-bar-fill" style="width:${Math.round(a.resolution_rate * 100)}%"></div></div>
                   <span style="font-size:0.85rem;">${Math.round(a.resolution_rate * 100)}%</span>
                 </div>
               </td>
-              <td style="font-family:'JetBrains Mono',monospace;">${a.avg_resolution_time.toFixed(1)}h</td>
-              <td><strong style="color:${a.performance_score >= 80 ? 'var(--green)' : a.performance_score >= 60 ? 'var(--yellow)' : 'var(--red)'};">${a.performance_score.toFixed(1)}</strong></td>
+              <td data-label="Avg Time" style="font-family:'JetBrains Mono',monospace;">${a.avg_resolution_time.toFixed(1)}h</td>
+              <td data-label="Score"><strong style="color:${a.performance_score >= 80 ? 'var(--green)' : a.performance_score >= 60 ? 'var(--yellow)' : 'var(--red)'};">${a.performance_score.toFixed(1)}</strong></td>
             </tr>`).join('')}
         </tbody>
       </table>`;
@@ -351,12 +351,12 @@
                 requestAnimationFrame(() => {
                     tbody.innerHTML = allIssues.map(i => `
           <tr>
-            <td style="max-width:200px;"><a href="issue.html?id=${i.id}" style="font-weight:600;color:var(--accent);">${i.title}</a></td>
-            <td><span class="cat-badge cat-${i.category}">${i.category}</span></td>
-            <td><span class="priority-score priority-${i.priority_score >= 80 ? 'critical' : i.priority_score >= 60 ? 'high' : i.priority_score >= 40 ? 'medium' : 'low'}" style="font-size:1rem;">${i.priority_score}</span></td>
-            <td><span class="badge badge-${i.status}">${i.status.replace('_', ' ')}</span></td>
-            <td style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${i.days_unresolved}d</td>
-            <td style="display: ${isAuth ? '' : 'none'}"><button class="btn btn-primary btn-sm" onclick="updateIssue('${i.id}')">Update</button></td>
+            <td data-label="Title" style="max-width:200px;"><a href="issue.html?id=${i.id}" style="font-weight:600;color:var(--accent);">${i.title}</a></td>
+            <td data-label="Category"><span class="cat-badge cat-${i.category}">${i.category}</span></td>
+            <td data-label="Priority"><span class="priority-score priority-${i.priority_score >= 80 ? 'critical' : i.priority_score >= 60 ? 'high' : i.priority_score >= 40 ? 'medium' : 'low'}" style="font-size:1rem;">${i.priority_score}</span></td>
+            <td data-label="Status"><span class="badge badge-${i.status}">${i.status.replace('_', ' ')}</span></td>
+            <td data-label="Days Open" style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${i.days_unresolved}d</td>
+            <td data-label="Actions" style="display: ${isAuth ? '' : 'none'}"><button class="btn btn-primary btn-sm" onclick="updateIssue('${i.id}')">Update</button></td>
           </tr>`).join('');
                 });
             } catch (err) {

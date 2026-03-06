@@ -1813,7 +1813,27 @@ footer {
   }
 
   .sidebar {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    position: static;
+    height: auto;
+    width: 100%;
+    margin-bottom: 24px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    gap: 16px;
+  }
+
+  .sidebar>div {
+    flex: 1;
+    min-width: 250px;
+  }
+
+  .admin-sidebar {
     display: none;
+    /* Hide admin sidebar for now or handle via mobile menu later */
   }
 }
 
@@ -1845,8 +1865,117 @@ footer {
     font-size: 2.5rem;
   }
 
-  .nav-links {
+  /* ── Mobile Navigation System ── */
+  .mobile-menu-btn {
+    display: block !important;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    margin-left: auto;
+    z-index: 1001;
+  }
+
+  .nav-links,
+  .desktop-actions {
+    display: none !important;
+  }
+
+  /* When menu is active */
+  .navbar.mobile-menu-open {
+    background: var(--bg-secondary);
+  }
+
+  .navbar.mobile-menu-open .nav-links,
+  .navbar.mobile-menu-open .desktop-actions {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    align-items: center !important;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .navbar.mobile-menu-open .navbar-inner {
+    flex-direction: column;
+    height: auto;
+    background: var(--bg-secondary);
+    position: absolute;
+    top: 72px;
+    left: 0;
+    width: 100%;
+    box-shadow: var(--shadow-lg);
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 24px;
+    z-index: 1000;
+  }
+
+  .navbar.mobile-menu-open .desktop-actions {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+
+  /* ── Mobile Layout Adjustments ── */
+  .container {
+    padding: 0 16px;
+  }
+
+  .page-header .flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 16px;
+  }
+
+  /* ── Touch Optimization ── */
+  .btn,
+  .btn-primary,
+  .btn-outline,
+  .btn-ghost,
+  .btn-sm {
+    min-height: 44px;
+    /* Apple UI Guideline */
+  }
+
+  /* ── Converting tables into mobile cards ── */
+  .leaderboard-table,
+  .leaderboard-table thead,
+  .leaderboard-table tbody,
+  .leaderboard-table th,
+  .leaderboard-table td,
+  .leaderboard-table tr {
+    display: block;
+  }
+
+  .leaderboard-table thead tr {
     display: none;
+    /* Hide headers */
+  }
+
+  .leaderboard-table tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--bg-secondary);
+  }
+
+  .leaderboard-table td {
+    border: none !important;
+    position: relative;
+    padding: 8px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+  }
+
+  .leaderboard-table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
   }
 }
 

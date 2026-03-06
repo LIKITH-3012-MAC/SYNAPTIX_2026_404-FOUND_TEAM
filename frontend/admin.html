@@ -300,12 +300,12 @@
                         const tbody = document.getElementById("users-tbody");
                         tbody.innerHTML = users.map(u => `
       <tr>
-        <td><strong>${u.username}</strong></td>
-        <td style="color:#64748b;">${u.email}</td>
-        <td><span style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;background:${u.role === 'admin' ? '#ede9fe' : u.role === 'authority' ? '#e0f2fe' : '#f0fdf4'};color:${u.role === 'admin' ? '#7c3aed' : u.role === 'authority' ? '#0369a1' : '#15803d'};">${u.role}</span></td>
-        <td style="color:#64748b;">${u.department || "—"}</td>
-        <td>${u.is_active ? "✅ Active" : "🔴 Disabled"}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}',this)">${u.is_active ? "Disable" : "Enable"}</button></td>
+        <td data-label="Username"><strong>${u.username}</strong></td>
+        <td data-label="Email" style="color:#64748b;">${u.email}</td>
+        <td data-label="Role"><span style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;background:${u.role === 'admin' ? '#ede9fe' : u.role === 'authority' ? '#e0f2fe' : '#f0fdf4'};color:${u.role === 'admin' ? '#7c3aed' : u.role === 'authority' ? '#0369a1' : '#15803d'};">${u.role}</span></td>
+        <td data-label="Department" style="color:#64748b;">${u.department || "—"}</td>
+        <td data-label="Status">${u.is_active ? "✅ Active" : "🔴 Disabled"}</td>
+        <td data-label="Action"><button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}',this)">${u.is_active ? "Disable" : "Enable"}</button></td>
       </tr>`).join("");
                     } catch (e) { console.warn("Users:", e); }
                 }
@@ -554,9 +554,9 @@
                 }
             </script>
 
-    <!-- Smooth Scroll & Hardware Acceleration Engine -->
-    <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
-    <script src="js/smooth-scroll.js"></script>
+            <!-- Smooth Scroll & Hardware Acceleration Engine -->
+            <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+            <script src="js/smooth-scroll.js"></script>
 </body>
 
 </html>
