@@ -103,8 +103,8 @@ function renderIssueCard(issue, opts = {}) {
   const isCritical = score >= 80;
 
   return `
-    <div class="glass card issue-card-v2 ${isCritical ? 'pulse-critical' : ''}" 
-         style="border-left: 5px solid ${band.color}; cursor:pointer;" 
+    <div class="glass card issue-card-v2 gpu-accelerate ${isCritical ? 'pulse-critical' : ''}" 
+         style="border-left: 5px solid ${band.color}; cursor:pointer; content-visibility: auto; contain-intrinsic-size: 0 160px;" 
          onclick="window.location.href='issue.html?id=${issue.id}'">
       
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
@@ -180,6 +180,14 @@ function startSlaCountdowns(issues) {
       el.style.color = info.expired ? "#dc2626" : info.urgent ? "#ea580c" : "#16a34a";
       if (info.expired) {
         el.style.animation = "pulse 0.8s infinite";
+
+        // System alert for breach
+        if (!issue.sla_breached) {
+          issue.sla_breached = true;
+          if (typeof showToast === 'function') {
+            showToast(`🚨 SYSTEM ALERT: SLA Breached for Issue #${issue.id.slice(-6)}! Penalty flag assigned.`, 'error');
+          }
+        }
         clearInterval(_slaTimers[issue.id]);
       }
 

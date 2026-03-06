@@ -65,16 +65,16 @@ const Auth = {
         return true;
     },
 
-    requireRole(role, redirectTo = 'index.html') {
+    requireRole(roleOrRoles, redirectTo = 'index.html') {
         const user = this.getUser();
-        if (!user || user.role !== role) {
-            // If they are logged in but wrong role, show error and redirect
+        const allowed = Array.isArray(roleOrRoles) ? roleOrRoles.map(r => r.toLowerCase()) : [roleOrRoles.toLowerCase()];
+
+        if (!user || !allowed.includes(String(user.role).toLowerCase())) {
             if (user) {
-                showToast('⛔ Access denied (Role Required: ' + role + ')', 'error');
+                showToast('⛔ Access denied (Role Required: ' + allowed.join(' or ') + ')', 'error');
                 setTimeout(() => window.location.href = redirectTo, 1500);
                 return false;
             }
-            // If not logged in at all, just return false so the page can handle it (e.g. show login modal)
             return false;
         }
         return true;

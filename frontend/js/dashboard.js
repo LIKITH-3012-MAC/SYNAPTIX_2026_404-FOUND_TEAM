@@ -52,11 +52,9 @@ async function fetchIssues() {
     const sortBy = document.getElementById('sort-select')?.value || 'priority_score';
     try {
         const params = {
-            category: _catFilter && _catFilter !== 'undefined' ? _catFilter : undefined,
-            status: _statusFilter && _statusFilter !== 'undefined' ? _statusFilter : undefined,
             sort_by: sortBy,
             order: 'desc',
-            limit: 100,
+            limit: 1000,
             offset: 0
         };
         const issues = await Issues.list(params);
@@ -64,9 +62,6 @@ async function fetchIssues() {
         _offset = 0;
         renderIssues();
 
-        if (_mapVisible) {
-            MapManager.updateData(issues, Auth.getUser()?.role);
-        }
     } catch {
         document.getElementById('issues-grid').innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:60px;">
@@ -82,31 +77,55 @@ function setCatFilter(cat) {
     _catFilter = cat;
     document.querySelectorAll('[data-cat]').forEach(b => b.classList.remove('active'));
     document.querySelector(`[data-cat="${cat}"]`)?.classList.add('active');
-    fetchIssues();
+    _offset = 0;
+    renderIssues();
 }
 
 function setStatusFilter(status) {
     _statusFilter = status;
     document.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
     document.querySelector(`[data-status="${status}"]`)?.classList.add('active');
-    fetchIssues();
+    _offset = 0;
+    renderIssues();
 }
 
+let _searchTimeout = null;
+
 function filterIssues() {
-    _searchQuery = document.getElementById('search-input')?.value?.toLowerCase() || '';
-    renderIssues();
+    clearTimeout(_searchTimeout);
+    _searchTimeout = setTimeout(() => {
+        _searchQuery = document.getElementById('search-input')?.value?.toLowerCase() || '';
+        renderIssues();
+    }, 300);
 }
 
 /* ── Render Issues Grid ──────────────────────────────────────── */
 function renderIssues() {
     let filtered = _allIssues;
 
+    if (_catFilter) {
+        filtered = filtered.filter(i => i.category === _catFilter);
+    }
+
+    if (_statusFilter) {
+        filtered = filtered.filter(i => i.status === _statusFilter);
+    }
+
     if (_searchQuery) {
-        filtered = filtered.filter(i =>
-            i.title.toLowerCase().includes(_searchQuery) ||
-            (i.description || '').toLowerCase().includes(_searchQuery) ||
-            i.category.toLowerCase().includes(_searchQuery)
-        );
+        filtered = filtered.filter(i => {
+            const query = _searchQuery;
+            const searchFields = [
+                i.title,
+                i.category,
+                i.description,
+                i.status,
+                i.location,
+                `${i.latitude}, ${i.longitude}`,
+                `${i.latitude},${i.longitude}`
+            ].map(f => (f || '').toString().toLowerCase());
+
+            return searchFields.some(field => field.includes(query));
+        });
     }
 
     const grid = document.getElementById('issues-grid');
@@ -128,17 +147,25 @@ function renderIssues() {
     const visible = filtered.slice(0, _offset + 12);
     const user = Auth.getUser();
     const isAuth = user && (user.role === 'authority' || user.role === 'admin');
-    grid.innerHTML = visible.map(issue => renderIssueCard(issue, { showUpvote: true, showUpdateBtn: isAuth })).join('');
 
-    // Start live SLA countdowns
-    startSlaCountdowns(visible);
+    // Defer DOM update to animation frame for fluid scroll performance
+    requestAnimationFrame(() => {
+        grid.innerHTML = visible.map(issue => renderIssueCard(issue, { showUpvote: true, showUpdateBtn: isAuth })).join('');
 
-    // Animate priority scores on load
-    setTimeout(() => animatePriorityScores(), 100);
+        // Start live SLA countdowns
+        startSlaCountdowns(visible);
 
-    if (loadMoreBtn) {
-        loadMoreBtn.style.display = visible.length < filtered.length ? 'block' : 'none';
-    }
+        // Animate priority scores on load
+        setTimeout(() => typeof animatePriorityScores === 'function' && animatePriorityScores(), 100);
+
+        if (loadMoreBtn) {
+            loadMoreBtn.style.display = visible.length < filtered.length ? 'block' : 'none';
+        }
+
+        if (_mapVisible) {
+            MapManager.updateData(filtered, Auth.getUser()?.role);
+        }
+    });
 }
 
 function loadMore() {

@@ -8,7 +8,10 @@ PATCH  /api/issues/{id}      - Update issue (auth/admin only); awards credits on
 DELETE /api/issues/{id}      - Delete issue (admin only)
 """
 import uuid
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, UploadFile, File
+import os
+import uuid
+import shutil
 from typing import Optional
 from models import IssueCreate, IssueUpdate, IssueResponse, MessageResponse
 from database import get_db
@@ -80,6 +83,25 @@ def _serialize_issue(row: dict) -> dict:
         r["breach_risk"] = 0.0
 
     return r
+
+
+# ── UPLOAD ────────────────────────────────────────────────────
+@router.post("/upload", response_model=dict)
+def upload_image(request: Request, file: UploadFile = File(...)):
+    """Upload image to local server and return URL."""
+    try:
+        os.makedirs("uploads", exist_ok=True)
+        ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        filename = f"{uuid.uuid4()}.{ext}"
+        path = os.path.join("uploads", filename)
+        with open(path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        base_url = str(request.base_url).rstrip("/")
+        # fallback for render or prod if request.base_url is wrong
+        return {"url": f"{base_url}/uploads/{filename}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── CREATE ────────────────────────────────────────────────────

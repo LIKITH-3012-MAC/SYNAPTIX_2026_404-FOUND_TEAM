@@ -97,10 +97,12 @@ def require_roles(*allowed_roles: str):
     Usage: Depends(require_roles('admin', 'authority'))
     """
     def role_checker(current_user: dict = Depends(get_current_user)) -> dict:
-        if current_user.get("role") not in allowed_roles:
+        user_role = str(current_user.get("role", "")).lower()
+        allowed = [r.lower() for r in allowed_roles]
+        if user_role not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required roles: {list(allowed_roles)}"
+                detail=f"⛔ Access denied (Role Required: {', '.join(allowed_roles)})"
             )
         return current_user
     return role_checker

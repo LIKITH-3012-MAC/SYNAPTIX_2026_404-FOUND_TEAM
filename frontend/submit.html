@@ -206,12 +206,40 @@
                             style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">4</span>
                         Photo Evidence
                     </h3>
+
                     <div class="form-group">
-                        <label class="form-label">Image URL (Optional)</label>
+                        <label class="form-label">Upload Photo or Capture</label>
+                        <div class="flex gap-4" style="margin-bottom: 16px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-primary"
+                                onclick="document.getElementById('file-gallery').click()" style="flex:1;">
+                                📁 Upload from Gallery
+                            </button>
+                            <button type="button" class="btn btn-outline"
+                                onclick="document.getElementById('file-camera').click()" style="flex:1;">
+                                📷 Capture Photo
+                            </button>
+                        </div>
+
+                        <!-- Hidden inputs -->
+                        <input type="file" id="file-gallery" accept="image/*" style="display:none;"
+                            onchange="handleImageSelection(this)" />
+                        <input type="file" id="file-camera" accept="image/*" capture="environment" style="display:none;"
+                            onchange="handleImageSelection(this)" />
+
+                        <!-- Preview area -->
+                        <div id="image-preview-container"
+                            style="display:none; position:relative; max-width:100%; width:300px; height:200px; overflow:hidden; border-radius:var(--radius-md); border:2px solid var(--border); margin-bottom:16px;">
+                            <img id="image-preview" src=""
+                                style="width:100%; height:100%; object-fit:contain; background:var(--bg-secondary);" />
+                            <button type="button" class="btn btn-sm btn-outline" onclick="removeImage()"
+                                style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); color:white; border:none;">✕</button>
+                        </div>
+
+                        <label class="form-label">Or Image URL</label>
                         <input type="url" id="image_url" class="form-input"
                             placeholder="https://example.com/photo.jpg" />
-                        <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">Upload your photo to
-                            an image host and paste the URL here. Photo evidence strengthens your report.</div>
+                        <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">Upload your photo.
+                            Photo evidence strengthens your report.</div>
                     </div>
                 </div>
 
@@ -478,6 +506,36 @@
             const btn = document.getElementById('submit-btn');
             btn.textContent = '⏳ Submitting...'; btn.disabled = true;
 
+            let finalImageUrl = document.getElementById('image_url').value || null;
+
+            // Upload selected file to backend
+            if (selectedImageFile) {
+                btn.textContent = '⏳ Uploading Photo...';
+                try {
+                    const formData = new FormData();
+                    formData.append('file', selectedImageFile);
+
+                    const token = localStorage.getItem("resolvit_token");
+                    const headers = {};
+                    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+                    const uploadRes = await fetch(`${BASE_URL}/api/issues/upload`, {
+                        method: 'POST',
+                        headers,
+                        body: formData
+                    });
+
+                    if (!uploadRes.ok) throw new Error("Failed to upload image");
+                    const uploadData = await uploadRes.json();
+                    finalImageUrl = uploadData.url;
+                } catch (err) {
+                    showToast("❌ Image upload failed: " + err.message, "error");
+                    btn.textContent = '🚨 Submit Issue Report';
+                    btn.disabled = false;
+                    return;
+                }
+            }
+
             const payload = {
                 title: document.getElementById('title').value,
                 description: document.getElementById('description').value,
@@ -487,7 +545,7 @@
                 safety_risk_probability: parseInt(document.getElementById('safety_risk').value) / 100,
                 latitude: parseFloat(document.getElementById('latitude').value) || null,
                 longitude: parseFloat(document.getElementById('longitude').value) || null,
-                image_url: document.getElementById('image_url').value || null
+                image_url: finalImageUrl
             };
 
             try {
@@ -581,6 +639,62 @@
             }
         });
 
+        // Image UI Handlers
+        let selectedImageFile = null;
+
+        function handleImageSelection(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        // Auto-compress image using canvas
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const MAX_SIZE = 1200; // max width/height
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob((blob) => {
+                            selectedImageFile = new File([blob], file.name || "capture.jpg", { type: "image/jpeg", lastModified: Date.now() });
+
+                            // Show preview
+                            document.getElementById('image-preview').src = URL.createObjectURL(blob);
+                            document.getElementById('image-preview-container').style.display = 'block';
+                            document.getElementById('image_url').value = '';
+                        }, 'image/jpeg', 0.8); // 80% quality compression
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeImage() {
+            selectedImageFile = null;
+            document.getElementById('image-preview-container').style.display = 'none';
+            document.getElementById('image-preview').src = '';
+            document.getElementById('file-gallery').value = '';
+            document.getElementById('file-camera').value = '';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initSubmitMap();
             updatePriorityPreview();
@@ -593,6 +707,10 @@
             window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
         });
     </script>
+
+    <!-- Smooth Scroll & Hardware Acceleration Engine -->
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+    <script src="js/smooth-scroll.js"></script>
 </body>
 
 </html>

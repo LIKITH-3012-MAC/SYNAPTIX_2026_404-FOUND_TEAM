@@ -217,7 +217,7 @@
                 Auth.showModal('login');
                 return;
             }
-            if (!Auth.requireRole('authority', 'index.html')) return;
+            if (!Auth.requireRole(['authority', 'admin'], 'index.html')) return;
 
             currentUser = Auth.getUser();
             initDashboard();
@@ -330,23 +330,45 @@
                 if (escalated.length) alertEl.innerHTML = `<div class="escalation-banner" style="margin-bottom:24px;"><span style="font-size:1.5rem;">🚨</span><div><strong>${escalated.length} ESCALATED ISSUE${escalated.length > 1 ? 'S' : ''}</strong> require immediate attention. <a href="#" style="color:inherit;text-decoration:underline;margin-left:8px;" onclick="document.getElementById('issue-status-filter').value='escalated';loadIssues();">View All →</a></div></div>`;
                 else alertEl.innerHTML = '';
 
+                // SLA Tracker
+                const activeSla = allIssues
+                    .filter(i => i.sla_seconds_remaining != null && !i.sla_breached && i.status !== 'resolved')
+                    .sort((a, b) => a.sla_seconds_remaining - b.sla_seconds_remaining)
+                    .slice(0, 3);
+                const slaEl = document.getElementById('sla-issues');
+                if (!activeSla.length) {
+                    slaEl.innerHTML = '<div style="grid-column:1/-1;" class="alert alert-success">✅ No pending SLAs! All on track.</div>';
+                } else {
+                    slaEl.innerHTML = activeSla.map(i => renderIssueCard(i, { showUpdateBtn: isAuth })).join('');
+                    if (window.startSlaCountdowns) {
+                        setTimeout(() => window.startSlaCountdowns(activeSla), 100);
+                    }
+                }
+
                 // Issues Table
                 const tbody = document.getElementById('issues-tbody');
-                tbody.innerHTML = allIssues.map(i => `
-      <tr>
-        <td style="max-width:200px;"><a href="issue.html?id=${i.id}" style="font-weight:600;color:var(--accent);">${i.title}</a></td>
-        <td><span class="cat-badge cat-${i.category}">${i.category}</span></td>
-        <td><span class="priority-score priority-${i.priority_score >= 80 ? 'critical' : i.priority_score >= 60 ? 'high' : i.priority_score >= 40 ? 'medium' : 'low'}" style="font-size:1rem;">${i.priority_score}</span></td>
-        <td><span class="badge badge-${i.status}">${i.status.replace('_', ' ')}</span></td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${i.days_unresolved}d</td>
-        <td style="display: ${isAuth ? '' : 'none'}"><button class="btn btn-primary btn-sm" onclick="updateIssue('${i.id}')">Update</button></td>
-      </tr>`).join('');
+
+                requestAnimationFrame(() => {
+                    tbody.innerHTML = allIssues.map(i => `
+          <tr>
+            <td style="max-width:200px;"><a href="issue.html?id=${i.id}" style="font-weight:600;color:var(--accent);">${i.title}</a></td>
+            <td><span class="cat-badge cat-${i.category}">${i.category}</span></td>
+            <td><span class="priority-score priority-${i.priority_score >= 80 ? 'critical' : i.priority_score >= 60 ? 'high' : i.priority_score >= 40 ? 'medium' : 'low'}" style="font-size:1rem;">${i.priority_score}</span></td>
+            <td><span class="badge badge-${i.status}">${i.status.replace('_', ' ')}</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${i.days_unresolved}d</td>
+            <td style="display: ${isAuth ? '' : 'none'}"><button class="btn btn-primary btn-sm" onclick="updateIssue('${i.id}')">Update</button></td>
+          </tr>`).join('');
+                });
             } catch (err) {
                 console.error(err);
                 document.getElementById('issues-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">Could not load issues. Is the backend running?</td></tr>';
             }
         }
     </script>
+
+    <!-- Smooth Scroll & Hardware Acceleration Engine -->
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+    <script src="js/smooth-scroll.js"></script>
 </body>
 
 </html>

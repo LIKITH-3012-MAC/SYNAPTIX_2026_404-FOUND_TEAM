@@ -148,6 +148,7 @@ function buildUrbanNodePopup(issue, role = "citizen") {
       </div>
       <h4 style="margin:8px 0; color:white; font-size:1rem;">${issue.title}</h4>
       <div style="font-size:0.7rem; color:var(--text-secondary);">${issue.category}</div>
+      ${issue.image_url ? `<div style="margin-top:10px; border-radius:8px; overflow:hidden; border:1px solid var(--border);"><img src="${issue.image_url}" style="width:100%; height:120px; object-fit:cover; display:block;" /></div>` : ''}
     </div>
     
     <div class="popup-sla-box" style="background:${slaStatus.color}10; padding:12px; border-left:4px solid ${slaStatus.color};">

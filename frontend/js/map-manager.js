@@ -43,7 +43,10 @@ const MapManager = (() => {
             _map = L.map(elementId, {
                 zoomControl: true,
                 dragging: true,
-                scrollWheelZoom: true
+                scrollWheelZoom: true,
+                preferCanvas: true, // Extreme performance for rendering many points
+                wheelDebounceTime: 150, // Optimize scroll wheel zooms on Mac/touchpads
+                zoomAnimation: true
             }).setView(coords, 13);
 
             // Support Light/Dark Theme dynamically
