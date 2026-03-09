@@ -30,7 +30,7 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: Optional[
         to_email: Recipient email address
         subject: Email subject line
         html_body: HTML content of the email
-        text_body: Plain text fallback (optional)
+        text_body: Plain text fallback (optionals)
     
     Returns:
         True if email was sent successfully, False otherwise
