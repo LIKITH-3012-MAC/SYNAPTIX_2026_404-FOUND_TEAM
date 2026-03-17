@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Primary Meta Tags -->
-  <title>Likith Naidu Anumakonda | AI-ML Engineer & Creator of Resolvit</title>
+  <title>Resolvit-IT</title>
   <meta name="title" content="Resolvit | Streamlined Task-Based Communication">
   <meta name="description"
     content="Official Portfolio of Likith Naidu Anumakonda — AI-ML Architect, Founder of SAKRA Vision, Lead Developer of BenchAI & Resolvit. Specializing in Offline LLM, RAG Systems, and Civic Intelligence.">
@@ -88,6 +88,216 @@
   </script>
 
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* ── Cinematic Background System ────────────────────────── */
+    body {
+      background: url('https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/A_breathtaking_ultrawide_cinematic_landscape_photo_delpmaspu.png') no-repeat center center fixed !important;
+      background-size: cover !important;
+      position: relative;
+    }
+
+    /* Subtle Readability Layer */
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(2, 6, 23, 0.4);
+      /* Premium dark overlay */
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* ── Premium Glassmorphism Overrides ───────────────────── */
+    .hero,
+    .section,
+    section {
+      background: transparent !important;
+    }
+
+    .hero-bg,
+    .hero-grid {
+      display: none !important;
+      /* Remove secondary background layers */
+    }
+
+    /* Cinematic Text Panels */
+    .hero-content,
+    section .container,
+    footer .container {
+      background: rgba(15, 23, 42, 0.25) !important;
+      backdrop-filter: blur(12px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: var(--radius-lg);
+      padding: 40px !important;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      width: calc(100% - 32px) !important; /* Mobile safe width */
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+
+    /* Premium Glass Cards */
+    .card,
+    .issue-card,
+    .stat-item,
+    .hero-badge {
+      background: rgba(255, 255, 255, 0.04) !important;
+      backdrop-filter: blur(16px) saturate(200%) !important;
+      -webkit-backdrop-filter: blur(16px) saturate(200%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2) !important;
+      transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    }
+
+    .card:hover,
+    .issue-card:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      transform: translateY(-5px) !important;
+      border-color: var(--accent) !important;
+    }
+
+    /* ── Advanced Typography Visibility ───────────────────── */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    .hero-tagline,
+    .hero-subtitle,
+    .section-label,
+    p,
+    span,
+    .stat-number,
+    .stat-label {
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.2) !important;
+      color: #ffffff !important;
+    }
+
+    h1 {
+      background: none !important;
+      -webkit-text-fill-color: #ffffff !important;
+      font-weight: 900 !important;
+    }
+
+    .hero-tagline {
+      color: #818cf8 !important;
+      /* Lighter indigo for visibility */
+    }
+
+    .hero-subtitle {
+      color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    .section-label {
+      background: rgba(99, 102, 241, 0.2) !important;
+      color: #a5b4fc !important;
+      border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    }
+
+    /* ── Component Adjustments ────────────────────────────── */
+    #navbar {
+      background: rgba(15, 23, 42, 0.65) !important;
+      backdrop-filter: blur(24px) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .nav-link {
+      color: rgba(255, 255, 255, 0.8) !important;
+    }
+
+    .nav-link:hover {
+      color: #ffffff !important;
+    }
+
+    /* Map Visibility */
+    #map {
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* Footer refinement */
+    footer {
+      background: rgba(2, 6, 23, 0.8) !important;
+      backdrop-filter: blur(20px) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* ── Mobile UI Optimizations ──────────────────────────── */
+    @media (max-width: 768px) {
+      .hero-content,
+      section .container,
+      footer .container {
+        padding: 24px !important;
+        /* Reduce padding for mobile */
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        border-radius: var(--radius-md);
+      }
+
+      .hero {
+        padding-top: 60px;
+        min-height: auto;
+        display: block;
+      }
+
+      .hero-content {
+        padding-top: 80px !important;
+      }
+
+      h1 {
+        font-size: 2.2rem !important;
+        /* Smaller text for mobile */
+        line-height: 1.1;
+      }
+
+      .hero-tagline {
+        font-size: 1.4rem !important;
+      }
+
+      .hero-stats {
+        gap: 20px !important;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .stat-number {
+        font-size: 1.6rem !important;
+      }
+
+      .hero-cta {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px !important;
+      }
+
+      .btn-hero,
+      .btn-hero-outline {
+        width: 100%;
+        padding: 16px 24px !important;
+        text-align: center;
+      }
+
+      .grid-4,
+      .grid-3 {
+        grid-template-columns: 1fr !important;
+        /* Single column on mobile */
+      }
+
+      .navbar-inner {
+        padding: 0 16px !important;
+      }
+
+      .nav-links {
+        display: none;
+        /* Hiding simple links on mobile for cleaner look */
+      }
+    }
+  </style>
 </head>
 
 <body>
