@@ -10,10 +10,11 @@ const Auth = {
         const data = await API.post('/api/auth/login', { email, password });
         localStorage.setItem('resolvit_token', data.access_token);
         localStorage.setItem('resolvit_user', JSON.stringify({
-            id: data.user_id,
-            username: data.username,
-            role: data.role,
-            department: data.department,
+            id:            data.user_id,
+            username:      data.username,
+            email:         email,
+            role:          data.role,
+            department:    data.department || null,
             auth_provider: 'database'
         }));
         return data;
@@ -31,18 +32,17 @@ const Auth = {
      */
     logout() {
         const user = this.getUser();
-        const wasOAuth = user && user.auth_provider === 'google';
+        const isOAuth = user && user.auth_provider && user.auth_provider !== 'database';
         
         localStorage.removeItem('resolvit_token');
         localStorage.removeItem('resolvit_user');
         
-        // If Google user, also clear Auth0 session
-        if (wasOAuth && window.Auth0Integration && Auth0Integration._client) {
-            Auth0Integration._client.logout({
-                logoutParams: { returnTo: window.location.origin }
-            });
-            return; // Auth0 will handle redirect
+        // For ALL OAuth logins (Google, GitHub, Twitter) also sign out from Auth0
+        if (isOAuth && window.Auth0Integration) {
+            Auth0Integration.logout();  // handles Auth0 + redirect
+            return;
         }
+        // Email/password: just stay on page (caller handles redirect)
     },
 
     /**
@@ -71,7 +71,8 @@ const Auth = {
      */
     requireAuth(redirectTo = 'index.html') {
         if (!this.getUser()) {
-            showToast('⚠️ Please login to access this page.');
+            const _toast = typeof showToast === 'function' ? showToast : console.warn;
+            _toast('⚠️ Please login to access this page.', 'warning');
             setTimeout(() => window.location.href = redirectTo, 1500);
             return false;
         }
@@ -200,13 +201,22 @@ const Auth = {
                 const btn = e.target.querySelector('button');
                 btn.disabled = true; btn.textContent = '⏳ Processing...';
                 try {
-                    const email = document.getElementById('u-email').value;
-                    const pass = document.getElementById('u-pass').value;
-                    await this.register({ username: document.getElementById('u-name').value, email, password: pass, role: 'citizen' });
-                    await this.login(email, pass);
+                    const email    = document.getElementById('u-email').value.trim();
+                    const pass     = document.getElementById('u-pass').value;
+                    const fullName = document.getElementById('u-name').value.trim();
+                    await this.register({ username: fullName, email, password: pass, role: 'citizen' });
+                    const u = await this.login(email, pass);
+                    // Enrich stored user with display name
+                    const stored = this.getUser() || {};
+                    stored.full_name = fullName;
+                    localStorage.setItem('resolvit_user', JSON.stringify(stored));
                     this.hideModal();
-                    showToast(`✨ Welcome to RESOLVIT!`, 'success');
-                    setTimeout(() => location.reload(), 800);
+                    showToast(`✨ Welcome to RESOLVIT, ${fullName}!`, 'success');
+                    setTimeout(() => {
+                        if (u.role === 'admin') window.location.href = 'admin.html';
+                        else if (u.role === 'authority') window.location.href = 'authority.html';
+                        else window.location.href = 'dashboard.html';
+                    }, 700);
                 } catch (err) {
                     document.getElementById('auth-alert').innerHTML = `<div class="alert alert-error" style="margin-bottom:15px;">❌ ${err.message}</div>`;
                     btn.disabled = false; btn.textContent = 'Create Account';

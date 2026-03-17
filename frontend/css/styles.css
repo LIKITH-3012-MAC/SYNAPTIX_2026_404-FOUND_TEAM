@@ -2522,10 +2522,106 @@ html, body {
 
 /* Script Overrides */
 body.script-devanagari { font-family: var(--font-hi), var(--font-main) !important; }
-body.script-telugu { font-family: var(--font-te), var(--font-main) !important; }
-body.script-tamil { font-family: var(--font-ta), var(--font-main) !important; }
-body.script-bengali { font-family: var(--font-bn), var(--font-main) !important; }
-body.script-kannada { font-family: var(--font-kn), var(--font-main) !important; }
-body.script-malayalam { font-family: var(--font-ml), var(--font-main) !important; }
-body.script-gujarati { font-family: var(--font-gu), var(--font-main) !important; }
-body.script-gurmukhi { font-family: var(--font-pa), var(--font-main) !important; }
+body.script-telugu     { font-family: var(--font-te), var(--font-main) !important; }
+body.script-tamil      { font-family: var(--font-ta), var(--font-main) !important; }
+body.script-bengali    { font-family: var(--font-bn), var(--font-main) !important; }
+body.script-kannada    { font-family: var(--font-kn), var(--font-main) !important; }
+body.script-malayalam  { font-family: var(--font-ml), var(--font-main) !important; }
+body.script-gujarati   { font-family: var(--font-gu), var(--font-main) !important; }
+body.script-gurmukhi   { font-family: var(--font-pa), var(--font-main) !important; }
+
+/* ================================================================
+   MOBILE SCROLL PERFORMANCE ENGINE
+   Backbone fix for smooth touch scrolling across all devices.
+   ================================================================ */
+
+/* Native momentum scroll */
+html {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── On mobile: disable GPU-expensive backdrop-filter (biggest perf win) ── */
+@media (max-width: 768px) {
+  /* Replace blur-glass with solid fallback — visually similar, zero GPU cost */
+  .glass,
+  .glass-premium,
+  .glass-card-premium,
+  .glass-hover,
+  .modal-box,
+  #navbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(15, 23, 42, 0.92) !important;
+  }
+
+  /* Pause expensive cluster animations during scroll (re-enabled on idle) */
+  .cluster-pulse-low,
+  .cluster-pulse-medium,
+  .cluster-pulse-high,
+  .cluster-blink-critical {
+    animation-play-state: paused;
+  }
+
+  /* Prevent fixed-position home background from compositing constantly */
+  .home-bg::before {
+    position: absolute !important;
+    background-attachment: scroll;
+  }
+
+  /* Contain layout for issue cards — prevents paint storms */
+  .issue-card-v2, .glass-card-premium {
+    contain: layout style;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 180px;
+  }
+
+  /* Remove box-shadow depth stacking on mobile */
+  .panel,
+  .ctrl-card,
+  .glass-card-premium {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  }
+
+  /* Simplify hover transforms — eliminate jank */
+  .glass-card-premium:hover,
+  .ctrl-card:hover,
+  .issue-card-v2:hover {
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  }
+
+  /* Auth modal scrollable on small screens */
+  .modal-overlay {
+    align-items: flex-start !important;
+    padding-top: 20px;
+    overflow-y: auto !important;
+  }
+
+  .modal-box {
+    max-height: unset !important;
+    overflow-y: visible !important;
+    margin-bottom: 20px;
+  }
+}
+
+/* ── Respect system preference for reduced motion ──────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── Scrollbar styling ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #818cf8; }
