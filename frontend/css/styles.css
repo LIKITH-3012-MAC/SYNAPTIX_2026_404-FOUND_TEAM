@@ -2240,10 +2240,7 @@ footer {
   overflow: hidden;
 }
 
-@media (max-width: 1024px) {
-  .admin-layout { flex-direction: column; overflow-y: auto; height: auto; }
-  .admin-sidebar { width: 100% !important; border-right: none; border-bottom: 1px solid var(--border); }
-}
+
 
 .admin-sidebar {
   width: 280px;
@@ -2294,6 +2291,7 @@ footer {
   padding: 40px;
   overflow-y: auto;
   position: relative;
+  min-width: 0;
 }
 
 .admin-header {

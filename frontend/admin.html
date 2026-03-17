@@ -10,46 +10,417 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-   type="image/png" href="">
-  
-  <!-- Auth0 Runtime Configuration -->
-  <script>
-    window.AUTH0_CONFIG = {
-      domain: "resolvit-ai.us.auth0.com",
-      clientId: "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
-      redirectUri: "https://resolvit-app-2026.vercel.app"
-    };
-  </script>
-  <!-- RESOLVIT Official Favicon -->
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
-  <link rel="shortcut icon" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
+
+    <!-- Auth0 Runtime Configuration -->
+    <script>
+        window.AUTH0_CONFIG = {
+            domain: "resolvit-ai.us.auth0.com",
+            clientId: "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
+            redirectUri: "https://resolvit-app-2026.vercel.app"
+        };
+    </script>
+    <!-- RESOLVIT Official Favicon -->
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
+    <link rel="shortcut icon" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
+
+    <style>
+        /* ─── RESPONSIVE ADMIN SHELL ─────────────────────────────── */
+        .admin-layout {
+            display: flex;
+            height: 100vh;
+            background: #020617;
+            color: #f8fafc;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ─── MOBILE HEADER BAR ──────────────────────────────────── */
+        .admin-topbar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 5000;
+            background: #0f172a;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 0 16px;
+            height: 56px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .admin-topbar-logo {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #6366f1;
+            letter-spacing: -0.04em;
+        }
+
+        .admin-topbar-logo small {
+            display: block;
+            font-size: 0.6rem;
+            opacity: 0.5;
+            font-weight: 400;
+            line-height: 1;
+        }
+
+        .admin-hamburger {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+        }
+
+        .admin-hamburger span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: currentColor;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .admin-hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+        .admin-hamburger.open span:nth-child(2) { opacity: 0; }
+        .admin-hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+        /* ─── SIDEBAR ────────────────────────────────────────────── */
+        .admin-sidebar {
+            width: 264px;
+            background: #0f172a;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 0;
+            flex-shrink: 0;
+            overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .admin-sidebar .logo {
+            padding: 0 24px 28px;
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: #6366f1;
+            letter-spacing: -0.04em;
+        }
+
+        .sidebar-link {
+            padding: 11px 24px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-right: 3px solid transparent;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .sidebar-link:hover { background: rgba(99,102,241,0.06); color: #e2e8f0; }
+        .sidebar-link.active { background: rgba(99,102,241,0.12); color: #818cf8; border-right-color: #6366f1; font-weight: 700; }
+
+        .sidebar-sep {
+            height: 1px;
+            background: rgba(255,255,255,0.06);
+            margin: 12px 16px;
+        }
+
+        /* ─── SIDEBAR OVERLAY (mobile) ───────────────────────────── */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 4999;
+            background: rgba(2,6,23,0.7);
+            backdrop-filter: blur(4px);
+        }
+
+        /* ─── MAIN AREA ──────────────────────────────────────────── */
+        .admin-main {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            position: relative;
+            min-width: 0;
+        }
+
+        .admin-header { margin-bottom: 32px; }
+
+        .admin-header h1 {
+            font-size: clamp(1.4rem, 3vw, 2rem);
+            font-weight: 800;
+            margin-bottom: 6px;
+            color: white;
+        }
+
+        .admin-header p { color: #64748b; font-size: 0.9rem; }
+
+        /* ─── KPI GRID ───────────────────────────────────────────── */
+        .ctrl-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .ctrl-card {
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4);
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .ctrl-card:hover { transform: translateY(-3px); border-color: rgba(99,102,241,0.3); }
+
+        .ctrl-val {
+            font-size: clamp(1.5rem, 3vw, 2.2rem);
+            font-weight: 900;
+            margin-bottom: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .ctrl-lbl {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ─── PANELS ─────────────────────────────────────────────── */
+        .panel {
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+            animation: panelIn 0.45s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        .panel h3 { margin-bottom: 20px; font-size: 1.15rem; font-weight: 800; color: white; }
+        .panel.hidden { display: none; }
+
+        @keyframes panelIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── HEATMAP ────────────────────────────────────────────── */
+        #heatmap { height: 480px; border-radius: 18px; background: #020617; }
+
+        /* ─── TABLE ──────────────────────────────────────────────── */
+        .esc-table { width: 100%; border-collapse: collapse; }
+        .esc-table th {
+            text-align: left;
+            padding: 14px 16px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #64748b;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .esc-table td {
+            padding: 14px 16px;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            color: #e2e8f0;
+        }
+
+        /* ─── PERF ROWS ──────────────────────────────────────────── */
+        .perf-row {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 14px;
+            margin-bottom: 14px;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .perf-rank {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+
+        .perf-bar-wrap { flex: 1; min-width: 0; }
+
+        .perf-bar-bg { height: 6px; background: #1e293b; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+        .perf-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+
+        #category-chart { margin-top: 28px; }
+        #radar-overlay { animation: radarFadeIn 0.4s ease; }
+        @keyframes radarFadeIn { from { opacity:0; transform:scale(1.04); } to { opacity:1; transform:scale(1); } }
+
+        /* ─── GOV HEALTH GRID ────────────────────────────────────── */
+        #gov-components { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; max-width: 600px; margin: 0 auto; }
+
+        /* ─── ANALYTICS KPI ──────────────────────────────────────── */
+        #analytics-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+
+        /* ─── LEVEL BADGES ───────────────────────────────────────── */
+        .level-badge { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+        .level-1 { background: #fef3c7; color: #92400e; }
+        .level-2 { background: #fee2e2; color: #991b1b; }
+        .level-3 { background: #4c1d95; color: #ddd6fe; }
+
+        /* ─── RANK COLOUR CODING ─────────────────────────────────── */
+        .rank-1 { background: linear-gradient(135deg,#f59e0b,#fbbf24); color: #000; }
+        .rank-2 { background: linear-gradient(135deg,#94a3b8,#cbd5e1); color: #000; }
+        .rank-3 { background: linear-gradient(135deg,#92400e,#b45309); color: #fff; }
+        .rank-n { background: #1e293b; color: #94a3b8; }
+
+        /* ─── CATEGORY DOT ───────────────────────────────────────── */
+        .category-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+
+        /* ─────────────────────────────────────────────────────────
+           TABLET  (≤1024px)
+        ───────────────────────────────────────────────────────── */
+        @media (max-width: 1024px) {
+            .admin-layout { height: 100vh; overflow: hidden; }
+
+            /* Show the topbar */
+            .admin-topbar { display: flex; }
+
+            /* Sidebar becomes a full-height drawer */
+            .admin-sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 5100;
+                transform: translateX(-100%);
+                box-shadow: 4px 0 40px rgba(0,0,0,0.6);
+                padding-top: 72px; /* clear topbar */
+            }
+
+            .admin-sidebar.open { transform: translateX(0); }
+            .sidebar-overlay.show { display: block; }
+
+            .admin-main { padding-top: 76px; /* clear topbar */ }
+        }
+
+        /* ─────────────────────────────────────────────────────────
+           MOBILE  (≤768px)
+        ───────────────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .admin-main { padding: 76px 16px 24px; }
+
+            .ctrl-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+            .ctrl-card { padding: 16px; border-radius: 14px; }
+            .ctrl-val { font-size: 1.6rem; }
+
+            .panel { padding: 18px; border-radius: 16px; }
+            .panel h3 { font-size: 1rem; }
+
+            #heatmap { height: 300px; }
+
+            /* Responsive table → card list */
+            .esc-table thead { display: none; }
+            .esc-table, .esc-table tbody, .esc-table tr, .esc-table td { display: block; width: 100%; }
+            .esc-table tr {
+                background: rgba(255,255,255,0.02);
+                border: 1px solid rgba(255,255,255,0.05);
+                border-radius: 12px;
+                margin-bottom: 12px;
+                padding: 4px 0;
+            }
+            .esc-table td {
+                padding: 8px 14px;
+                font-size: 0.82rem;
+                border-bottom: none;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .esc-table td::before {
+                content: attr(data-label);
+                font-size: 0.65rem;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: #64748b;
+                font-weight: 700;
+                min-width: 80px;
+                flex-shrink: 0;
+            }
+
+            .perf-row { flex-wrap: wrap; gap: 12px; padding: 14px; }
+            .perf-rank { width: 36px; height: 36px; font-size: 1rem; }
+
+            #gov-components { grid-template-columns: repeat(2,1fr); }
+            #analytics-kpis { grid-template-columns: repeat(2,1fr); gap: 12px; }
+
+            /* Radar overlay metrics move to bottom */
+            #radar-overlay > div:nth-child(3) {
+                width: calc(100% - 32px) !important;
+                top: auto !important;
+                bottom: 20px !important;
+                right: 16px !important;
+                left: 16px !important;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .ctrl-grid { grid-template-columns: 1fr 1fr; }
+            #gov-components { grid-template-columns: 1fr 1fr; }
+            #analytics-kpis { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 
 <body>
 
+    <!-- ── Mobile Topbar ──────────────────────────────────────── -->
+    <div class="admin-topbar" id="admin-topbar">
+        <div class="admin-topbar-logo">⚖️ RESOLVIT<small>Admin Control Tower</small></div>
+        <button class="admin-hamburger" id="admin-hamburger" aria-label="Open menu">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+
+    <!-- ── Sidebar Overlay (mobile) ──────────────────────────── -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <div class="admin-layout">
         <!-- Sidebar -->
-        <aside class="admin-sidebar">
-            <div class="logo">⚖️ RESOLVIT<br /><small style="font-size:0.7rem;opacity:0.5;font-weight:400;">Admin
-                    Control Tower</small></div>
-            <a class="sidebar-link active" onclick="showPanel('heatmap-panel')">🗺️ City Heatmap</a>
-            <a class="sidebar-link" onclick="showPanel('governance-panel')">📊 Governance Health</a>
-            <a class="sidebar-link" onclick="showPanel('pressure-panel')">⚠️ Pressure Board</a>
-            <a class="sidebar-link" onclick="showPanel('escalation-panel')">🚨 Escalation Monitor</a>
-            <a class="sidebar-link" onclick="showPanel('performance-panel')">🏛️ Dept Performance</a>
-            <a class="sidebar-link" onclick="showPanel('analytics-panel')">📡 Civic Analytics</a>
-            <a class="sidebar-link" onclick="showPanel('anomaly-panel')">🔍 Anomaly Board</a>
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <div class="logo">⚖️ RESOLVIT<br /><small style="font-size:0.7rem;opacity:0.5;font-weight:400;">Admin Control Tower</small></div>
+            <a class="sidebar-link active" onclick="showPanel('heatmap-panel');closeSidebar()">🗺️ City Heatmap</a>
+            <a class="sidebar-link" onclick="showPanel('governance-panel');closeSidebar()">📊 Governance Health</a>
+            <a class="sidebar-link" onclick="showPanel('pressure-panel');closeSidebar()">⚠️ Pressure Board</a>
+            <a class="sidebar-link" onclick="showPanel('escalation-panel');closeSidebar()">🚨 Escalation Monitor</a>
+            <a class="sidebar-link" onclick="showPanel('performance-panel');closeSidebar()">🏛️ Dept Performance</a>
+            <a class="sidebar-link" onclick="showPanel('analytics-panel');closeSidebar()">📡 Civic Analytics</a>
+            <a class="sidebar-link" onclick="showPanel('anomaly-panel');closeSidebar()">🔍 Anomaly Board</a>
             <a class="sidebar-link" href="intelligence.html">🛰️ Elite Urban Intelligence</a>
-            <a class="sidebar-link" onclick="showPanel('users-panel')">👥 User Management</a>
-            <div style="height:1px;background:rgba(255,255,255,0.1);margin:16px;"></div>
+            <a class="sidebar-link" onclick="showPanel('users-panel');closeSidebar()">👥 User Management</a>
+            <div class="sidebar-sep"></div>
             <a class="sidebar-link" onclick="enterRadarMode()">🌌 Civic Radar Mode</a>
-            <div style="height:1px;background:rgba(255,255,255,0.1);margin:16px;"></div>
+            <div class="sidebar-sep"></div>
             <a class="sidebar-link" href="authority.html">← Authority Portal</a>
             <a class="sidebar-link" href="dashboard.html">← Public Dashboard</a>
-            <div style="height:1px;background:rgba(255,255,255,0.1);margin:16px;"></div>
-            <div id="admin-profile-card" style="padding:0 20px 16px;font-size:0.85rem;color:rgba(255,255,255,0.6);">
-                <div style="margin-bottom:8px;font-weight:700;color:white;" id="sidebar-user-name">👤 Loading...
-                </div>
+            <div class="sidebar-sep"></div>
+            <div id="admin-profile-card" style="padding:0 20px 12px;font-size:0.82rem;color:rgba(255,255,255,0.6);">
+                <div style="margin-bottom:6px;font-weight:700;color:white;" id="sidebar-user-name">👤 Loading...</div>
             </div>
             <a class="sidebar-link" onclick="Auth.logout();location.href='index.html'">🚪 Logout</a>
         </aside>
@@ -84,7 +455,7 @@
             <!-- Heatmap Panel -->
             <div class="panel" id="heatmap-panel">
                 <h3>🗺️ Live Issue Heatmap — Click markers for details</h3>
-                <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;font-size:0.82rem;">
+                <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;font-size:0.8rem;">
                     <span><span class="category-dot" style="background:#dc2626"></span>Critical (80+)</span>
                     <span><span class="category-dot" style="background:#ea580c"></span>High (55–79)</span>
                     <span><span class="category-dot" style="background:#ca8a04"></span>Medium (30–54)</span>
@@ -111,10 +482,7 @@
                             </tr>
                         </thead>
                         <tbody id="esc-tbody">
-                            <tr>
-                                <td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">Loading...
-                                </td>
-                            </tr>
+                            <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -123,23 +491,21 @@
             <!-- Dept Performance Panel -->
             <div class="panel hidden" id="performance-panel">
                 <h3>🏛️ Department Performance Board</h3>
-                <div id="perf-list">
-                    <p style="color:#94a3b8;text-align:center;padding:40px;">Loading...</p>
-                </div>
+                <div id="perf-list"><p style="color:#94a3b8;text-align:center;padding:40px;">Loading...</p></div>
             </div>
 
             <!-- Civic Analytics Panel -->
             <div class="panel hidden" id="analytics-panel">
                 <h3>📊 Civic Engagement Analytics</h3>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;"
-                    id="analytics-kpis"></div>
-                <h4 style="margin-bottom:12px;font-size:1rem;">Issue Category Distribution</h4>
+                <div id="analytics-kpis"></div>
+                <h4 style="margin-bottom:12px;font-size:0.95rem;">Issue Category Distribution</h4>
                 <div id="category-chart"></div>
             </div>
 
             <!-- Users Panel -->
             <div class="panel hidden" id="users-panel">
                 <h3>👥 User Management</h3>
+                <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">Enable or disable citizen and authority accounts.</p>
                 <div style="overflow-x:auto;">
                     <table class="esc-table">
                         <thead>
@@ -153,10 +519,7 @@
                             </tr>
                         </thead>
                         <tbody id="users-tbody">
-                            <tr>
-                                <td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">Loading...
-                                </td>
-                            </tr>
+                            <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -165,94 +528,55 @@
             <!-- Governance Health Panel -->
             <div class="panel hidden" id="governance-panel">
                 <h3>📊 City Governance Health Index</h3>
-                <div id="gov-health-display" style="text-align:center;padding:24px;">
-                    <div id="gov-score" style="font-size:5rem;font-weight:900;color:#6366f1;">—</div>
-                    <div id="gov-label" style="font-size:1.1rem;color:#64748b;margin-bottom:24px;"></div>
-                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:600px;margin:0 auto;"
-                        id="gov-components"></div>
+                <div id="gov-health-display" style="text-align:center;padding:16px 0 24px;">
+                    <div id="gov-score" style="font-size:clamp(3rem,8vw,5rem);font-weight:900;color:#6366f1;line-height:1;">—</div>
+                    <div id="gov-label" style="font-size:1rem;color:#64748b;margin-bottom:24px;"></div>
+                    <div id="gov-components"></div>
                 </div>
             </div>
 
             <!-- Governance Pressure Board -->
             <div class="panel hidden" id="pressure-panel">
                 <h3>⚠️ Top Pressure Issues</h3>
-                <div id="pressure-list">
-                    <p style="color:#94a3b8;text-align:center;padding:24px;">Loading...</p>
-                </div>
+                <div id="pressure-list"><p style="color:#94a3b8;text-align:center;padding:24px;">Loading...</p></div>
             </div>
 
             <!-- Anomaly Monitor -->
             <div class="panel hidden" id="anomaly-panel">
                 <h3>🔍 Performance Anomaly Board</h3>
-                <div id="anomaly-list">
-                    <p style="color:#94a3b8;text-align:center;padding:24px;">Loading anomalies...</p>
-                </div>
+                <div id="anomaly-list"><p style="color:#94a3b8;text-align:center;padding:24px;">Loading anomalies...</p></div>
             </div>
 
             <!-- Civic Radar Mode (hidden fullscreen) -->
             <div id="radar-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:#050d1a;">
-                <div style="position:absolute;top:20px;left:0;right:0;text-align:center;color:white;z-index:10001;">
-                    <div
-                        style="font-size:1.2rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#6366f1;">
-                        🌌 CIVIC RADAR — URBAN COMMAND CENTER</div>
-                    <div style="font-size:0.8rem;color:#475569;margin-top:4px;">RESOLVIT Real-Time Governance
-                        Intelligence</div>
+                <div style="position:absolute;top:16px;left:0;right:0;text-align:center;color:white;z-index:10001;pointer-events:none;">
+                    <div style="font-size:clamp(0.9rem,2vw,1.2rem);font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#6366f1;">🌌 CIVIC RADAR — URBAN COMMAND CENTER</div>
+                    <div style="font-size:0.75rem;color:#475569;margin-top:4px;">RESOLVIT Real-Time Governance Intelligence</div>
                 </div>
                 <div id="radar-map" style="width:100%;height:100%;"></div>
-                <div
-                    style="position:absolute;top:70px;right:20px;width:260px;background:rgba(15,23,42,0.95);border:1px solid #6366f1;border-radius:16px;padding:16px;color:white;z-index:10001;">
-                    <div
-                        style="font-size:0.8rem;font-weight:700;color:#6366f1;margin-bottom:10px;text-transform:uppercase;">
-                        Live Metrics</div>
+                <div style="position:absolute;top:70px;right:20px;width:240px;background:rgba(15,23,42,0.95);border:1px solid #6366f1;border-radius:16px;padding:16px;color:white;z-index:10001;">
+                    <div style="font-size:0.75rem;font-weight:700;color:#6366f1;margin-bottom:10px;text-transform:uppercase;">Live Metrics</div>
                     <div style="display:grid;gap:8px;font-size:0.82rem;">
-                        <div style="display:flex;justify-content:space-between;"><span style="color:#94a3b8;">Total
-                                Issues</span><strong id="r-total">—</strong></div>
-                        <div style="display:flex;justify-content:space-between;"><span
-                                style="color:#94a3b8;">Escalated</span><strong id="r-esc"
-                                style="color:#dc2626;">—</strong></div>
-                        <div style="display:flex;justify-content:space-between;"><span style="color:#94a3b8;">SLA
-                                Breached</span><strong id="r-sla" style="color:#ea580c;">—</strong></div>
-                        <div style="display:flex;justify-content:space-between;"><span style="color:#94a3b8;">Health
-                                Index</span><strong id="r-health" style="color:#6366f1;">—</strong></div>
+                        <div style="display:flex;justify-content:space-between;"><span style="color:#94a3b8;">Total Issues</span><strong id="r-total">—</strong></div>
+                        <div style="display:flex;justify-content:space-between;"><span style="color:#94a3b8;">Escalated</span><strong id="r-esc" style="color:#dc2626;">—</strong></div>
+                        <div style="display:flex;justify-content:space-between;"><span style="color:#94a3b8;">SLA Breached</span><strong id="r-sla" style="color:#ea580c;">—</strong></div>
+                        <div style="display:flex;justify-content:space-between;"><span style="color:#94a3b8;">Health Index</span><strong id="r-health" style="color:#6366f1;">—</strong></div>
                     </div>
-                    <div
-                        style="margin-top:12px;font-size:0.72rem;color:#6366f1;font-weight:700;animation:pulse 1s infinite;">
-                        ● LIVE DATA</div>
+                    <div style="margin-top:12px;font-size:0.72rem;color:#6366f1;font-weight:700;animation:pulse 1s infinite;">● LIVE DATA</div>
                 </div>
-                <button onclick="exitRadarMode()"
-                    style="position:absolute;top:20px;right:20px;background:#dc2626;color:white;border:none;border-radius:10px;padding:8px 16px;cursor:pointer;font-weight:700;z-index:10002;">✕
-                    Exit Radar</button>
+                <button onclick="exitRadarMode()" style="position:absolute;top:16px;right:16px;background:#dc2626;color:white;border:none;border-radius:10px;padding:8px 16px;cursor:pointer;font-weight:700;z-index:10002;">✕ Exit Radar</button>
             </div>
 
-
             <div class="toast-container" id="toast-container"></div>
+
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
             <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-              
-  
-  
-  
-    <script src="js/auth.js"></script>
-  <script src="js/libs/auth0-spa-js.production.min.js"></script>
-  <script>console.log("Auth0 SDK Init - Global:", typeof createAuth0Client, "Namespace:", typeof (window.auth0 && window.auth0.createAuth0Client));</script>
-  <script src="js/auth0-integration.js"></script>
-  <script src="js/api.js"></script>
-      
-  
-  
-  
-  
-  
-  
-  
-  
-  
+            <script src="js/auth.js"></script>
+            <script src="js/libs/auth0-spa-js.production.min.js"></script>
+            <script>console.log("Auth0 SDK Init - Global:", typeof createAuth0Client, "Namespace:", typeof (window.auth0 && window.auth0.createAuth0Client));</script>
+            <script src="js/auth0-integration.js"></script>
+            <script src="js/api.js"></script>
             <script src="js/theme-manager.js"></script>
-              
-  
-  
-    
-    
             <script src="js/animations.js"></script>
             <script src="js/ui-enhancements.js"></script>
             <script src="js/issues.js"></script>
@@ -261,28 +585,42 @@
             <script src="js/simulation.js"></script>
 
             <script>
+                // ── Mobile Sidebar Toggle ──────────────────────────
+                const hamburger = document.getElementById('admin-hamburger');
+                const sidebar   = document.getElementById('admin-sidebar');
+                const overlay   = document.getElementById('sidebar-overlay');
+
+                function openSidebar() {
+                    sidebar.classList.add('open');
+                    overlay.classList.add('show');
+                    hamburger.classList.add('open');
+                    document.body.style.overflow = 'hidden';
+                }
+                function closeSidebar() {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                    hamburger.classList.remove('open');
+                    document.body.style.overflow = '';
+                }
+                hamburger.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
+                overlay.addEventListener('click', closeSidebar);
+
+                // ── Admin Data ─────────────────────────────────────
                 let dashboardData = null;
                 let adminMap = null;
 
-                // Guard: admin only
                 document.addEventListener("DOMContentLoaded", () => {
-                    if (!Auth.getUser()) {
-                        Auth.showModal("login");
-                        return;
-                    }
+                    if (!Auth.getUser()) { Auth.showModal("login"); return; }
                     if (!Auth.requireRole("admin", "index.html")) return;
-
                     const user = Auth.getUser();
                     if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
                     document.getElementById('sidebar-user-name').textContent = `👤 ${user.username}`;
                     initAdmin();
-                    // Init demo panel from simulation.js
                     if (typeof initDemoPanel === "function") initDemoPanel();
                 });
 
                 async function initAdmin() {
                     await Promise.all([loadStats(), loadDashboard(), loadEscalations(), loadUsers(), loadGovernanceHealth(), loadPressureBoard(), loadAnomalies()]);
-                    // Set live polling for Admin Real-Time updates
                     setInterval(async () => {
                         if (document.getElementById("radar-overlay").style.display === "block") return;
                         await Promise.all([loadStats(), loadDashboard(), loadEscalations(), loadUsers(), loadGovernanceHealth(), loadPressureBoard(), loadAnomalies()]);
@@ -318,15 +656,15 @@
                             return;
                         }
                         tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td><a href="issue.html?id=${r.id}" style="font-weight:600;color:#6366f1;">${r.title}</a></td>
-        <td>${r.category}</td>
-        <td style="color:#64748b;">${r.department || r.authority_name || "—"}</td>
-        <td><span class="level-badge level-${r.escalation_level}">${["—", "L1: Dept Head", "L2: Commissioner", "L3: Govt"][r.escalation_level] || "L" + r.escalation_level}</span></td>
-        <td style="color:${r.hours_overdue > 24 ? '#dc2626' : '#ea580c'};font-weight:700;">${r.hours_overdue}h</td>
-        <td><span style="font-weight:700;color:${r.priority_score >= 80 ? '#dc2626' : r.priority_score >= 55 ? '#ea580c' : '#ca8a04'}">${r.priority_score}</span></td>
-        <td><a href="issue.html?id=${r.id}" class="btn btn-primary btn-sm">View</a></td>
-      </tr>`).join("");
+                        <tr>
+                          <td data-label="Issue"><a href="issue.html?id=${r.id}" style="font-weight:600;color:#6366f1;">${r.title}</a></td>
+                          <td data-label="Category">${r.category}</td>
+                          <td data-label="Dept" style="color:#64748b;">${r.department || r.authority_name || "—"}</td>
+                          <td data-label="Level"><span class="level-badge level-${r.escalation_level}">${["—","L1: Dept Head","L2: Commissioner","L3: Govt"][r.escalation_level] || "L"+r.escalation_level}</span></td>
+                          <td data-label="Overdue" style="color:${r.hours_overdue > 24 ? '#dc2626' : '#ea580c'};font-weight:700;">${r.hours_overdue}h</td>
+                          <td data-label="Priority"><span style="font-weight:700;color:${r.priority_score >= 80 ? '#dc2626' : r.priority_score >= 55 ? '#ea580c' : '#ca8a04'}">${r.priority_score}</span></td>
+                          <td data-label="Action"><a href="issue.html?id=${r.id}" class="btn btn-primary btn-sm">View</a></td>
+                        </tr>`).join("");
                     } catch (e) { console.warn("Escalations:", e); }
                 }
 
@@ -335,23 +673,21 @@
                         const users = await API.get("/api/admin/users");
                         const tbody = document.getElementById("users-tbody");
                         tbody.innerHTML = users.map(u => `
-      <tr>
-        <td data-label="Username"><strong>${u.username}</strong></td>
-        <td data-label="Email" style="color:#64748b;">${u.email}</td>
-        <td data-label="Role"><span style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;background:${u.role === 'admin' ? '#ede9fe' : u.role === 'authority' ? '#e0f2fe' : '#f0fdf4'};color:${u.role === 'admin' ? '#7c3aed' : u.role === 'authority' ? '#0369a1' : '#15803d'};">${u.role}</span></td>
-        <td data-label="Department" style="color:#64748b;">${u.department || "—"}</td>
-        <td data-label="Status">${u.is_active ? "✅ Active" : "🔴 Disabled"}</td>
-        <td data-label="Action"><button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}',this)">${u.is_active ? "Disable" : "Enable"}</button></td>
-      </tr>`).join("");
+                        <tr>
+                          <td data-label="Username"><strong>${u.username}</strong></td>
+                          <td data-label="Email" style="color:#64748b;word-break:break-all;">${u.email}</td>
+                          <td data-label="Role"><span style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;background:${u.role==='admin'?'#ede9fe':u.role==='authority'?'#e0f2fe':'#f0fdf4'};color:${u.role==='admin'?'#7c3aed':u.role==='authority'?'#0369a1':'#15803d'};">${u.role}</span></td>
+                          <td data-label="Department" style="color:#64748b;">${u.department || "—"}</td>
+                          <td data-label="Status">${u.is_active ? "✅ Active" : "🔴 Disabled"}</td>
+                          <td data-label="Action"><button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}',this)">${u.is_active ? "Disable" : "Enable"}</button></td>
+                        </tr>`).join("");
                     } catch (e) { console.warn("Users:", e); }
                 }
 
                 function initHeatmap(issues) {
                     const heatmapEl = document.getElementById("heatmap");
                     if (!heatmapEl) return;
-
                     MapManager.init("heatmap", [12.9716, 77.5946]);
-                    // Let MapManager handle the clusters and layers natively:
                     MapManager.updateData(issues, "admin");
                 }
 
@@ -368,11 +704,11 @@
                             ["Escalation Control", c.escalation_control, "#ca8a04"],
                             ["Backlog Stability", c.backlog_stability, "#8b5cf6"],
                         ].map(([label, val, color]) => `
-                  <div style="background:#f8fafc;border-radius:14px;padding:16px;text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:900;color:${color};">${(val || 0).toFixed(1)}</div>
-                    <div style="color:#64748b;font-size:0.78rem;margin-top:4px;">${label}</div>
-                    <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:8px;"><div style="height:100%;width:${val || 0}%;background:${color};border-radius:2px;"></div></div>
-                  </div>`).join("");
+                        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;text-align:center;">
+                          <div style="font-size:clamp(1.2rem,3vw,1.5rem);font-weight:900;color:${color};">${(val||0).toFixed(1)}</div>
+                          <div style="color:#64748b;font-size:0.75rem;margin-top:4px;">${label}</div>
+                          <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:8px;"><div style="height:100%;width:${val||0}%;background:${color};border-radius:2px;"></div></div>
+                        </div>`).join("");
                     } catch (e) { console.warn("Gov health:", e); }
                 }
 
@@ -385,18 +721,18 @@
                             const ps = parseFloat(r.pressure_score || 0);
                             const barPct = Math.min(ps / 4, 100);
                             const barColor = ps >= 200 ? "#dc2626" : ps >= 100 ? "#ea580c" : ps >= 50 ? "#ca8a04" : "#16a34a";
-                            return `<div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9;">
-                      <div style="width:28px;height:28px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;">${i + 1}</div>
-                      <div style="flex:1;">
-                        <div style="font-weight:600;font-size:0.88rem;"><a href="issue.html?id=${r.id}" style="color:#6366f1;">${r.title}</a></div>
-                        <div style="display:flex;gap:8px;font-size:0.75rem;color:#94a3b8;margin-top:2px;">
-                          <span>${r.category}</span><span>📢 ${r.report_count || 1}</span><span>👍 ${r.upvotes || 0}</span>
-                          <span style="color:${barColor};font-weight:700;">${r.pressure_label}</span>
-                        </div>
-                        <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:${barPct}%;background:${barColor};border-radius:2px;"></div></div>
-                      </div>
-                      <div style="font-weight:900;font-size:1.1rem;color:${barColor};">${Math.round(ps)}</div>
-                    </div>`;
+                            return `<div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                              <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;">${i+1}</div>
+                              <div style="flex:1;min-width:0;">
+                                <div style="font-weight:600;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><a href="issue.html?id=${r.id}" style="color:#6366f1;">${r.title}</a></div>
+                                <div style="display:flex;gap:8px;font-size:0.73rem;color:#94a3b8;margin-top:2px;flex-wrap:wrap;">
+                                  <span>${r.category}</span><span>📢 ${r.report_count||1}</span><span>👍 ${r.upvotes||0}</span>
+                                  <span style="color:${barColor};font-weight:700;">${r.pressure_label}</span>
+                                </div>
+                                <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:6px;"><div style="height:100%;width:${barPct}%;background:${barColor};border-radius:2px;"></div></div>
+                              </div>
+                              <div style="font-weight:900;font-size:1rem;color:${barColor};flex-shrink:0;">${Math.round(ps)}</div>
+                            </div>`;
                         }).join("");
                     } catch (e) { console.warn("Pressure board:", e); }
                 }
@@ -407,20 +743,18 @@
                         const el = document.getElementById("anomaly-list");
                         if (!rows.length) { el.innerHTML = "<p style='color:#16a34a;text-align:center;padding:24px;'>✅ No anomalies detected. All officers performing normally.</p>"; return; }
                         el.innerHTML = rows.map(r => `
-                  <div style="padding:14px;border:1px solid #fed7aa;border-radius:12px;background:#fff7ed;margin-bottom:12px;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                      <div style="font-weight:700;color:#ea580c;">${r.anomaly_type?.replace(/_/g, ' ')} — ${r.officer_name || r.officer_username || 'Unknown'}</div>
-                      <span style="background:#fed7aa;color:#9a3412;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">${r.severity}</span>
-                    </div>
-                    <div style="font-size:0.83rem;color:#475569;">${r.description}</div>
-                    <div style="font-size:0.72rem;color:#94a3b8;margin-top:6px;">${r.department || ''} · Detected: ${new Date(r.detected_at).toLocaleString()}</div>
-                  </div>`).join("");
+                        <div style="padding:14px;border:1px solid rgba(249,115,22,0.3);border-radius:12px;background:rgba(249,115,22,0.05);margin-bottom:12px;">
+                          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+                            <div style="font-weight:700;color:#ea580c;">${r.anomaly_type?.replace(/_/g,' ')} — ${r.officer_name||r.officer_username||'Unknown'}</div>
+                            <span style="background:#fed7aa;color:#9a3412;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;white-space:nowrap;">${r.severity}</span>
+                          </div>
+                          <div style="font-size:0.83rem;color:#94a3b8;">${r.description}</div>
+                          <div style="font-size:0.72rem;color:#64748b;margin-top:6px;">${r.department||''} · Detected: ${new Date(r.detected_at).toLocaleString()}</div>
+                        </div>`).join("");
                     } catch (e) { console.warn("Anomalies:", e); }
                 }
 
-                let radarMap = null;
-                let radarCluster = null;
-                let radarInterval = null;
+                let radarMap = null, radarCluster = null, radarInterval = null;
 
                 async function updateRadarData() {
                     try {
@@ -432,22 +766,19 @@
                         }
                         const stats = await API.get("/api/admin/stats");
                         document.getElementById("r-total").textContent = stats.issues?.total_issues ?? "—";
-                        document.getElementById("r-esc").textContent = stats.issues?.escalated ?? "—";
-                        document.getElementById("r-sla").textContent = stats.issues?.sla_breached ?? "—";
+                        document.getElementById("r-esc").textContent   = stats.issues?.escalated ?? "—";
+                        document.getElementById("r-sla").textContent   = stats.issues?.sla_breached ?? "—";
                         const gh = await API.get("/api/admin/governance_health");
-                        document.getElementById("r-health").textContent = (gh.health_index || 0) + "/100";
-                    } catch (e) {
-                        console.warn("Radar update failed:", e);
-                    }
+                        document.getElementById("r-health").textContent = (gh.health_index||0)+"/100";
+                    } catch (e) { console.warn("Radar update failed:", e); }
                 }
 
                 async function enterRadarMode() {
+                    closeSidebar();
                     document.getElementById("radar-overlay").style.display = "block";
                     if (!radarMap) {
                         radarMap = L.map("radar-map", { zoomControl: false }).setView([12.9716, 77.5946], 13);
-                        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-                            attribution: "© OpenStreetMap"
-                        }).addTo(radarMap);
+                        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { attribution: "© OpenStreetMap" }).addTo(radarMap);
                         radarCluster = L.markerClusterGroup({
                             showCoverageOnHover: false,
                             zoomToBoundsOnClick: true,
@@ -457,85 +788,64 @@
                                 const markers = cluster.getAllChildMarkers();
                                 let maxScore = 0;
                                 markers.forEach(m => maxScore = Math.max(maxScore, m.options.priorityScore || 0));
-                                
                                 const count = cluster.getChildCount();
                                 let size = 48;
                                 if (count > 50) size = 64;
                                 else if (count > 10) size = 56;
-
                                 let glowClass = 'glow-low';
                                 if (maxScore >= 80) glowClass = 'glow-critical';
                                 else if (maxScore >= 55) glowClass = 'glow-high';
                                 else if (maxScore >= 30) glowClass = 'glow-medium';
-
                                 return L.divIcon({
-                                    html: `
-                                        <div class="premium-cluster" style="width:${size}px; height:${size}px;">
-                                            <div class="cluster-glow ${glowClass}"></div>
-                                            <div class="cluster-glass-shell" style="width:${size - 8}px; height:${size - 8}px;">
-                                                <span class="cluster-count" style="pointer-events:none;">${count}</span>
-                                            </div>
-                                        </div>`,
+                                    html: `<div class="premium-cluster" style="width:${size}px;height:${size}px;"><div class="cluster-glow ${glowClass}"></div><div class="cluster-glass-shell" style="width:${size-8}px;height:${size-8}px;"><span class="cluster-count" style="pointer-events:none;">${count}</span></div></div>`,
                                     className: 'cluster-premium-wrapper',
                                     iconSize: L.point(size, size),
-                                    iconAnchor: [size / 2, size / 2]
+                                    iconAnchor: [size/2, size/2]
                                 });
                             }
                         });
                         radarMap.addLayer(radarCluster);
                     }
-
-                    // Initial load
                     setTimeout(updateRadarData, 200);
-
-                    // Set up live updating for radar mode
                     if (radarInterval) clearInterval(radarInterval);
-                    radarInterval = setInterval(updateRadarData, 5000); // 5s for fast demonstration
+                    radarInterval = setInterval(updateRadarData, 5000);
                 }
 
                 function exitRadarMode() {
                     document.getElementById("radar-overlay").style.display = "none";
-                    if (radarInterval) {
-                        clearInterval(radarInterval);
-                        radarInterval = null;
-                    }
+                    if (radarInterval) { clearInterval(radarInterval); radarInterval = null; }
                 }
 
                 function renderDeptPerformance(depts) {
                     const container = document.getElementById("perf-list");
-                    if (!depts.length) {
-                        container.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:40px;">No performance data yet.</p>`;
-                        return;
-                    }
+                    if (!depts.length) { container.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:40px;">No performance data yet.</p>`; return; }
                     container.innerHTML = depts.map((d, i) => {
                         const score = d.performance_score || 0;
                         const color = score >= 80 ? "#16a34a" : score >= 60 ? "#ca8a04" : "#dc2626";
                         const rankCls = i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "rank-n";
                         return `
-    <div class="perf-row">
-      <div class="perf-rank ${rankCls}">${i + 1}</div>
-      <div class="perf-bar-wrap">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <strong style="font-size:0.9rem;">${d.full_name || d.username}</strong>
-            <div style="color:#94a3b8;font-size:0.78rem;">${d.department || "—"}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-weight:800;font-size:1.1rem;color:${color};">${score.toFixed(1)}</div>
-            <div style="color:#94a3b8;font-size:0.72rem;">Perf Score</div>
-          </div>
-        </div>
-        <div class="perf-bar-bg">
-          <div class="perf-bar-fill" style="width:${score}%;background:${color};"></div>
-        </div>
-        <div style="display:flex;gap:16px;font-size:0.75rem;color:#94a3b8;margin-top:4px;">
-          <span>✅ ${d.total_resolved || 0} resolved</span>
-          <span>🚨 ${d.total_escalated || 0} escalated</span>
-          <span>⏱️ ${(d.avg_resolution_time || 0).toFixed(1)}h avg</span>
-          <span>📋 ${d.total_assigned || 0} assigned</span>
-        </div>
-      </div>
-    </div>`;
+                        <div class="perf-row">
+                          <div class="perf-rank ${rankCls}">${i+1}</div>
+                          <div class="perf-bar-wrap">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                              <div>
+                                <strong style="font-size:0.9rem;">${d.full_name||d.username}</strong>
+                                <div style="color:#94a3b8;font-size:0.75rem;">${d.department||"—"}</div>
+                              </div>
+                              <div style="text-align:right;">
+                                <div style="font-weight:800;font-size:1rem;color:${color};">${score.toFixed(1)}</div>
+                                <div style="color:#94a3b8;font-size:0.7rem;">Perf Score</div>
+                              </div>
+                            </div>
+                            <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${score}%;background:${color};"></div></div>
+                            <div style="display:flex;gap:12px;font-size:0.72rem;color:#64748b;margin-top:6px;flex-wrap:wrap;">
+                              <span>✅ ${d.total_resolved||0} resolved</span>
+                              <span>🚨 ${d.total_escalated||0} escalated</span>
+                              <span>⏱️ ${(d.avg_resolution_time||0).toFixed(1)}h avg</span>
+                              <span>📋 ${d.total_assigned||0} assigned</span>
+                            </div>
+                          </div>
+                        </div>`;
                     }).join("");
                 }
 
@@ -543,26 +853,24 @@
                     const kpiEl = document.getElementById("analytics-kpis");
                     if (engagement) {
                         kpiEl.innerHTML = `
-      <div class="ctrl-card"><div class="ctrl-val" style="color:#6366f1;">${engagement.active_citizens || 0}</div><div class="ctrl-lbl">Active Citizens</div></div>
-      <div class="ctrl-card"><div class="ctrl-val" style="color:#16a34a;">${(engagement.total_points_awarded || 0).toLocaleString()}</div><div class="ctrl-lbl">Total Points Awarded</div></div>
-      <div class="ctrl-card"><div class="ctrl-val" style="color:#ea580c;">${engagement.total_reports || 0}</div><div class="ctrl-lbl">Total Reports</div></div>`;
+                        <div class="ctrl-card"><div class="ctrl-val" style="color:#6366f1;">${engagement.active_citizens||0}</div><div class="ctrl-lbl">Active Citizens</div></div>
+                        <div class="ctrl-card"><div class="ctrl-val" style="color:#16a34a;">${(engagement.total_points_awarded||0).toLocaleString()}</div><div class="ctrl-lbl">Total Points Awarded</div></div>
+                        <div class="ctrl-card"><div class="ctrl-val" style="color:#ea580c;">${engagement.total_reports||0}</div><div class="ctrl-lbl">Total Reports</div></div>`;
                     }
-
                     const catEl = document.getElementById("category-chart");
-                    const catColors = { Roads: "#f59e0b", Water: "#3b82f6", Electricity: "#eab308", Sanitation: "#ec4899", Safety: "#ef4444", Environment: "#22c55e", Other: "#8b5cf6" };
+                    const catColors = { Roads:"#f59e0b",Water:"#3b82f6",Electricity:"#eab308",Sanitation:"#ec4899",Safety:"#ef4444",Environment:"#22c55e",Other:"#8b5cf6" };
                     const total = categories.reduce((s, c) => s + parseInt(c.count), 0) || 1;
-
                     catEl.innerHTML = categories.map(c => {
-                        const pct = Math.round((c.count / total) * 100);
+                        const pct = Math.round((c.count/total)*100);
                         const color = catColors[c.category] || "#94a3b8";
                         return `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-      <div style="width:100px;color:#475569;font-size:0.85rem;font-weight:600;">${c.category}</div>
-      <div style="flex:1;height:24px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
-        <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding:0 8px;color:white;font-size:0.75rem;font-weight:700;transition:width 1s;">${pct}%</div>
-      </div>
-      <div style="color:#475569;font-size:0.82rem;width:80px;text-align:right;">${c.count} issues (${c.resolved || 0} resolved)</div>
-    </div>`;
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                          <div style="width:90px;color:#94a3b8;font-size:0.8rem;font-weight:600;flex-shrink:0;">${c.category}</div>
+                          <div style="flex:1;min-width:100px;height:22px;background:#1e293b;border-radius:4px;overflow:hidden;">
+                            <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding:0 8px;color:white;font-size:0.72rem;font-weight:700;transition:width 1s;">${pct}%</div>
+                          </div>
+                          <div style="color:#64748b;font-size:0.78rem;white-space:nowrap;">${c.count} (${c.resolved||0} ✅)</div>
+                        </div>`;
                     }).join("");
                 }
 
@@ -574,40 +882,33 @@
                     } catch (e) { showToast(e.message, "error"); }
                 }
 
-                const panels = ["heatmap-panel", "governance-panel", "pressure-panel", "escalation-panel", "performance-panel", "analytics-panel", "anomaly-panel", "users-panel"];
+                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel"];
                 const panelTitles = {
-                    "heatmap-panel": ["🗺️ City Heatmap", "Urban Nodes pulse with severity. Hover for full intelligence."],
-                    "governance-panel": ["📊 Governance Health Index", "Real-time city governance score across 5 dimensions."],
-                    "pressure-panel": ["⚠️ Pressure Board", "Issues ranked by Governance Pressure Score."],
-                    "escalation-panel": ["🚨 Escalation Monitor", "All active SLA breaches and escalated issues."],
-                    "performance-panel": ["🏛️ Department Performance", "Live rankings by resolution rate, speed, and SLA compliance."],
-                    "analytics-panel": ["📡 Civic Engagement Analytics", "Participation metrics and issue category distribution."],
-                    "anomaly-panel": ["🔍 Anomaly Board", "Detected performance anomalies and suspicious officer patterns."],
-                    "users-panel": ["👥 User Management", "Enable or disable citizen and authority accounts."],
+                    "heatmap-panel":     ["🗺️ City Heatmap",                "Urban nodes pulse with severity. Hover for full intelligence."],
+                    "governance-panel":  ["📊 Governance Health Index",      "Real-time city governance score across 5 dimensions."],
+                    "pressure-panel":    ["⚠️ Pressure Board",               "Issues ranked by Governance Pressure Score."],
+                    "escalation-panel":  ["🚨 Escalation Monitor",           "All active SLA breaches and escalated issues."],
+                    "performance-panel": ["🏛️ Department Performance",       "Live rankings by resolution rate, speed, and SLA compliance."],
+                    "analytics-panel":   ["📡 Civic Engagement Analytics",   "Participation metrics and issue category distribution."],
+                    "anomaly-panel":     ["🔍 Anomaly Board",                 "Detected performance anomalies and suspicious officer patterns."],
+                    "users-panel":       ["👥 User Management",               "Enable or disable citizen and authority accounts."],
                 };
 
                 function showPanel(id) {
-                    panels.forEach(p => {
-                        const el = document.getElementById(p);
-                        el.classList[p === id ? "remove" : "add"]("hidden");
-                    });
-                    document.querySelectorAll(".sidebar-link").forEach((a, i) => {
-                        a.classList.toggle("active", panels[i] === id);
-                    });
-                    const titles = panelTitles[id] || ["Admin", ""];
+                    panels.forEach(p => document.getElementById(p).classList[p === id ? "remove" : "add"]("hidden"));
+                    document.querySelectorAll(".sidebar-link").forEach((a, i) => a.classList.toggle("active", panels[i] === id));
+                    const titles = panelTitles[id] || ["Admin",""];
                     document.getElementById("panel-title").textContent = titles[0];
-                    document.getElementById("panel-sub").textContent = titles[1];
-
-                    // Re-init map when shown (Leaflet needs visible container)
-                    if (id === "heatmap-panel" && dashboardData) {
-                        setTimeout(() => { MapManager.getMap()?.invalidateSize(); }, 100);
-                    }
+                    document.getElementById("panel-sub").textContent   = titles[1];
+                    if (id === "heatmap-panel" && dashboardData) setTimeout(() => MapManager.getMap()?.invalidateSize(), 100);
                 }
             </script>
 
             <!-- Smooth Scroll & Hardware Acceleration Engine -->
             <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
             <script src="js/smooth-scroll.js"></script>
-</body>
+        </main>
+    </div>
 
+</body>
 </html>
