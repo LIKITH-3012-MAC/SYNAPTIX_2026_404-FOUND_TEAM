@@ -1,10 +1,10 @@
 /**
- * RESOLVIT - Auth0 Google Login Integration (Finalized & Robust)
+ * RESOLVIT - Auth0 Google Login Integration (Universal SDK Loader)
  * Uses @auth0/auth0-spa-js for Google OAuth via Auth0.
  */
 
 const Auth0Integration = {
-    // Auth0 Configuration from Global Head Object
+    // Auth0 Configuration - Loads from window.AUTH0_CONFIG for vanilla JS compatibility
     get config() {
         const globalConfig = window.AUTH0_CONFIG || {};
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -23,42 +23,56 @@ const Auth0Integration = {
     _initialized: false,
 
     /**
+     * Helper to get the Auth0 factory function from various build types (global, UMD/namespace)
+     */
+    _getCreateAuth0Client() {
+        if (typeof createAuth0Client === 'function') return createAuth0Client;
+        if (window.auth0 && typeof window.auth0.createAuth0Client === 'function') return window.auth0.createAuth0Client;
+        return null;
+    },
+
+    /**
      * Initialize the Auth0 SPA client.
      */
     async init() {
-        // Log SDK presence as requested
-        console.log('[Auth0] createAuth0Client type:', typeof createAuth0Client);
+        const conf = this.config;
+        console.log('[Auth0] Initializing with config:', conf);
 
         if (this._initialized) return;
 
-        try {
-            // Safety Check: Wait for SDK to parse if load is delayed
-            const waitForSDK = async (retries = 10) => {
-                for (let i = 0; i < retries; i++) {
-                    if (typeof createAuth0Client === 'function') return true;
-                    console.warn(`[Auth0] SDK not found yet, retrying... (${i+1}/10)`);
-                    await new Promise(r => setTimeout(r, 500));
+        // Verify SDK presence (checking global and window.auth0 namespace)
+        const waitForSDK = async (retries = 15) => {
+            for (let i = 0; i < retries; i++) {
+                const factory = this._getCreateAuth0Client();
+                if (factory) {
+                    console.log('[Auth0] SDK factory found.');
+                    return factory;
                 }
-                return false;
-            };
-
-            if (!(await waitForSDK())) {
-                const errMsg = '[Auth0] CRITICAL: createAuth0Client is not defined. SDK failed to load from CDN.';
-                console.error(errMsg);
-                throw new Error(errMsg);
+                console.warn(`[Auth0] SDK not found yet, retrying... (${i+1}/${retries})`);
+                await new Promise(r => setTimeout(r, 500));
             }
+            return null;
+        };
 
-            this._client = await createAuth0Client({
-                domain: this.config.domain,
-                clientId: this.config.clientId,
+        const factory = await waitForSDK();
+        if (!factory) {
+            const errMsg = '[Auth0] CRITICAL: Auth0 SDK factory (createAuth0Client) is not defined. SDK failed to load or is being blocked.';
+            console.error(errMsg);
+            throw new Error(errMsg);
+        }
+
+        try {
+            this._client = await factory({
+                domain: conf.domain,
+                clientId: conf.clientId,
                 authorizationParams: {
-                    redirect_uri: this.config.redirectUri
+                    redirect_uri: conf.redirectUri
                 },
-                cacheLocation: this.config.cacheLocation
+                cacheLocation: conf.cacheLocation
             });
 
             this._initialized = true;
-            console.log('[Auth0] Client successfully initialized with Redirect URI:', this.config.redirectUri);
+            console.log('[Auth0] Client initialized. Ready for Google Login.');
         } catch (error) {
             console.error('[Auth0] Initialization failed:', error);
             throw error;
@@ -71,7 +85,7 @@ const Auth0Integration = {
     async _handleCallback() {
         const query = window.location.search;
         if (query.includes('code=') && query.includes('state=')) {
-            console.log('[Auth0] Callback params detected. Processing redirect...');
+            console.log('[Auth0] Handling authentication callback...');
             try {
                 if (!this._client) await this.init();
                 await this._client.handleRedirectCallback();
@@ -88,10 +102,10 @@ const Auth0Integration = {
     },
 
     /**
-     * Sync authenticated user with RESOLVIT database
+     * Sync authenticated user with backend
      */
     async _syncWithBackend(auth0User) {
-        console.log('[Auth0] Syncing user with backend...', auth0User.email);
+        console.log('[Auth0] Syncing user with database...');
         try {
             const response = await fetch(`${BASE_URL}/api/auth/oauth-login`, {
                 method: 'POST',
@@ -105,7 +119,7 @@ const Auth0Integration = {
                 })
             });
 
-            if (!response.ok) throw new Error('Database sync failed');
+            if (!response.ok) throw new Error('Backend sync failed');
 
             const data = await response.json();
             localStorage.setItem('resolvit_token', data.access_token);
@@ -119,18 +133,18 @@ const Auth0Integration = {
             }));
 
             if (typeof showToast === 'function') {
-                showToast(`✅ Welcome, ${data.username}!`, 'success');
+                showToast(`✅ Welcome back, ${data.username}!`, 'success');
             }
 
-            // Route to dashboard
+            // Route to target page
             setTimeout(() => {
                 if (data.role === 'admin') window.location.href = 'admin.html';
                 else if (data.role === 'authority') window.location.href = 'authority.html';
                 else window.location.href = 'dashboard.html';
-            }, 700);
+            }, 600);
 
         } catch (error) {
-            console.error('[Auth0] Sync failed:', error);
+            console.error('[Auth0] Sync error:', error);
         }
     },
 
@@ -138,33 +152,32 @@ const Auth0Integration = {
      * Trigger Google Login flow
      */
     async loginWithGoogle() {
-        console.log('[Auth0] loginWithGoogle initiating...');
-        
-        // Find triggering button for state update
+        // Find existing button for state update
         const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithGoogle"]');
         if (btn) {
-            btn.dataset.original = btn.innerHTML;
+            btn.dataset.originalContent = btn.innerHTML;
             btn.innerHTML = 'Connecting to Secure Server...';
             btn.disabled = true;
         }
 
         try {
+            const conf = this.config;
+            console.log('[Auth0] Starting redirect with config:', conf);
+            
             if (!this._client) await this.init();
             
-            console.log('[Auth0] Calling loginWithRedirect...');
             await this._client.loginWithRedirect({
                 authorizationParams: {
                     connection: 'google-oauth2',
-                    redirect_uri: this.config.redirectUri
+                    redirect_uri: conf.redirectUri
                 }
             });
         } catch (error) {
-            const errMsg = error.message || 'Unknown error';
-            console.error('[Auth0] CRITICAL Login Initiation Failed:', error);
-            alert(`Unable to start Google login.\n\nReason: ${errMsg}\n\ntypeof createAuth0Client: ${typeof createAuth0Client}`);
+            console.error('[Auth0] Login Initiation Error:', error);
+            alert(`Google login failed. \n\nCause: ${error.message}\n\ntypeof window.auth0: ${typeof window.auth0}\ntypeof createAuth0Client: ${typeof createAuth0Client}`);
             
             if (btn) {
-                btn.innerHTML = btn.dataset.original;
+                btn.innerHTML = btn.dataset.originalContent;
                 btn.disabled = false;
             }
         }
@@ -184,7 +197,7 @@ const Auth0Integration = {
     }
 };
 
-// Global hooks
+// Global handlers
 document.addEventListener('DOMContentLoaded', () => Auth0Integration._handleCallback());
 window.loginWithGoogle = () => Auth0Integration.loginWithGoogle();
 window.Auth0Integration = Auth0Integration;
