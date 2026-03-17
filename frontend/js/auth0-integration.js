@@ -107,7 +107,8 @@ const Auth0Integration = {
     async _syncWithBackend(auth0User) {
         console.log('[Auth0] Syncing user with database...');
         const provider = auth0User.sub.includes('google') ? 'google' : 
-                         auth0User.sub.includes('github') ? 'github' : 'auth0';
+                         auth0User.sub.includes('github') ? 'github' : 
+                         auth0User.sub.includes('twitter') ? 'twitter' : 'auth0';
         
         try {
             const response = await fetch(`${BASE_URL}/api/auth/oauth-login`, {
@@ -217,6 +218,36 @@ const Auth0Integration = {
     },
 
     /**
+     * Trigger Twitter Login flow
+     */
+    async loginWithTwitter() {
+        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithTwitter"]');
+        if (btn) {
+            btn.dataset.originalContent = btn.innerHTML;
+            btn.innerHTML = 'Connecting to Twitter...';
+            btn.disabled = true;
+        }
+
+        try {
+            const conf = this.config;
+            if (!this._client) await this.init();
+            
+            await this._client.loginWithRedirect({
+                authorizationParams: {
+                    connection: 'twitter',
+                    redirect_uri: conf.redirectUri
+                }
+            });
+        } catch (error) {
+            console.error('[Auth0] Twitter Login Error:', error);
+            if (btn) {
+                btn.innerHTML = btn.dataset.originalContent;
+                btn.disabled = false;
+            }
+        }
+    },
+
+    /**
      * Logout
      */
     async logout() {
@@ -234,4 +265,5 @@ const Auth0Integration = {
 document.addEventListener('DOMContentLoaded', () => Auth0Integration._handleCallback());
 window.loginWithGoogle = () => Auth0Integration.loginWithGoogle();
 window.loginWithGitHub = () => Auth0Integration.loginWithGitHub();
+window.loginWithTwitter = () => Auth0Integration.loginWithTwitter();
 window.Auth0Integration = Auth0Integration;

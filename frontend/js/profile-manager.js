@@ -57,13 +57,16 @@ const ProfileManager = {
         if (!sidebar) return;
 
         const providerName = user.auth_provider === 'google' ? 'Google' : 
-                             user.auth_provider === 'github' ? 'GitHub' : 'Email/Password';
+                             user.auth_provider === 'github' ? 'GitHub' : 
+                             user.auth_provider === 'twitter' ? 'Twitter' : 'Email/Password';
         
         let providerIcon = '🔐';
         if (user.auth_provider === 'google') {
             providerIcon = 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg';
         } else if (user.auth_provider === 'github') {
             providerIcon = 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+        } else if (user.auth_provider === 'twitter') {
+            providerIcon = 'https://abs.twimg.com/favicons/twitter.3.ico';
         }
 
         // Avatar logic
@@ -93,7 +96,7 @@ const ProfileManager = {
 
                 <div class="auth-source-card">
                     <div class="auth-icon-wrapper">
-                        ${user.auth_provider === 'google' ? '🌐' : user.auth_provider === 'github' ? '🐙' : '🔑'}
+                        ${user.auth_provider === 'google' ? '🌐' : user.auth_provider === 'github' ? '🐙' : user.auth_provider === 'twitter' ? '𝕏' : '🔑'}
                     </div>
                     <div class="auth-details" style="text-align:left;">
                         <h4>Logged in via ${providerName}</h4>
