@@ -1,10 +1,10 @@
 /**
- * RESOLVIT - Auth0 Google Login Integration (Global Config Mode)
+ * RESOLVIT - Auth0 Google Login Integration (Safety First Mode)
  * Uses @auth0/auth0-spa-js for Google OAuth via Auth0.
  */
 
 const Auth0Integration = {
-    // Auth0 Configuration - Loads from window.AUTH0_CONFIG for vanilla JS compatibility
+    // Auth0 Configuration - Using window.AUTH0_CONFIG or fallbacks
     get config() {
         const globalConfig = window.AUTH0_CONFIG || {};
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -28,20 +28,28 @@ const Auth0Integration = {
     async init() {
         const conf = this.config;
         console.log('[Auth0] Initializing with config:', conf);
+        
+        // Debug: Log SDK presence
+        console.log('[Auth0] createAuth0Client type:', typeof createAuth0Client);
 
         if (this._initialized) return;
 
-        // Verify SDK presence
+        // Verify SDK presence with a small wait
         const waitForSDK = async (retries = 10) => {
             for (let i = 0; i < retries; i++) {
-                if (typeof createAuth0Client !== 'undefined') return true;
+                if (typeof createAuth0Client === 'function') {
+                    console.log('[Auth0] SDK found as function.');
+                    return true;
+                }
+                console.warn(`[Auth0] SDK not found yet, retrying... (${i+1}/10)`);
                 await new Promise(r => setTimeout(r, 500));
             }
             return false;
         };
 
         if (!(await waitForSDK())) {
-            throw new Error('Auth0 SDK (createAuth0Client) not found. Check script tag order.');
+            console.error('[Auth0] CRITICAL: createAuth0Client is not defined. SDK failed to load.');
+            throw new Error('Auth0 SDK not found. Verify script tags in HTML.');
         }
 
         try {
@@ -55,9 +63,9 @@ const Auth0Integration = {
             });
 
             this._initialized = true;
-            console.log('[Auth0] Client initialized. Ready for Google Login.');
+            console.log('[Auth0] Client successfuly initialized.');
         } catch (error) {
-            console.error('[Auth0] Initialization failed:', error);
+            console.error('[Auth0] Client initialization error:', error);
             throw error;
         }
     },
@@ -68,7 +76,7 @@ const Auth0Integration = {
     async _handleCallback() {
         const query = window.location.search;
         if (query.includes('code=') && query.includes('state=')) {
-            console.log('[Auth0] Handling authentication callback...');
+            console.log('[Auth0] Processing redirect callback...');
             try {
                 if (!this._client) await this.init();
                 await this._client.handleRedirectCallback();
@@ -79,7 +87,7 @@ const Auth0Integration = {
                     await this._syncWithBackend(auth0User);
                 }
             } catch (error) {
-                console.error('[Auth0] Callback error:', error);
+                console.error('[Auth0] Callback handling failed:', error);
             }
         }
     },
@@ -88,7 +96,7 @@ const Auth0Integration = {
      * Sync authenticated user with backend
      */
     async _syncWithBackend(auth0User) {
-        console.log('[Auth0] Syncing user with database...');
+        console.log('[Auth0] Syncing user account with server...');
         try {
             const response = await fetch(`${BASE_URL}/api/auth/oauth-login`, {
                 method: 'POST',
@@ -102,7 +110,7 @@ const Auth0Integration = {
                 })
             });
 
-            if (!response.ok) throw new Error('Backend sync failed');
+            if (!response.ok) throw new Error('Database sync failed');
 
             const data = await response.json();
             localStorage.setItem('resolvit_token', data.access_token);
@@ -116,10 +124,10 @@ const Auth0Integration = {
             }));
 
             if (typeof showToast === 'function') {
-                showToast(`✅ Welcome back, ${data.username}!`, 'success');
+                showToast(`✅ Welcome, ${data.username}!`, 'success');
             }
 
-            // Route to target page
+            // Route based on role
             setTimeout(() => {
                 if (data.role === 'admin') window.location.href = 'admin.html';
                 else if (data.role === 'authority') window.location.href = 'authority.html';
@@ -127,7 +135,7 @@ const Auth0Integration = {
             }, 600);
 
         } catch (error) {
-            console.error('[Auth0] Sync error:', error);
+            console.error('[Auth0] Backend synchronization failed:', error);
         }
     },
 
@@ -135,17 +143,19 @@ const Auth0Integration = {
      * Trigger Google Login flow
      */
     async loginWithGoogle() {
-        // Find existing button for state update
+        console.log('[Auth0] loginWithGoogle clicked.');
+        
+        // Visual feedback
         const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithGoogle"]');
         if (btn) {
-            btn.dataset.originalContent = btn.innerHTML;
-            btn.innerHTML = 'Establishing Secure Connection...';
+            btn.dataset.original = btn.innerHTML;
+            btn.innerHTML = '<span class="loading-spinner"></span> Connecting...';
             btn.disabled = true;
         }
 
         try {
             const conf = this.config;
-            console.log('[Auth0] Starting redirect with config:', conf);
+            console.log('[Auth0] Redirecting with URI:', conf.redirectUri);
             
             if (!this._client) await this.init();
             
@@ -156,11 +166,11 @@ const Auth0Integration = {
                 }
             });
         } catch (error) {
-            console.error('[Auth0] Login Initiation Error:', error);
-            alert(`Google login failed. \n\nCause: ${error.message}\n\nPlease ensure your Auth0 dashboard allows the redirect URI: ${this.config.redirectUri}`);
+            console.error('[Auth0] Redirect failed:', error);
+            alert(`Unable to start Google login. \n\nReason: ${error.message}\n\ntypeof createAuth0Client: ${typeof createAuth0Client}`);
             
             if (btn) {
-                btn.innerHTML = btn.dataset.originalContent;
+                btn.innerHTML = btn.dataset.original;
                 btn.disabled = false;
             }
         }
@@ -180,7 +190,7 @@ const Auth0Integration = {
     }
 };
 
-// Global handlers
+// Global initialization
 document.addEventListener('DOMContentLoaded', () => Auth0Integration._handleCallback());
 window.loginWithGoogle = () => Auth0Integration.loginWithGoogle();
 window.Auth0Integration = Auth0Integration;
