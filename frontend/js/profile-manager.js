@@ -56,11 +56,15 @@ const ProfileManager = {
         const sidebar = document.getElementById('identity-sidebar');
         if (!sidebar) return;
 
-        const isGoogle = user.auth_provider === 'google';
-        const providerName = isGoogle ? 'Google' : 'Database';
-        const providerIcon = isGoogle 
-            ? 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg'
-            : '🔐';
+        const providerName = user.auth_provider === 'google' ? 'Google' : 
+                             user.auth_provider === 'github' ? 'GitHub' : 'Email/Password';
+        
+        let providerIcon = '🔐';
+        if (user.auth_provider === 'google') {
+            providerIcon = 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg';
+        } else if (user.auth_provider === 'github') {
+            providerIcon = 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+        }
 
         // Avatar logic
         const initials = user.full_name 
@@ -76,7 +80,7 @@ const ProfileManager = {
                 <div class="profile-avatar-wrapper">
                     ${avatarHtml}
                     <div class="provider-badge">
-                        ${isGoogle ? `<img src="${providerIcon}" alt="Google">` : `<span>${providerIcon}</span>`}
+                        ${user.auth_provider === 'database' ? `<span>${providerIcon}</span>` : `<img src="${providerIcon}" alt="${providerName}">`}
                     </div>
                 </div>
                 
@@ -89,7 +93,7 @@ const ProfileManager = {
 
                 <div class="auth-source-card">
                     <div class="auth-icon-wrapper">
-                        ${isGoogle ? '🌐' : '🔑'}
+                        ${user.auth_provider === 'google' ? '🌐' : user.auth_provider === 'github' ? '🐙' : '🔑'}
                     </div>
                     <div class="auth-details" style="text-align:left;">
                         <h4>Logged in via ${providerName}</h4>
@@ -142,11 +146,40 @@ const ProfileManager = {
 
         content.innerHTML = `
             <div class="profile-content">
+                <!-- Stats Section -->
                 <div class="panel-premium">
                     <div class="panel-header">
                         <div class="panel-title">⭐ Contribution Statistics</div>
                     </div>
                     ${statsHtml}
+                </div>
+
+                <!-- Export Section -->
+                <div class="panel-premium">
+                    <div class="panel-header">
+                        <div class="panel-title">📋 Report Intelligence & Exports</div>
+                        <button onclick="document.getElementById('export-modal').style.display='flex'" class="btn btn-sm btn-ghost">Advanced Options</button>
+                    </div>
+                    <div class="stat-grid-premium" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+                        <div class="stat-card-premium" style="text-align:left; display:flex; gap:20px; align-items:center;">
+                            <div style="font-size:2rem; background:rgba(255,255,255,0.05); padding:12px; border-radius:12px;">📊</div>
+                            <div>
+                                <div style="font-size:1.1rem; font-weight:700;">Issue History</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:12px;">Download all your reported data</div>
+                                <div style="display:flex; gap:8px;">
+                                    <button onclick="ProfileManager.triggerExport('pdf')" class="btn btn-sm btn-primary" style="padding:4px 12px; font-size:0.7rem;">PDF Report</button>
+                                    <button onclick="ProfileManager.triggerExport('csv')" class="btn btn-sm btn-ghost" style="padding:4px 12px; font-size:0.7rem;">CSV Data</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card-premium" style="text-align:left; display:flex; gap:20px; align-items:center; opacity: 0.6;">
+                            <div style="font-size:2rem; background:rgba(255,255,255,0.05); padding:12px; border-radius:12px;">🏆</div>
+                            <div>
+                                <div style="font-size:1.1rem; font-weight:700;">Civic Certificates</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">Coming soon: Branded impact stickers</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="role-specific-content"></div>
@@ -163,6 +196,35 @@ const ProfileManager = {
         `;
 
         this.loadActivityFeed(user);
+    },
+
+    async triggerExport(format) {
+        if (!typeof showToast === 'function') console.log("Export triggered:", format);
+        else showToast(`⏳ Generating your ${format.toUpperCase()} report...`, 'info');
+
+        const token = localStorage.getItem('resolvit_token');
+        try {
+            const response = await fetch(`${API.BASE_URL}/api/export/issues/${format}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error('Export failed');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `resolvit_export_${new Date().toISOString().split('T')[0]}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            if (typeof showToast === 'function') showToast(`✅ ${format.toUpperCase()} Export Complete!`, 'success');
+        } catch (error) {
+            console.error(error);
+            if (typeof showToast === 'function') showToast(`❌ Export failed: ${error.message}`, 'error');
+        }
     },
 
     getCitizenStatsHtml(user) {

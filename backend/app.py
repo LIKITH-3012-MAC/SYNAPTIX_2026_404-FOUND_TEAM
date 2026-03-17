@@ -29,6 +29,7 @@ from routes.audit_metrics import audit_router, metrics_router
 from routes.admin_routes import router as admin_router
 from routes.credits_routes import router as credits_router
 from routes.simulation import router as simulation_router
+from routes.export_routes import router as export_router
 from routes.feedback_routes import router as feedback_router
 
 # -----------------------------
@@ -72,6 +73,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # -----------------------------
 app.include_router(auth_router,       prefix="/api/auth",       tags=["Auth"])
 app.include_router(issues_router,     prefix="/api/issues",     tags=["Issues"])
+app.include_router(export_router,     prefix="/api/export",     tags=["Exports"])
 app.include_router(audit_router,      prefix="/api/audit",      tags=["Audit"])
 app.include_router(metrics_router,    prefix="/api/metrics",    tags=["Metrics"])
 app.include_router(admin_router,      prefix="/api/admin",      tags=["Admin"])

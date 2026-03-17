@@ -145,14 +145,41 @@ function renderIssueCard(issue, opts = {}) {
       </div>
 
       <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px;">
-         <div style="display:flex; gap:8px;">
-            ${opts.showUpvote ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); upvoteIssue('${issue.id}', this)">👍 ${issue.upvotes || 0}</button>` : ''}
-         </div>
-         <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">#${issue.id.slice(-6)}</span>
+          <div style="display:flex; align-items:center; gap:10px;">
+             ${opts.showUpvote ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); upvoteIssue('${issue.id}', this)">👍 ${issue.upvotes || 0}</button>` : ''}
+             <button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); exportSingleIssue('${issue.id}')" title="Download Official Record">📁</button>
+          </div>
+          <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">#${issue.id.slice(-6)}</span>
       </div>
     </div>
   `;
 }
+
+/**
+ * Trigger single issue PDF export (Certificate of Submission)
+ */
+async function exportSingleIssue(id) {
+    if (typeof showToast === 'function') showToast(`⏳ Generating submission certificate...`, 'info');
+    const token = localStorage.getItem('resolvit_token');
+    try {
+        const response = await fetch(`${API.BASE_URL}/api/export/issue/${id}/pdf`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Generation failed');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `resolvit_report_${id.slice(0,8)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        if (typeof showToast === 'function') showToast(`✅ Certificate Generated!`, 'success');
+    } catch (e) {
+        if (typeof showToast === 'function') showToast(`❌ Export failed: ${e.message}`, 'error');
+    }
+}
+window.exportSingleIssue = exportSingleIssue;
 
 // ── SLA Live Ticker ─────────────────────────────────────────────
 // Call after rendering cards to start ticking all SLA countdowns on page

@@ -106,6 +106,9 @@ const Auth0Integration = {
      */
     async _syncWithBackend(auth0User) {
         console.log('[Auth0] Syncing user with database...');
+        const provider = auth0User.sub.includes('google') ? 'google' : 
+                         auth0User.sub.includes('github') ? 'github' : 'auth0';
+        
         try {
             const response = await fetch(`${BASE_URL}/api/auth/oauth-login`, {
                 method: 'POST',
@@ -113,7 +116,7 @@ const Auth0Integration = {
                 body: JSON.stringify({
                     email: auth0User.email,
                     name: auth0User.name || auth0User.nickname || auth0User.email.split('@')[0],
-                    provider: 'google',
+                    provider: provider,
                     provider_id: auth0User.sub,
                     picture: auth0User.picture || ''
                 })
@@ -129,7 +132,7 @@ const Auth0Integration = {
                 role: data.role,
                 department: data.department,
                 picture: auth0User.picture || '',
-                auth_provider: 'google'
+                auth_provider: provider
             }));
 
             if (typeof showToast === 'function') {
@@ -184,6 +187,36 @@ const Auth0Integration = {
     },
 
     /**
+     * Trigger GitHub Login flow
+     */
+    async loginWithGitHub() {
+        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithGitHub"]');
+        if (btn) {
+            btn.dataset.originalContent = btn.innerHTML;
+            btn.innerHTML = 'Connecting to GitHub...';
+            btn.disabled = true;
+        }
+
+        try {
+            const conf = this.config;
+            if (!this._client) await this.init();
+            
+            await this._client.loginWithRedirect({
+                authorizationParams: {
+                    connection: 'github',
+                    redirect_uri: conf.redirectUri
+                }
+            });
+        } catch (error) {
+            console.error('[Auth0] GitHub Login Error:', error);
+            if (btn) {
+                btn.innerHTML = btn.dataset.originalContent;
+                btn.disabled = false;
+            }
+        }
+    },
+
+    /**
      * Logout
      */
     async logout() {
@@ -200,4 +233,5 @@ const Auth0Integration = {
 // Global handlers
 document.addEventListener('DOMContentLoaded', () => Auth0Integration._handleCallback());
 window.loginWithGoogle = () => Auth0Integration.loginWithGoogle();
+window.loginWithGitHub = () => Auth0Integration.loginWithGitHub();
 window.Auth0Integration = Auth0Integration;
