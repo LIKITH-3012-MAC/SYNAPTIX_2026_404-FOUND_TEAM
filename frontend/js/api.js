@@ -29,6 +29,7 @@ const BASE_URL = (() => {
 })();
 
 const API = {
+  BASE_URL,
   // NEW: track backend status
   status: 'connecting', // 'connecting', 'online', 'waking', 'offline'
 

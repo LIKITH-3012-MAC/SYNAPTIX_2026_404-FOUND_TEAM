@@ -28,12 +28,12 @@ class ResolvitPDF(FPDF):
         
         self.set_font('helvetica', 'B', 24)
         self.set_text_color(255, 255, 255)
-        self.cell(0, 20, '   RESOLVIT', ln=True, align='L')
+        self.cell(0, 20, '   RESOLVIT', ln=1, align='L')
         
         self.set_font('helvetica', '', 10)
         self.set_text_color(148, 163, 184)
-        self.cell(0, -10, '   CIVIC RESOLUTION PLATFORM | REPORT HISTORY   ', ln=True, align='L')
-        self.ln(20)
+        self.cell(0, 10, '   CIVIC RESOLUTION PLATFORM | REPORT HISTORY', ln=1, align='L')
+        self.ln(10)
 
     def footer(self):
         self.set_y(-15)
@@ -49,12 +49,15 @@ def create_issue_pdf(issues, user):
     # User Summary
     pdf.set_font('helvetica', 'B', 16)
     pdf.set_text_color(15, 12, 41)
-    pdf.cell(0, 10, f'Citizen Report: {user["full_name"] or user["username"]}', ln=True)
+    # Ensure user data is not None
+    user_name = (user.get("full_name") or user.get("username") or "Citizen") if user else "Citizen"
+    pdf.cell(0, 10, f'Citizen Report: {user_name}', ln=1)
     
     pdf.set_font('helvetica', '', 10)
     pdf.set_text_color(100, 116, 139)
-    pdf.cell(0, 8, f'Email: {user["email"]}', ln=True)
-    pdf.cell(0, 8, f'Total Records: {len(issues)}', ln=True)
+    user_email = user.get("email", "Not provided") if user else "Not provided"
+    pdf.cell(0, 8, f'Email: {user_email}', ln=1)
+    pdf.cell(0, 8, f'Total Records: {len(issues)}', ln=1)
     pdf.ln(10)
     
     # Issue Cards in PDF
@@ -67,30 +70,31 @@ def create_issue_pdf(issues, user):
         # Priority/Category
         pdf.set_font('helvetica', 'B', 9)
         pdf.set_text_color(99, 102, 241) # Accent color
-        pdf.cell(95, 8, f'  {issue["category"].upper()}', ln=False)
+        pdf.cell(95, 8, f'  {issue["category"].upper()}', ln=0)
         
         # Status Badge
         status_color = (34, 197, 94) if issue["status"] == "resolved" else (249, 115, 22)
         pdf.set_text_color(*status_color)
-        pdf.cell(90, 8, f'STATUS: {issue["status"].upper()}  ', ln=True, align='R')
+        pdf.cell(90, 8, f'STATUS: {issue["status"].upper()}  ', ln=1, align='R')
         
         # Title
         pdf.set_font('helvetica', 'B', 12)
         pdf.set_text_color(15, 12, 41)
-        pdf.cell(0, 8, f'  {issue["title"][:70]}...', ln=True)
+        issue_title = str(issue.get("title", "No Title"))
+        pdf.cell(0, 8, f'  {issue_title[:70]}...', ln=1)
         
         # Meta row
         pdf.set_font('helvetica', '', 8)
         pdf.set_text_color(100, 116, 139)
         created = issue["created_at"].strftime("%Y-%m-%d") if isinstance(issue["created_at"], datetime) else str(issue["created_at"])
-        pdf.cell(95, 6, f'  Track ID: {str(issue["id"])[:13]}', ln=False)
-        pdf.cell(90, 6, f'Reported: {created}  ', ln=True, align='R')
+        pdf.cell(95, 6, f'  Track ID: {str(issue["id"])[:13]}', ln=0)
+        pdf.cell(90, 6, f'Reported: {created}  ', ln=1, align='R')
         
         # Description excerpt
         pdf.set_font('helvetica', '', 9)
         pdf.set_text_color(51, 65, 85)
-        desc = issue["description"].replace('\n', ' ')
-        pdf.multi_cell(0, 5, f'  Summary: {desc[:280]}...', ln=True)
+        description = str(issue.get("description", "")).replace('\n', ' ')
+        pdf.multi_cell(0, 5, f'  Summary: {description[:280]}...', ln=1)
         
         pdf.ln(12) # Gap between cards
 
@@ -135,23 +139,37 @@ async def export_issues_csv(
     df.to_csv(output, index=False)
     
     return Response(
-        content=output.getvalue(),
+        content=output.getvalue().encode('utf-8'),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=resolvit_reports_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
 
 @router.get("/issues/pdf")
 async def export_issues_pdf(
+    status: Optional[str] = None,
+    category: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Secure Premium PDF Export for current user's issue history."""
+    """Secure Premium PDF Export for current user's issue history with filtering."""
+    query = "SELECT * FROM issues WHERE reporter_id = %s"
+    params = [current_user["sub"]]
+    
+    if status:
+        query += " AND status = %s"
+        params.append(status)
+    if category:
+        query += " AND category = %s"
+        params.append(category)
+        
+    query += " ORDER BY created_at DESC"
+    
     with get_db() as cursor:
         # Get User details for the PDF header
         cursor.execute("SELECT username, full_name, email FROM users WHERE id = %s", (current_user["sub"],))
         user_data = cursor.fetchone()
         
         # Get Issues
-        cursor.execute("SELECT * FROM issues WHERE reporter_id = %s ORDER BY created_at DESC", (current_user["sub"],))
+        cursor.execute(query, tuple(params))
         issues = cursor.fetchall()
 
     if not issues:
@@ -186,9 +204,10 @@ async def export_single_issue_pdf(
         raise HTTPException(status_code=403, detail="Unauthorized export request.")
 
     pdf_bytes = create_issue_pdf([issue], user_data)
+    safe_id = str(issue_id)[:8]
     
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=resolvit_issue_{issue_id[:8]}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename=resolvit_issue_{safe_id}.pdf"}
     )

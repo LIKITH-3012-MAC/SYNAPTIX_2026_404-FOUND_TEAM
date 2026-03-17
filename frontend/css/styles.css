@@ -95,19 +95,41 @@
   display: inline-block;
 }
 
-/* --- THE GLASS ENGINE --- */
+/* --- THE GLASS ENGINE (PERFORMANCE OPTIMIZED) --- */
 .glass {
   background: var(--glass);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(8px) saturate(160%);
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-lg);
   transition: var(--transition);
+  will-change: transform, opacity;
 }
 
-.glass-hover:hover {
+.glass-premium {
+  background: rgba(15, 23, 42, 0.25) !important;
+  backdrop-filter: blur(8px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+  will-change: transform, opacity;
+}
+
+.glass-card-premium {
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  will-change: transform;
+}
+
+.glass-hover:hover, .glass-card-premium:hover {
   transform: translateY(-4px);
   border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.06) !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-glow);
 }
 
@@ -274,6 +296,27 @@ body {
   -webkit-transform: translate3d(0, 0, 0);
   perspective: 1000px;
   -webkit-font-smoothing: subpixel-antialiased;
+  backface-visibility: hidden;
+}
+
+/* PERFORMANCE-OPTIMIZED FIXED BACKGROUND */
+.bg-fixed-optimized::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/A_breathtaking_ultrawide_cinematic_landscape_photo_delpmaspu.png') no-repeat center center;
+  background-size: cover;
+  z-index: -2;
+  transform: translate3d(0,0,0);
+  will-change: transform;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .glass, .glass-premium, .glass-card-premium, .navbar, footer {
+    backdrop-filter: blur(6px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(6px) saturate(140%) !important;
+  }
 }
 
 html.lenis {

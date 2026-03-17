@@ -53,9 +53,9 @@
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   <meta name="referrer" content="strict-origin-when-cross-origin">
 
-  <!-- Favicon -->
-  
-
+  <!-- RESOLVIT Official Favicon -->
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
+  <link rel="shortcut icon" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
   [
@@ -90,84 +90,76 @@
   <link rel="stylesheet" href="css/map-premium.css" />
   <link rel="stylesheet" href="css/intro.css" />
   <style>
-    /* ── Cinematic Background System ────────────────────────── */
+    /* ── High-Performance Cinematic Background ────────────────── */
     body {
-      background: url('https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/A_breathtaking_ultrawide_cinematic_landscape_photo_delpmaspu.png') no-repeat center center fixed !important;
-      background-size: cover !important;
+      background: #020617 !important;
       position: relative;
-
+      min-height: 100vh;
+    }
+    
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: url('https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/A_breathtaking_ultrawide_cinematic_landscape_photo_delpmaspu.png') no-repeat center center;
+      background-size: cover;
+      z-index: -2;
+      transform: translate3d(0,0,0);
+      will-change: transform;
+      pointer-events: none;
     }
 
     /* Subtle Readability Layer */
     body::after {
       content: "";
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       background: rgba(2, 6, 23, 0.4);
-      /* Default dark overlay */
       z-index: -1;
       pointer-events: none;
       transition: background 0.5s ease;
     }
 
     [data-theme="light"] body::after {
-      background: rgba(255, 255, 255, 0.2);
-      /* Lighter overlay for light mode */
+      background: rgba(255, 255, 255, 0.15);
     }
 
-    /* ── Premium Glassmorphism Overrides ───────────────────── */
-    .hero,
-    .section,
-    section {
-      background: transparent !important;
-    }
+    /* ── Optimized Premium Glassmorphism ───────────────────── */
+    .hero, .section, section { background: transparent !important; }
 
-    .hero-bg,
-    .hero-grid {
-      display: none !important;
-      /* Remove secondary background layers */
-    }
-
-    /* Cinematic Text Panels */
-    .hero-content,
-    section .container,
-    footer .container {
+    .glass-premium {
       background: rgba(15, 23, 42, 0.25) !important;
-      backdrop-filter: blur(12px) saturate(180%) !important;
-      -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+      backdrop-filter: blur(8px) saturate(160%) !important;
+      -webkit-backdrop-filter: blur(8px) saturate(160%) !important;
       border: 1px solid rgba(255, 255, 255, 0.08) !important;
       border-radius: var(--radius-lg);
-      padding: 40px !important;
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+      will-change: transform, opacity;
+    }
+
+    .glass-card-premium {
+      background: rgba(255, 255, 255, 0.03) !important;
+      backdrop-filter: blur(12px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+      will-change: transform;
+    }
+
+    .glass-card-premium:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+      transform: translateY(-4px) !important;
+      border-color: var(--accent) !important;
+    }
+
+    /* Apply new classes */
+    .hero-content, section .container, footer .container {
       margin-top: 2rem;
       margin-bottom: 2rem;
       width: calc(100% - 32px) !important;
-      /* Mobile safe width */
       margin-left: auto !important;
       margin-right: auto !important;
-    }
-
-    /* Premium Glass Cards */
-    .card,
-    .issue-card,
-    .stat-item,
-    .hero-badge {
-      background: rgba(255, 255, 255, 0.04) !important;
-      backdrop-filter: blur(16px) saturate(200%) !important;
-      -webkit-backdrop-filter: blur(16px) saturate(200%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2) !important;
-      transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-    }
-
-    .card:hover,
-    .issue-card:hover {
-      background: rgba(255, 255, 255, 0.08) !important;
-      transform: translateY(-5px) !important;
-      border-color: var(--accent) !important;
     }
 
     /* ── Advanced Typography Visibility ───────────────────── */
@@ -211,100 +203,49 @@
     /* ── Component Adjustments ────────────────────────────── */
     #navbar {
       background: rgba(15, 23, 42, 0.65) !important;
-      backdrop-filter: blur(24px) !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      backdrop-filter: blur(12px) !important;
+    }
+    
+    .hero-content {
+      padding: 40px !important;
+      margin-top: 100px !important;
+      width: calc(100% - 32px) !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
     }
 
-    .nav-link {
-      color: rgba(255, 255, 255, 0.8) !important;
-    }
-
-    .nav-link:hover {
-      color: #ffffff !important;
-    }
-
-    /* Map Visibility */
-    #map {
-      border: 1px solid rgba(255, 255, 255, 0.2) !important;
-      box-shadow: 0 0 40px rgba(0, 0, 0, 0.5) !important;
-    }
-
-    /* Footer refinement */
     footer {
       background: rgba(2, 6, 23, 0.8) !important;
-      backdrop-filter: blur(20px) !important;
+      backdrop-filter: blur(12px) !important;
       border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     /* ── Mobile UI Optimizations ──────────────────────────── */
+    /* ── Mobile UI Optimizations ──────────────────────────── */
     @media (max-width: 768px) {
+      .glass-premium, .glass-card-premium, #navbar, footer {
+        backdrop-filter: blur(8px) saturate(140%) !important;
+        -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+      }
+      
+      body::after { background: rgba(2, 6, 23, 0.6); }
 
       .hero-content,
       section .container,
       footer .container {
-        padding: 24px !important;
-        /* Reduce padding for mobile */
-        margin-top: 1rem;
-        margin-bottom: 1rem;
-        border-radius: var(--radius-md);
+        padding: 20px !important;
+        width: calc(100% - 24px) !important;
       }
 
-      .hero {
-        padding-top: 60px;
-        min-height: auto;
-        display: block;
-      }
-
-      .hero-content {
-        padding-top: 80px !important;
-      }
-
-      h1 {
-        font-size: 2.2rem !important;
-        /* Smaller text for mobile */
-        line-height: 1.1;
-      }
-
-      .hero-tagline {
-        font-size: 1.4rem !important;
-      }
-
+      h1 { font-size: 1.8rem !important; }
+      .hero-tagline { font-size: 1.1rem !important; }
+      
       .hero-stats {
-        gap: 20px !important;
-        justify-content: center;
-        text-align: center;
-      }
-
-      .stat-number {
-        font-size: 1.6rem !important;
-      }
-
-      .hero-cta {
-        flex-direction: column;
-        width: 100%;
         gap: 12px !important;
       }
-
-      .btn-hero,
-      .btn-hero-outline {
-        width: 100%;
-        padding: 16px 24px !important;
-        text-align: center;
-      }
-
-      .grid-4,
-      .grid-3 {
-        grid-template-columns: 1fr !important;
-        /* Single column on mobile */
-      }
-
-      .navbar-inner {
-        padding: 0 16px !important;
-      }
-
-      .nav-links {
-        display: none;
-        /* Hiding simple links on mobile for cleaner look */
+      
+      .stat-item {
+        padding: 16px 12px !important;
       }
     }
   </style>
@@ -365,8 +306,8 @@
   <section class="hero" id="hero">
     <div class="hero-bg"></div>
     <div class="hero-grid"></div>
-    <div class="hero-content">
-      <div class="hero-badge" data-i18n="hero_badge">
+    <div class="hero-content glass-premium gpu-accelerate">
+      <div class="hero-badge glass-card-premium" data-i18n="hero_badge">
         <span class="hero-badge-dot"></span>
         India's First AI-Powered Civic Resolution Engine
       </div>
@@ -391,19 +332,19 @@
       </div>
 
       <div class="hero-stats">
-        <div class="stat-item">
+        <div class="stat-item glass-card-premium">
           <div class="stat-number" id="stat-resolved">0</div>
           <div class="stat-label" data-i18n="stat_resolved">Issues Resolved</div>
         </div>
-        <div class="stat-item">
+        <div class="stat-item glass-card-premium">
           <div class="stat-number" id="stat-response">0h</div>
           <div class="stat-label" data-i18n="stat_response">Avg Response Time</div>
         </div>
-        <div class="stat-item">
+        <div class="stat-item glass-card-premium">
           <div class="stat-number" id="stat-authorities">0</div>
           <div class="stat-label" data-i18n="stat_active">Active Authorities</div>
         </div>
-        <div class="stat-item">
+        <div class="stat-item glass-card-premium">
           <div class="stat-number" id="stat-impacted">0</div>
           <div class="stat-label" data-i18n="stat_impacted">Citizens Impacted</div>
         </div>
@@ -424,28 +365,28 @@
       </div>
 
       <div class="grid-4">
-        <div class="card animate-in" style="animation-delay: 0s; text-align: center; padding: 36px 24px;">
+        <div class="card glass-card-premium animate-in" style="animation-delay: 0s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">📍</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_report_title">1. Report</h4>
           <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_report_desc">Citizens submit
             issues with location, photo, and
             urgency rating in seconds.</p>
         </div>
-        <div class="card animate-in" style="animation-delay: 0.1s; text-align: center; padding: 36px 24px;">
+        <div class="card glass-card-premium animate-in" style="animation-delay: 0.1s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">🤖</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_ai_title">2. AI Cluster</h4>
           <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_ai_desc">Our AI detects duplicate
             reports within 100m and
             merges them to amplify impact.</p>
         </div>
-        <div class="card animate-in" style="animation-delay: 0.2s; text-align: center; padding: 36px 24px;">
+        <div class="card glass-card-premium animate-in" style="animation-delay: 0.2s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">📈</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_prioritize_title">3. Prioritize</h4>
           <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_prioritize_desc">Dynamic scoring
             ranks issues by impact, urgency,
             time, and safety risk automatically.</p>
         </div>
-        <div class="card animate-in" style="animation-delay: 0.3s; text-align: center; padding: 36px 24px;">
+        <div class="card glass-card-premium animate-in" style="animation-delay: 0.3s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">✅</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_resolve_title">4. Resolve</h4>
           <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_resolve_desc">Authorities act
@@ -474,9 +415,9 @@
 
       <div class="grid-3" id="preview-issues">
         <!-- Skeleton loaders -->
-        <div class="skeleton skeleton-card"></div>
-        <div class="skeleton skeleton-card"></div>
-        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton glass-card-premium" style="height: 160px;"></div>
+        <div class="skeleton glass-card-premium" style="height: 160px;"></div>
+        <div class="skeleton glass-card-premium" style="height: 160px;"></div>
       </div>
     </div>
   </section>
@@ -620,23 +561,34 @@
 
   <script>
     // ── Navbar scroll effect ──────────────
-    window.addEventListener('scroll', () => {
-      document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
-    });
-
-    // ── Load stats + preview issues ───────
     async function loadHomeData() {
       try {
         const summary = await API.get('/api/metrics/summary');
-        animateCounter('stat-resolved', summary.resolved_issues || 847);
-        animateCounter('stat-response', summary.avg_resolution_hours || 18, 'h');
-        animateCounter('stat-authorities', summary.active_authorities || 24);
-        animateCounter('stat-impacted', summary.total_people_impacted || 12400);
-      } catch {
-        animateCounter('stat-resolved', 847);
-        animateCounter('stat-response', 18, 'h');
-        animateCounter('stat-authorities', 24);
-        animateCounter('stat-impacted', 12400);
+        const stats = {
+            'stat-resolved': summary.resolved_issues || 847,
+            'stat-response': summary.avg_resolution_hours || 18,
+            'stat-authorities': summary.active_authorities || 24,
+            'stat-impacted': summary.total_people_impacted || 12400
+        };
+
+        // If UIEnhancements.animateCounter is available, it will handle it via intersection
+        // Otherwise fallback 
+        Object.entries(stats).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if(el) el.innerText = val + (id === 'stat-response' ? 'h' : '');
+        });
+      } catch (err) {
+        console.warn("Metrics load failed, using fallback values", err);
+        const fallbacks = {
+          'stat-resolved': 847,
+          'stat-response': 18,
+          'stat-authorities': 24,
+          'stat-impacted': 12400
+        };
+        Object.entries(fallbacks).forEach(([id, val]) => {
+          const el = document.getElementById(id);
+          if(el) el.innerText = val + (id === 'stat-response' ? 'h' : '');
+        });
       }
 
       try {

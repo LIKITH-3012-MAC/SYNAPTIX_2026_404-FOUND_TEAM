@@ -43,6 +43,17 @@
   <!-- RESOLVIT Official Favicon -->
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
   <link rel="shortcut icon" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
+  
+  <style>
+    body { background: #020617 !important; position: relative; min-height: 100vh; }
+    body::before {
+      content: ""; position: fixed; inset: 0;
+      background: url('https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/A_breathtaking_ultrawide_cinematic_landscape_photo_delpmaspu.png') no-repeat center center;
+      background-size: cover; z-index: -2; transform: translate3d(0,0,0); will-change: transform; pointer-events: none;
+    }
+    body::after { content: ""; position: fixed; inset: 0; background: rgba(2, 6, 23, 0.4); z-index: -1; pointer-events: none; }
+    .page-header { padding-top: 100px; }
+  </style>
 </head>
 
 <body>
@@ -65,7 +76,7 @@
 
     <div class="page-header">
         <div class="container">
-            <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px;">
+            <div class="flex justify-between items-center glass-premium gpu-accelerate" style="padding: 30px; flex-wrap:wrap; gap:16px;">
                 <div>
                     <div class="section-label" data-i18n="dash_hint">Public Feed</div>
                     <h1 style="font-size:2rem;margin-top:8px;" data-i18n="dash_title">Issue Dashboard</h1>
@@ -79,11 +90,11 @@
             </div>
 
             <!-- Stats Row -->
-            <div class="metrics-grid" style="margin-top:32px;" id="summary-stats">
-                <div class="metric-card skeleton" style="height:100px;"></div>
-                <div class="metric-card skeleton" style="height:100px;"></div>
-                <div class="metric-card skeleton" style="height:100px;"></div>
-                <div class="metric-card skeleton" style="height:100px;"></div>
+            <div class="metrics-grid" style="margin-top:24px;" id="summary-stats">
+                <div class="metric-card glass-card-premium skeleton" style="height:100px;"></div>
+                <div class="metric-card glass-card-premium skeleton" style="height:100px;"></div>
+                <div class="metric-card glass-card-premium skeleton" style="height:100px;"></div>
+                <div class="metric-card glass-card-premium skeleton" style="height:100px;"></div>
             </div>
         </div>
     </div>
@@ -92,7 +103,7 @@
         <div class="container dashboard-grid" style="display:grid; grid-template-columns: 1fr 320px; gap:40px;">
             <div class="main-dashboard-column">
                 <!-- Filter / Sort Bar -->
-                <div class="filter-bar">
+                <div class="filter-bar glass-premium" style="padding: 20px; margin-bottom: 24px;">
                     <input type="text" id="search-input" class="search-input" data-i18n="dash_search" placeholder="🔍 Search issues..."
                         oninput="filterIssues()" />
                     <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cat-filters">
@@ -104,16 +115,6 @@
                         <button class="filter-btn" data-cat="Sanitation" onclick="setCatFilter('Sanitation')" data-i18n="dash_filter_sanitation">🗑
                             Sanitation</button>
                         <button class="filter-btn" data-cat="Safety" onclick="setCatFilter('Safety')" data-i18n="dash_filter_safety">🚨 Safety</button>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                        <label style="font-size:0.8rem;color:var(--text-muted);font-weight:600;" data-i18n="dash_sort_label">Sort:</label>
-                        <select class="form-select" id="sort-select" onchange="fetchIssues()"
-                            style="padding:8px 28px 8px 12px;width:auto;min-width:160px;">
-                            <option value="priority_score" data-i18n="dash_sort_priority">Priority Score ↓</option>
-                            <option value="created_at" data-i18n="dash_sort_newest">Newest First</option>
-                            <option value="impact_scale">Most Impacted</option>
-                            <option value="urgency">Urgency</option>
-                        </select>
                     </div>
                 </div>
 
@@ -143,9 +144,9 @@
 
                 <!-- Issue Grid -->
                 <div class="grid-3" id="issues-grid">
-                    <div class="skeleton skeleton-card"></div>
-                    <div class="skeleton skeleton-card"></div>
-                    <div class="skeleton skeleton-card"></div>
+                    <div class="skeleton glass-card-premium animate-in" style="height:180px;"></div>
+                    <div class="skeleton glass-card-premium animate-in" style="height:180px;"></div>
+                    <div class="skeleton glass-card-premium animate-in" style="height:180px;"></div>
                 </div>
 
                 <div id="load-more" style="text-align:center;margin-top:32px;display:none;">
@@ -155,8 +156,8 @@
 
             <!-- Gamified Sidebar -->
             <aside class="dashboard-sidebar">
-                <div class="glass card"
-                    style="margin-bottom:24px; border:1px solid var(--accent); position:relative; overflow:hidden;">
+                <div class="glass-card-premium card"
+                    style="margin-bottom:24px; border:1px solid var(--accent); position:relative; overflow:hidden; padding: 24px;">
                     <div style="font-size:0.7rem; color:var(--accent); font-weight:800; margin-bottom:12px;">CIVIC
                         CREDIT STATUS</div>
                     <div class="flex items-center gap-4" id="user-gamify-info">
@@ -173,13 +174,12 @@
                         rank</p>
                 </div>
 
-                <div class="glass card">
+                <div class="glass-premium card" style="padding: 24px;">
                     <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:8px;">🏆 Leaderboard</h3>
                     <div id="leaderboard-list" class="flex flex-col gap-4">
                         <!-- Populated by JS -->
-                        <div class="skeleton" style="height:40px;"></div>
-                        <div class="skeleton" style="height:40px;"></div>
-                        <div class="skeleton" style="height:40px;"></div>
+                        <div class="skeleton" style="height:40px; opacity: 0.1;"></div>
+                        <div class="skeleton" style="height:40px; opacity: 0.1;"></div>
                     </div>
                     <button class="btn btn-ghost btn-sm" style="width:100%; margin-top:16px;">View All Citizens</button>
                 </div>

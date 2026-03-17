@@ -202,31 +202,57 @@ const ProfileManager = {
     },
 
     async triggerExport(format) {
-        if (!typeof showToast === 'function') console.log("Export triggered:", format);
-        else showToast(`⏳ Generating your ${format.toUpperCase()} report...`, 'info');
+        const btnPdf = document.getElementById('btn-export-pdf');
+        const btnCsv = document.getElementById('btn-export-csv');
+        const statusEl = document.getElementById('export-status');
+        const categoryEl = document.getElementById('export-category');
+        
+        // UI State: Loading
+        const originalText = format === 'pdf' ? (btnPdf?.innerHTML || 'PDF Report') : (btnCsv?.innerHTML || 'CSV Data');
+        if (btnPdf) btnPdf.disabled = true;
+        if (btnCsv) btnCsv.disabled = true;
+        
+        if (typeof showToast === 'function') {
+            showToast(`⏳ Generating your premium ${format.toUpperCase()} report...`, 'info');
+        }
 
         const token = localStorage.getItem('resolvit_token');
+        const status = statusEl?.value || '';
+        const category = categoryEl?.value || '';
+        
+        let url = `${API.BASE_URL}/api/export/issues/${format}`;
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (category) params.append('category', category);
+        if (params.toString()) url += `?${params.toString()}`;
+
         try {
-            const response = await fetch(`${API.BASE_URL}/api/export/issues/${format}`, {
+            const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
-            if (!response.ok) throw new Error('Export failed');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || 'Export failed');
+            }
 
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
+            const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.style.display = 'none';
-            a.href = url;
-            a.download = `resolvit_export_${new Date().toISOString().split('T')[0]}.${format}`;
+            a.href = downloadUrl;
+            a.download = `resolvit_export_${new Date().toISOString().split('T')[0]}_${status || 'all'}.${format}`;
             document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
+            window.URL.revokeObjectURL(downloadUrl);
             
             if (typeof showToast === 'function') showToast(`✅ ${format.toUpperCase()} Export Complete!`, 'success');
         } catch (error) {
             console.error(error);
             if (typeof showToast === 'function') showToast(`❌ Export failed: ${error.message}`, 'error');
+        } finally {
+            if (btnPdf) btnPdf.disabled = false;
+            if (btnCsv) btnCsv.disabled = false;
         }
     },
 

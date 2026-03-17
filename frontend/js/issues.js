@@ -103,7 +103,7 @@ function renderIssueCard(issue, opts = {}) {
   const isCritical = score >= 80;
 
   return `
-    <div class="glass card issue-card-v2 gpu-accelerate ${isCritical ? 'pulse-critical' : ''}" 
+    <div class="glass-card-premium issue-card-v2 gpu-accelerate ${isCritical ? 'pulse-critical' : ''}" 
          style="border-left: 5px solid ${band.color}; cursor:pointer; content-visibility: auto; contain-intrinsic-size: 0 160px;" 
          onclick="window.location.href='issue.html?id=${issue.id}'">
       

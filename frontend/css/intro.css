@@ -72,8 +72,9 @@
     transform: perspective(1000px) rotateX(65deg) translateY(0);
     animation: gridAnimation 15s linear infinite;
     z-index: 2;
-    opacity: 0.4;
+    opacity: 0.3;
     filter: blur(1px);
+    will-change: transform;
 }
 
 /* Atmospheric Scanner Line */
@@ -113,8 +114,9 @@
     height: 4px;
     background: #6366f1;
     border-radius: 50%;
-    box-shadow: 0 0 20px #6366f1;
+    box-shadow: 0 0 10px #6366f1;
     opacity: 0;
+    will-change: transform, opacity;
     animation: nodePulse 4s infinite ease-in-out;
 }
 
@@ -132,17 +134,17 @@
     text-align: center;
     padding: 70px 120px;
     background: var(--intro-glass-bg);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid var(--intro-glass-border);
-    border-radius: 50px;
+    border-radius: 40px;
     box-shadow: 
-        0 40px 120px rgba(0, 0, 0, 0.8),
-        inset 0 0 1px 1px rgba(255,255,255,0.1),
-        0 0 40px rgba(99, 102, 241, 0.15);
+        0 20px 80px rgba(0, 0, 0, 0.6),
+        inset 0 0 1px 1px rgba(255,255,255,0.05);
     opacity: 0;
-    transform: scale(0.9) translateY(40px);
-    animation: panelReveal 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.5s;
+    will-change: transform, opacity;
+    transform: scale(0.95) translateY(20px);
+    animation: panelReveal 1s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.5s;
 }
 
 .intro-panel::before {
@@ -189,8 +191,8 @@
 }
 
 @keyframes titleBreath {
-    0%, 100% { letter-spacing: -4px; transform: scale(1); }
-    50% { letter-spacing: 2px; transform: scale(1.02); }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
 }
 
 .intro-light-sweep {
@@ -228,9 +230,11 @@
 /* Mobile Adjustments */
 @media (max-width: 768px) {
     .intro-panel {
-        padding: 45px 30px;
-        width: 88%;
-        border-radius: 30px;
+        padding: 40px 24px;
+        width: 90%;
+        border-radius: 24px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
     .intro-title {
         font-size: 2.2rem;
