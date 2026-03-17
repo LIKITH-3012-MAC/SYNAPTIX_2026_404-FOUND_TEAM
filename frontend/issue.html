@@ -6,44 +6,241 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Issue Detail — RESOLVIT</title>
     <link rel="stylesheet" href="css/styles.css" />
-   type="image/png" href="">
-  
-  <!-- Auth0 Runtime Configuration -->
-  <script>
-    window.AUTH0_CONFIG = {
-      domain: "resolvit-ai.us.auth0.com",
-      clientId: "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
-      redirectUri: "https://resolvit-app-2026.vercel.app"
-    };
-  </script>
-  <!-- RESOLVIT Official Favicon -->
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
-  <link rel="shortcut icon" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
-</head>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
+    <link rel="shortcut icon" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
 
-   type="image/png" href="">
-  
-  <!-- Auth0 Runtime Configuration -->
-  <script>
-    window.AUTH0_CONFIG = {
-      domain: "resolvit-ai.us.auth0.com",
-      clientId: "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
-      redirectUri: "https://resolvit-app-2026.vercel.app"
-    };
-  </script>
-  
-  
+    <!-- Auth0 Runtime Config -->
+    <script>
+        window.AUTH0_CONFIG = {
+            domain:      "resolvit-ai.us.auth0.com",
+            clientId:    "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
+            redirectUri: "https://resolvit-app-2026.vercel.app"
+        };
+    </script>
+
+    <style>
+        /* ── Issue Detail Chrome ──────────────────────────── */
+        body { background: #020617; color: #f8fafc; }
+
+        .issue-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 24px;
+            align-items: start;
+        }
+        @media (max-width: 768px) {
+            .issue-detail-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── Premium Skeleton ──────────────────────────────── */
+        @keyframes shimmer {
+            0%   { background-position: -600px 0; }
+            100% { background-position: 600px 0;  }
+        }
+        .skel {
+            border-radius: 10px;
+            background: linear-gradient(90deg, #1e293b 25%, #2d3748 50%, #1e293b 75%);
+            background-size: 600px 100%;
+            animation: shimmer 1.4s infinite;
+        }
+
+        /* ── Meta Strip ────────────────────────────────────── */
+        .meta-strip {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.82rem;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+        .meta-strip span { display: flex; align-items: center; gap: 5px; }
+
+        /* ── Priority Ring ─────────────────────────────────── */
+        .priority-ring {
+            text-align: center;
+            padding: 20px 28px;
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 18px;
+        }
+        .priority-num {
+            font-size: 2.8rem;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .priority-label {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+        }
+        .priority-bar-wrap {
+            height: 6px;
+            background: #1e293b;
+            border-radius: 3px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        .priority-bar-inner { height: 100%; border-radius: 3px; transition: width 1s; }
+
+        /* ── Info Card ─────────────────────────────────────── */
+        .info-card {
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 18px;
+            padding: 24px;
+        }
+        .info-card h4 {
+            font-size: 0.95rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            color: white;
+        }
+
+        /* ── Timeline ──────────────────────────────────────── */
+        .tl { position: relative; padding-left: 28px; }
+        .tl::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255,255,255,0.06);
+        }
+        .tl-step { position: relative; margin-bottom: 20px; opacity: 0.35; }
+        .tl-step.done, .tl-step.active { opacity: 1; }
+        .tl-dot {
+            position: absolute;
+            left: -28px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #1e293b;
+            border: 2px solid #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+        .tl-dot.done    { background: #16a34a; border-color: #16a34a; }
+        .tl-dot.active  { background: #6366f1; border-color: #6366f1; animation: ring-pulse 1.5s infinite; }
+        .tl-dot.breach  { background: #dc2626; border-color: #dc2626; }
+        @keyframes ring-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.5); }
+            50%       { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
+        }
+        .tl-label { font-size: 0.85rem; font-weight: 700; color: white; }
+        .tl-note  { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+
+        /* ── SLA Bar ──────────────────────────────────────── */
+        .sla-bar-wrap { height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .sla-bar-inner { height: 100%; border-radius: 4px; transition: width 0.6s; }
+
+        /* ── Status Badge ──────────────────────────────────── */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .sp-reported    { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+        .sp-verified    { background: #e0f2fe33; color: #38bdf8; border: 1px solid #38bdf855; }
+        .sp-assigned    { background: #ede9fe33; color: #a78bfa; border: 1px solid #a78bfa55; }
+        .sp-in_progress { background: #fef3c733; color: #fbbf24; border: 1px solid #fbbf2455; }
+        .sp-escalated   { background: #fee2e233; color: #f87171; border: 1px solid #f8717155; animation: pulse 1s infinite; }
+        .sp-resolved    { background: #dcfce733; color: #4ade80; border: 1px solid #4ade8055; }
+        .sp-clustered   { background: #ede9fe33; color: #c4b5fd; border: 1px solid #c4b5fd55; }
+
+        /* ── Error / Fallback ──────────────────────────────── */
+        .detail-error {
+            text-align: center;
+            padding: 60px 24px;
+            background: #0f172a;
+            border: 1px solid rgba(220,38,38,0.2);
+            border-radius: 20px;
+        }
+        .detail-error h2 { font-size: 1.4rem; margin-bottom: 12px; color: #f87171; }
+        .detail-error p  { color: #64748b; margin-bottom: 24px; }
+
+        /* ── Escalation Banner ─────────────────────────────── */
+        .esc-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: rgba(220,38,38,0.08);
+            border: 1px solid rgba(220,38,38,0.3);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        /* ── Proof Box ─────────────────────────────────────── */
+        .proof-img {
+            width: 100%;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.06);
+            margin-top: 12px;
+        }
+
+        /* ── Blockchain Log ────────────────────────────────── */
+        .audit-row {
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 10px;
+            border-left: 3px solid #6366f1;
+            margin-bottom: 8px;
+        }
+        .audit-row-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 0.78rem;
+        }
+        .audit-hash {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: #475569;
+            word-break: break-all;
+        }
+
+        /* ── Officer Control ───────────────────────────────── */
+        .officer-panel {
+            border: 1px solid rgba(99,102,241,0.3);
+        }
+        .admin-panel {
+            border: 1px solid rgba(220,38,38,0.3);
+        }
+
+        /* ── Responsive ────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .priority-ring { padding: 14px 20px; }
+            .priority-num  { font-size: 2rem; }
+        }
+    </style>
 </head>
 
 <body>
 
+    <!-- ── Navbar ─────────────────────────────────────────── -->
     <nav class="navbar" id="navbar">
         <div class="navbar-inner">
             <a href="index.html" class="nav-logo">
                 <div class="nav-logo-icon">⚖️</div>RESOLVIT
             </a>
             <div class="nav-links">
-                <a href="dashboard.html" class="nav-link">← Back to Issues</a>
+                <a href="javascript:history.back()" class="nav-link">← Back</a>
+                <a href="dashboard.html" class="nav-link">Dashboard</a>
             </div>
             <div class="nav-actions" id="nav-actions">
                 <a href="submit.html" class="btn btn-primary btn-sm">+ Report Issue</a>
@@ -51,460 +248,601 @@
         </div>
     </nav>
 
-    <section style="padding-top:100px;">
-        <div class="container" style="max-width:900px;" id="issue-detail">
-            <!-- Skeleton while loading -->
-            <div id="skeleton-detail">
-                <div class="skeleton" style="height:40px;width:60%;margin-bottom:16px;border-radius:8px;"></div>
-                <div class="skeleton" style="height:20px;width:40%;margin-bottom:32px;border-radius:8px;"></div>
-                <div class="skeleton" style="height:300px;border-radius:20px;margin-bottom:24px;"></div>
+    <!-- ── Main Content ───────────────────────────────────── -->
+    <section style="padding: 100px 0 60px;">
+        <div class="container" style="max-width: 1100px;" id="issue-root">
+
+            <!-- SKELETON (shown during load) -->
+            <div id="issue-skeleton">
+                <div class="skel" style="height:36px;width:55%;margin-bottom:14px;"></div>
+                <div class="skel" style="height:18px;width:35%;margin-bottom:36px;"></div>
+                <div class="issue-detail-grid">
+                    <div>
+                        <div class="skel" style="height:180px;margin-bottom:20px;border-radius:18px;"></div>
+                        <div class="skel" style="height:280px;border-radius:18px;"></div>
+                    </div>
+                    <div>
+                        <div class="skel" style="height:130px;margin-bottom:20px;border-radius:18px;"></div>
+                        <div class="skel" style="height:220px;border-radius:18px;"></div>
+                    </div>
+                </div>
             </div>
 
+            <!-- ERROR STATE -->
+            <div id="issue-error" style="display:none;"></div>
+
+            <!-- CONTENT (hidden until loaded) -->
             <div id="issue-content" style="display:none;">
+
                 <!-- Breadcrumb -->
-                <div style="margin-bottom:24px;font-size:0.85rem;color:var(--text-muted);">
-                    <a href="dashboard.html" style="color:var(--text-muted);">Issues</a> → <span id="d-category"></span>
+                <div style="font-size:0.82rem;color:#64748b;margin-bottom:16px;">
+                    <a href="dashboard.html" style="color:#64748b;">Issues</a>
+                    <span style="margin:0 6px;">→</span>
+                    <span id="d-category-bc"></span>
                 </div>
 
-                <!-- Header -->
-                <div
-                    style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:24px;">
+                <!-- Title Row -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px;">
                     <div style="flex:1;">
-                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
-                            <span id="d-cat-badge" class="cat-badge"></span>
-                            <span id="d-status-badge" class="badge"></span>
-                            <span id="d-escalated-badge"></span>
-                            <span id="d-cluster-badge"></span>
-                        </div>
-                        <h1 id="d-title" style="font-size:1.75rem;margin-bottom:12px;"></h1>
-                        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.85rem;color:var(--text-muted);">
-                            <span>🆔 <span id="d-id"></span></span>
-                            <span>📅 <span id="d-created"></span></span>
-                            <span>👤 <span id="d-reporter"></span></span>
-                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;" id="d-badges"></div>
+                        <h1 id="d-title" style="font-size:clamp(1.3rem,3vw,1.8rem);font-weight:800;color:white;margin-bottom:12px;line-height:1.3;"></h1>
+                        <div class="meta-strip" id="d-meta"></div>
                     </div>
-                    <div
-                        style="text-align:center;padding:20px 28px;background:var(--bg-secondary);border-radius:var(--radius-lg);border:1px solid var(--border);">
-                        <div
-                            style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">
-                            Priority Score</div>
-                        <div class="priority-score" id="d-priority" style="font-size:2.5rem;"></div>
-                        <div style="width:80px;margin-top:8px;" class="priority-bar">
-                            <div class="priority-bar-fill" id="d-priority-bar" style="background:var(--accent);"></div>
+                    <!-- Priority Ring -->
+                    <div class="priority-ring" style="flex-shrink:0;">
+                        <div class="priority-num" id="d-score"></div>
+                        <div class="priority-label">Priority Score</div>
+                        <div class="priority-bar-wrap">
+                            <div class="priority-bar-inner" id="d-score-bar"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Alert for escalated -->
-                <div id="d-escalation-banner" class="escalation-banner" style="display:none;margin-bottom:24px;">
+                <!-- Escalation Banner -->
+                <div id="d-esc-banner" class="esc-banner" style="display:none;">
                     <span style="font-size:1.5rem;">🚨</span>
                     <div>
-                        <strong>ESCALATED</strong> — This issue has exceeded SLA and been elevated to senior authority.
-                        <div style="font-size:0.85rem;opacity:0.8;margin-top:4px;" id="d-escalation-reason"></div>
+                        <strong style="color:#f87171;">ESCALATED</strong> — This issue has exceeded SLA and been elevated to senior authority.
+                        <div style="font-size:0.82rem;color:#f87171;opacity:0.8;margin-top:4px;" id="d-esc-reason"></div>
                     </div>
                 </div>
 
-                <!-- Main Grid -->
-                <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;" id="detail-grid">
-                    <!-- Left Column -->
-                    <div class="flex flex-col" style="gap:24px;">
+                <!-- Grid -->
+                <div class="issue-detail-grid">
+
+                    <!-- ── Left Column ──────────────────────────── -->
+                    <div style="display:flex;flex-direction:column;gap:20px;">
+
                         <!-- Description -->
-                        <div class="card">
-                            <h4 style="margin-bottom:16px;">📝 Issue Description</h4>
-                            <p id="d-description" style="color:var(--text-secondary);line-height:1.8;"></p>
+                        <div class="info-card">
+                            <h4>📝 Issue Description</h4>
+                            <p id="d-description" style="color:#94a3b8;line-height:1.8;font-size:0.95rem;white-space:pre-wrap;"></p>
+                        </div>
+
+                        <!-- SLA + Metrics -->
+                        <div class="info-card">
+                            <h4>📊 Issue Intelligence</h4>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="d-metrics"></div>
+                            <div id="d-sla-section" style="margin-top:16px;display:none;">
+                                <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:6px;">
+                                    <span style="color:#64748b;font-weight:600;">SLA Deadline</span>
+                                    <strong id="d-sla-text" style="font-weight:700;"></strong>
+                                </div>
+                                <div class="sla-bar-wrap">
+                                    <div class="sla-bar-inner" id="d-sla-bar"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Timeline -->
-                        <div class="card">
-                            <h4 style="margin-bottom:24px;">📍 Resolution Timeline</h4>
-                            <div class="timeline" id="d-timeline">
-                                <!-- Filled by JS -->
-                            </div>
+                        <div class="info-card">
+                            <h4>📍 Resolution Timeline</h4>
+                            <div class="tl" id="d-timeline"></div>
                         </div>
 
-                        <!-- Audit Chain -->
-                        <div class="card">
-                            <div class="flex justify-between items-center" style="margin-bottom:16px;">
-                                <h4>🔐 Blockchain Audit Log</h4>
-                                <span id="chain-valid-badge" class="badge badge-verified"></span>
+                        <!-- Blockchain Audit Log -->
+                        <div class="info-card">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                                <h4 style="margin:0;">🔐 Blockchain Audit Log</h4>
+                                <span id="d-chain-badge" class="status-pill sp-reported">Loading…</span>
                             </div>
-                            <div id="audit-chain" style="font-size:0.8rem;"></div>
+                            <div id="d-audit-chain"></div>
                         </div>
                     </div>
 
-                    <!-- Right Column -->
-                    <div class="flex flex-col" style="gap:20px;">
-                        <!-- Resolution Timer -->
-                        <div class="resolution-timer flex-col" id="timer-section">
+                    <!-- ── Right Column ─────────────────────────── -->
+                    <div style="display:flex;flex-direction:column;gap:20px;">
+
+                        <!-- Live Resolution Timer -->
+                        <div class="info-card" style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border-color:rgba(99,102,241,0.2);">
                             <div style="display:flex;align-items:center;gap:12px;">
-                                <div style="font-size:1.5rem;">⏱️</div>
+                                <div style="font-size:1.8rem;">⏱️</div>
                                 <div>
-                                    <div class="timer-label">Resolution Time</div>
-                                    <div class="timer-display" id="d-timer">--</div>
-                                </div>
-                            </div>
-                            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:8px;" id="timer-note"></div>
-                        </div>
-
-                        <!-- Metrics -->
-                        <div class="card">
-                            <h4 style="margin-bottom:16px;">📊 Issue Metrics</h4>
-                            <div class="flex flex-col" style="gap:14px;">
-                                <div class="flex justify-between items-center">
-                                    <span style="font-size:0.85rem;color:var(--text-muted);">Urgency</span>
-                                    <div class="urgency-dots" id="d-urgency-dots"></div>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span style="font-size:0.85rem;color:var(--text-muted);">People Affected</span>
-                                    <strong id="d-impact" style="color:var(--accent);"></strong>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span style="font-size:0.85rem;color:var(--text-muted);">Safety Risk</span>
-                                    <strong id="d-safety" style="color:var(--orange);"></strong>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span style="font-size:0.85rem;color:var(--text-muted);">Days Unresolved</span>
-                                    <strong id="d-days"></strong>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span style="font-size:0.85rem;color:var(--text-muted);">Cluster</span>
-                                    <span id="d-cluster-info" style="font-size:0.85rem;"></span>
+                                    <div style="font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Resolution Time</div>
+                                    <div id="d-timer" style="font-size:1.6rem;font-weight:900;font-family:'JetBrains Mono',monospace;color:#6366f1;">--:--:--</div>
+                                    <div id="d-timer-note" style="font-size:0.72rem;color:#64748b;margin-top:2px;"></div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Authority Assigned -->
-                        <div class="card">
-                            <h4 style="margin-bottom:16px;">🏛️ Assigned Authority</h4>
+                        <!-- Assigned Authority -->
+                        <div class="info-card">
+                            <h4>🏛️ Assigned Authority</h4>
                             <div id="d-authority">
-                                <p style="color:var(--text-muted);font-size:0.9rem;">No authority assigned yet.</p>
+                                <p style="color:#64748b;font-size:0.88rem;">No authority assigned yet.</p>
                             </div>
                         </div>
 
-                        <!-- Authority Control (RBAC Masked) -->
-                        <div class="card" id="authority-control-card"
-                            style="display:none; border: 1px solid var(--accent);">
-                            <div
-                                style="font-size:0.7rem; color:var(--accent); font-weight:800; margin-bottom:12px; letter-spacing:1px;">
-                                OFFICER CONTROL PANEL</div>
-                            <h4 style="margin-bottom:16px;">Update Resolution State</h4>
-                            <div class="flex flex-col" style="gap:16px;">
-                                <div class="form-group">
-                                    <label class="form-label">Current Status</label>
-                                    <select id="action-status" class="form-select">
-                                        <option value="verified">Verified</option>
-                                        <option value="assigned">Assigned</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="resolved">Resolved</option>
-                                    </select>
+                        <!-- Reporter Info -->
+                        <div class="info-card">
+                            <h4>👤 Reporter</h4>
+                            <div id="d-reporter-card" style="display:flex;align-items:center;gap:12px;">
+                                <div id="d-reporter-avatar" style="width:40px;height:40px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0;"></div>
+                                <div>
+                                    <div id="d-reporter-name" style="font-weight:700;"></div>
+                                    <div style="font-size:0.75rem;color:#64748b;">Citizen Reporter</div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">Resolution Note</label>
-                                    <textarea id="action-note" class="form-textarea"
-                                        placeholder="Describe the action taken..." style="min-height:80px;"></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Proof URL (Image/Video)</label>
-                                    <input type="text" id="action-proof" class="form-input" placeholder="https://..." />
-                                </div>
-                                <button class="btn btn-primary" style="width:100%;"
-                                    onclick="submitOfficerUpdate()">Execute Status Update</button>
                             </div>
                         </div>
 
-                        <!-- Admin Controls (RBAC Masked) -->
-                        <div class="card" id="admin-control-card" style="display:none; border: 1px solid var(--red);">
-                            <div
-                                style="font-size:0.7rem; color:var(--red); font-weight:800; margin-bottom:12px; letter-spacing:1px;">
-                                ADMIN OVERRIDE</div>
-                            <button class="btn btn-danger btn-sm" style="width:100%;" onclick="deleteIssue()">🔴 Delete
-                                Submission</button>
-                            <button class="btn btn-outline btn-sm" style="width:100%; margin-top:10px;"
-                                onclick="escalateManually()">🚨 Manual Escalation</button>
+                        <!-- Resolution (if resolved) -->
+                        <div class="info-card" id="d-resolution-card" style="display:none;">
+                            <h4>✅ Resolution Details</h4>
+                            <p id="d-resolution-note" style="color:#94a3b8;font-size:0.88rem;line-height:1.6;"></p>
+                            <div id="d-proof-wrap"></div>
                         </div>
 
-                        <!-- Resolution Proof -->
-                        <div class="card" id="d-resolution-section" style="display:none;">
-                            <h4 style="margin-bottom:12px;">✅ Resolution</h4>
-                            <p id="d-resolution-note"
-                                style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:12px;"></p>
-                            <div id="d-proof-img"></div>
+                        <!-- Issue Image -->
+                        <div id="d-image-card" style="display:none;">
+                            <img id="d-issue-img" src="" alt="Issue photo" class="proof-img" />
                         </div>
 
-                        <!-- Image -->
-                        <div id="d-image-section" style="display:none;">
-                            <img id="d-image" src="" alt="Issue photo"
-                                style="width:100%;border-radius:var(--radius-lg);border:1px solid var(--border);" />
+                        <!-- ── Officer Panel (authority/admin) ── -->
+                        <div class="info-card officer-panel" id="d-officer-panel" style="display:none;">
+                            <div style="font-size:0.65rem;color:#818cf8;font-weight:800;letter-spacing:0.1em;margin-bottom:10px;">OFFICER CONTROL PANEL</div>
+                            <h4>Update Status</h4>
+                            <div style="display:flex;flex-direction:column;gap:12px;">
+                                <select id="oc-status" class="form-select" style="background:#1e293b;color:white;border:1px solid #334155;border-radius:10px;padding:10px 14px;">
+                                    <option value="verified">Verified</option>
+                                    <option value="assigned">Assigned</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="escalated">Escalated</option>
+                                    <option value="resolved">Resolved</option>
+                                </select>
+                                <textarea id="oc-note" class="form-textarea" placeholder="Resolution / update note…" style="min-height:72px;background:#1e293b;color:white;border:1px solid #334155;border-radius:10px;padding:10px 14px;resize:vertical;"></textarea>
+                                <input type="text" id="oc-proof" class="form-input" placeholder="Proof URL (image/video)…" style="background:#1e293b;color:white;border:1px solid #334155;border-radius:10px;padding:10px 14px;" />
+                                <button class="btn btn-primary" style="width:100%;" onclick="submitOfficerUpdate()">🚀 Execute Update</button>
+                            </div>
                         </div>
+
+                        <!-- ── Admin Override Panel ── -->
+                        <div class="info-card admin-panel" id="d-admin-panel" style="display:none;">
+                            <div style="font-size:0.65rem;color:#f87171;font-weight:800;letter-spacing:0.1em;margin-bottom:10px;">ADMIN OVERRIDE</div>
+                            <div style="display:flex;flex-direction:column;gap:10px;">
+                                <button class="btn btn-outline btn-sm" style="width:100%;border-color:#f87171;color:#f87171;" onclick="adminDeleteIssue()">🔴 Delete Submission</button>
+                                <button class="btn btn-outline btn-sm" style="width:100%;" onclick="adminEscalate()">🚨 Force Escalation</button>
+                                <button class="btn btn-outline btn-sm" style="width:100%;border-color:#6366f1;color:#818cf8;" onclick="adminExportIssue()">📄 Export PDF Report</button>
+                            </div>
+                        </div>
+
                     </div>
-                </div>
-            </div>
+                </div><!-- /grid -->
+            </div><!-- /content -->
         </div>
     </section>
 
     <div class="toast-container" id="toast-container"></div>
-      
-  
-  
-  
+
+    <!-- ── Scripts — CORRECT ORDER ──────────────────────── -->
+    <!-- 1. API first — defines BASE_URL, API, showToast -->
+    <script src="js/api.js"></script>
+    <!-- 2. Auth0 SDK -->
+    <script src="js/libs/auth0-spa-js.production.min.js"></script>
+    <!-- 3. Auth0 integration (needs BASE_URL) -->
+    <script src="js/auth0-integration.js"></script>
+    <!-- 4. Auth (needs API + Auth0Integration) -->
     <script src="js/auth.js"></script>
-  <script src="js/libs/auth0-spa-js.production.min.js"></script>
-  <script>console.log("Auth0 SDK Init - Global:", typeof createAuth0Client, "Namespace:", typeof (window.auth0 && window.auth0.createAuth0Client));</script>
-  <script src="js/auth0-integration.js"></script>
-  <script src="js/api.js"></script>
-      
-  
-  
-  
-  
-  
-  
-  
-  
-  
+    <!-- 5. UI helpers -->
     <script src="js/theme-manager.js"></script>
-      
-  
-  
     <script src="js/animations.js"></script>
     <script src="js/issues.js"></script>
-    <script src="js/simulation.js"></script>
 
     <script>
-        const TIMELINE_STEPS = [
-            { key: 'reported', label: 'Reported', icon: '📍', color: '' },
-            { key: 'verified', label: 'Verified', icon: '✔️', color: '' },
-            { key: 'assigned', label: 'Assigned', icon: '🏛️', color: '' },
-            { key: 'in_progress', label: 'In Progress', icon: '🔧', color: '' },
-            { key: 'escalated', label: 'Escalated', icon: '🚨', color: 'escalated' },
-            { key: 'resolved', label: 'Resolved', icon: '✅', color: 'completed' }
+    // ─── Utilities ─────────────────────────────────────────────
+    const PRIORITY_COLORS = { crit: '#dc2626', high: '#ea580c', med: '#ca8a04', low: '#16a34a' };
+
+    function priorityColor(score) {
+        if (score >= 80) return PRIORITY_COLORS.crit;
+        if (score >= 55) return PRIORITY_COLORS.high;
+        if (score >= 30) return PRIORITY_COLORS.med;
+        return PRIORITY_COLORS.low;
+    }
+
+    function fmtDate(d) {
+        if (!d) return '—';
+        return new Date(d).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    function fmtTime(secs) {
+        const d = Math.floor(secs / 86400);
+        const h = Math.floor((secs % 86400) / 3600);
+        const m = Math.floor((secs % 3600) / 60);
+        const s = Math.floor(secs % 60);
+        if (d > 0) return `${d}d ${h}h ${m}m`;
+        return [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
+    }
+
+    // ─── Live Timer ────────────────────────────────────────────
+    let _timerIntv;
+    function startResolutionTimer(issue) {
+        const el   = document.getElementById('d-timer');
+        const note = document.getElementById('d-timer-note');
+        const start = new Date(issue.created_at);
+
+        if (issue.resolved_at) {
+            const diff = Math.floor((new Date(issue.resolved_at) - start) / 1000);
+            el.textContent   = fmtTime(diff);
+            note.textContent = 'Total resolution time';
+            return;
+        }
+        note.textContent = 'Time since report';
+        _timerIntv = setInterval(() => {
+            el.textContent = fmtTime(Math.floor((Date.now() - start) / 1000));
+        }, 1000);
+    }
+
+    // ─── Timeline ──────────────────────────────────────────────
+    function buildTimeline(issue) {
+        const steps = [
+            { key: 'reported',    label: 'Reported',    icon: '📍' },
+            { key: 'verified',    label: 'Verified',    icon: '✔️' },
+            { key: 'assigned',    label: 'Assigned',    icon: '🏛️' },
+            { key: 'in_progress', label: 'In Progress', icon: '🔧' },
+            { key: 'escalated',   label: 'Escalated',   icon: '🚨' },
+            { key: 'resolved',    label: 'Resolved',    icon: '✅' },
         ];
+        const ORDER = ['reported','verified','clustered','assigned','in_progress','escalated','resolved'];
+        const curIdx = ORDER.indexOf(issue.status);
 
-        const STATUS_ORDER = ['reported', 'verified', 'clustered', 'assigned', 'in_progress', 'escalated', 'resolved'];
+        return steps.map(step => {
+            const stepIdx = ORDER.indexOf(step.key);
+            const isDone  = stepIdx <  curIdx;
+            const isActive = issue.status === step.key;
+            const isBreached = step.key === 'escalated' && isActive;
 
-        function buildTimeline(issue) {
-            const currentIdx = STATUS_ORDER.indexOf(issue.status);
-            return TIMELINE_STEPS.map((step, i) => {
-                const stepIdx = STATUS_ORDER.indexOf(step.key);
-                const isDone = stepIdx < currentIdx || issue.status === step.key;
-                const isActive = issue.status === step.key || (step.key === 'in_progress' && issue.status === 'escalated');
-                let dotClass = '';
-                if (issue.status === 'escalated' && step.key === 'escalated') dotClass = 'escalated';
-                else if (isDone && !isActive) dotClass = 'completed';
-                else if (isActive) dotClass = 'active';
+            let dotCls = '';
+            if (isBreached)     dotCls = 'breach';
+            else if (isActive)  dotCls = 'active';
+            else if (isDone)    dotCls = 'done';
 
-                return `
-      <div class="timeline-step" style="opacity:${isDone || isActive ? 1 : 0.35};">
-        <div class="timeline-dot ${dotClass}">${step.icon}</div>
-        <div class="timeline-content">
-          <div class="timeline-title">${step.label}</div>
-          ${step.key === 'reported' ? `<div class="timeline-time">${formatDate(issue.created_at)}</div>` : ''}
-          ${step.key === 'resolved' && issue.resolved_at ? `<div class="timeline-time">${formatDate(issue.resolved_at)}</div>` : ''}
-          ${step.key === 'assigned' && issue.authority_name ? `<div class="timeline-note">👤 ${issue.authority_name}</div>` : ''}
-          ${step.key === 'resolved' && issue.resolution_note ? `<div class="timeline-note">${issue.resolution_note}</div>` : ''}
-        </div>
-      </div>`;
-            }).join('');
+            let cls = '';
+            if (isDone || isActive) cls = 'done';
+
+            let note = '';
+            if (step.key === 'reported')    note = fmtDate(issue.created_at);
+            if (step.key === 'assigned' && issue.authority_name)  note = `👤 ${issue.authority_name}`;
+            if (step.key === 'resolved' && issue.resolved_at)     note = fmtDate(issue.resolved_at);
+            if (step.key === 'resolved' && issue.resolution_note) note += (note ? '<br>' : '') + issue.resolution_note;
+
+            return `
+            <div class="tl-step ${cls}">
+                <div class="tl-dot ${dotCls}">${step.icon}</div>
+                <div style="padding-left: 6px;">
+                    <div class="tl-label">${step.label}</div>
+                    ${note ? `<div class="tl-note">${note}</div>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ─── Metrics Grid ──────────────────────────────────────────
+    function buildMetrics(issue) {
+        const items = [
+            ['⚠️ Urgency',          issue.urgency ? '★'.repeat(issue.urgency) + '☆'.repeat(5 - issue.urgency) : '—'],
+            ['👥 People Impacted',  (issue.impact_scale || 0).toLocaleString()],
+            ['🔥 Safety Risk',      Math.round((issue.safety_risk_probability || 0) * 100) + '%'],
+            ['📆 Days Unresolved',  (issue.days_unresolved ?? '—') + (issue.days_unresolved != null ? 'd' : '')],
+            ['🤖 AI Risk',          Math.round((issue.breach_risk || 0) * 100) + '%'],
+            ['📢 Reports',          issue.report_count || 1],
+        ];
+        return items.map(([label, val]) => `
+            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:12px;">
+                <div style="font-size:0.72rem;color:#64748b;font-weight:700;margin-bottom:4px;">${label}</div>
+                <div style="font-size:0.95rem;font-weight:800;color:white;">${val}</div>
+            </div>`).join('');
+    }
+
+    // ─── Badges ────────────────────────────────────────────────
+    function buildBadges(issue) {
+        const cats = { Roads:'🛣️', Water:'💧', Electricity:'⚡', Sanitation:'🗑️', Safety:'🚨', Environment:'🌿', Other:'📌' };
+        const icon = cats[issue.category] || '📌';
+        const statusCls = `sp-${(issue.status || 'reported').replace(' ','_')}`;
+        let html = `
+            <span class="status-pill sp-reported" style="background:rgba(99,102,241,0.1);color:#818cf8;border-color:#818cf855;">${icon} ${issue.category}</span>
+            <span class="status-pill ${statusCls}">${(issue.status || 'reported').replace('_',' ').toUpperCase()}</span>`;
+        if (issue.escalation_level > 0) html += `<span class="status-pill sp-escalated">🚨 ESC L${issue.escalation_level}</span>`;
+        if (issue.cluster_id) html += `<span class="status-pill sp-clustered">🤖 AI Clustered</span>`;
+        if (issue.sla_breached) html += `<span class="status-pill sp-escalated">⏰ SLA BREACHED</span>`;
+        return html;
+    }
+
+    // ─── RBAC ──────────────────────────────────────────────────
+    function applyRBAC(issue) {
+        const user = Auth.getUser();
+        if (!user) return;
+        if (user.role === 'authority' || user.role === 'admin') {
+            const panel = document.getElementById('d-officer-panel');
+            panel.style.display = 'block';
+            document.getElementById('oc-status').value = issue.status || 'reported';
+        }
+        if (user.role === 'admin') {
+            document.getElementById('d-admin-panel').style.display = 'block';
+        }
+    }
+
+    // ─── Render ─────────────────────────────────────────────────
+    function renderIssueDetail(issue) {
+        // Breadcrumb
+        document.getElementById('d-category-bc').textContent = issue.category;
+        // Title
+        document.title = `${issue.title} — RESOLVIT`;
+        document.getElementById('d-title').textContent = issue.title;
+        // Badges
+        document.getElementById('d-badges').innerHTML = buildBadges(issue);
+        // Meta
+        const metaItems = [
+            `🆔 #${(issue.id || '').slice(-8)}`,
+            `📅 ${fmtDate(issue.created_at)}`,
+            issue.location_name ? `📍 ${issue.location_name}` : null,
+        ].filter(Boolean);
+        document.getElementById('d-meta').innerHTML = metaItems.map(t => `<span>${t}</span>`).join('');
+
+        // Priority score
+        const score = issue.priority_score || 0;
+        const col   = priorityColor(score);
+        const scoreEl = document.getElementById('d-score');
+        scoreEl.textContent  = score;
+        scoreEl.style.color  = col;
+        document.getElementById('d-score-bar').style.cssText = `width:${score}%;background:${col};`;
+
+        // Description
+        document.getElementById('d-description').textContent = issue.description || 'No description provided.';
+
+        // Escalation banner
+        if (issue.status === 'escalated' || (issue.escalation_level || 0) > 0) {
+            document.getElementById('d-esc-banner').style.display = 'flex';
+            document.getElementById('d-esc-reason').textContent = `Unresolved for ${issue.days_unresolved} days — SLA breached at Level ${issue.escalation_level || 1}.`;
         }
 
-        function formatDate(d) {
-            return new Date(d).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+        // Metrics
+        document.getElementById('d-metrics').innerHTML = buildMetrics(issue);
+
+        // SLA Bar
+        if (issue.sla_seconds_remaining != null) {
+            const slaSection = document.getElementById('d-sla-section');
+            slaSection.style.display = 'block';
+            const slaRemain = issue.sla_seconds_remaining;
+            const slaTotalSec = (issue.sla_hours || 48) * 3600;
+            const pct = Math.max(0, Math.min(100, (slaRemain / slaTotalSec) * 100));
+            const slaColor = pct < 25 ? '#dc2626' : pct < 50 ? '#ea580c' : '#16a34a';
+            document.getElementById('d-sla-bar').style.cssText = `width:${pct}%;background:${slaColor};`;
+            const h = Math.floor(slaRemain / 3600);
+            const m = Math.floor((slaRemain % 3600) / 60);
+            document.getElementById('d-sla-text').textContent = slaRemain <= 0 ? 'SLA BREACHED' : `${h}h ${m}m remaining`;
+            document.getElementById('d-sla-text').style.color = slaColor;
         }
 
-        let timerInterval;
-        function startTimer(issue) {
-            const start = new Date(issue.created_at);
-            const end = issue.resolved_at ? new Date(issue.resolved_at) : null;
-            const el = document.getElementById('d-timer');
-            const note = document.getElementById('timer-note');
+        // Timeline
+        document.getElementById('d-timeline').innerHTML = buildTimeline(issue);
 
-            if (end) {
-                const diff = Math.floor((end - start) / 1000);
-                el.textContent = formatTime(diff);
-                note.textContent = 'Total resolution time';
+        // Reporter
+        const rname = issue.reporter_name || 'Citizen';
+        document.getElementById('d-reporter-avatar').textContent = rname[0].toUpperCase();
+        document.getElementById('d-reporter-name').textContent   = rname;
+
+        // Authority
+        if (issue.authority_name) {
+            document.getElementById('d-authority').innerHTML = `
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:40px;height:40px;border-radius:50%;background:#6366f1;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0;">${issue.authority_name[0].toUpperCase()}</div>
+                    <div>
+                        <div style="font-weight:700;">${issue.authority_full_name || issue.authority_name}</div>
+                        <div style="font-size:0.75rem;color:#64748b;">${issue.authority_department || 'Assigned Authority'}</div>
+                    </div>
+                </div>`;
+        }
+
+        // Resolution
+        if (issue.resolution_note) {
+            document.getElementById('d-resolution-card').style.display = 'block';
+            document.getElementById('d-resolution-note').textContent = issue.resolution_note;
+        }
+        if (issue.resolution_proof_url) {
+            document.getElementById('d-proof-wrap').innerHTML = `<img src="${issue.resolution_proof_url}" alt="Resolution Proof" class="proof-img" onerror="this.style.display='none'" />`;
+        }
+
+        // Issue image
+        if (issue.image_url) {
+            document.getElementById('d-image-card').style.display = 'block';
+            document.getElementById('d-issue-img').src = issue.image_url;
+        }
+
+        // Timer
+        startResolutionTimer(issue);
+
+        // RBAC controls
+        applyRBAC(issue);
+    }
+
+    // ─── Audit Chain ───────────────────────────────────────────
+    async function loadAuditChain(id) {
+        const el = document.getElementById('d-audit-chain');
+        const badge = document.getElementById('d-chain-badge');
+        try {
+            // Correct endpoint: /api/audit/issue/{id}
+            const audit = await API.get(`/api/audit/issue/${id}`);
+            const isValid = audit.chain_valid !== false;
+            badge.textContent = isValid ? '✅ Chain Valid' : '⚠️ Integrity Warning';
+            badge.className   = `status-pill ${isValid ? 'sp-resolved' : 'sp-escalated'}`;
+
+            const chain = audit.audit_chain || [];
+            if (!chain.length) {
+                el.innerHTML = '<p style="color:#64748b;font-size:0.85rem;">No audit entries yet.</p>';
                 return;
             }
+            el.innerHTML = chain.map(b => `
+                <div class="audit-row">
+                    <div class="audit-row-header">
+                        <strong style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;">${b.event_type || b.event || 'Event'}</strong>
+                        <span style="font-size:0.72rem;color:#64748b;">${fmtDate(b.timestamp)}</span>
+                    </div>
+                    <div class="audit-hash">${b.hash || ''}</div>
+                </div>`).join('');
+        } catch {
+            badge.textContent = 'Unavailable';
+            el.innerHTML = '<p style="color:#64748b;font-size:0.85rem;">Audit log not available.</p>';
+        }
+    }
 
-            note.textContent = 'Time since report';
-            timerInterval = setInterval(() => {
-                const diff = Math.floor((Date.now() - start) / 1000);
-                el.textContent = formatTime(diff);
-            }, 1000);
+    // ─── Main Load ─────────────────────────────────────────────
+    async function loadIssue() {
+        const id = new URLSearchParams(window.location.search).get('id');
+
+        if (!id) {
+            showError('No Issue ID', 'No issue ID was provided in the URL. Please navigate from the dashboard.');
+            return;
         }
 
-        function formatTime(secs) {
-            const d = Math.floor(secs / 86400);
-            const h = Math.floor((secs % 86400) / 3600);
-            const m = Math.floor((secs % 3600) / 60);
-            const s = secs % 60;
-            if (d > 0) return `${d}d ${h}h ${m}m`;
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        }
+        console.log('[IssueDetail] Loading issue:', id);
 
-        async function loadIssue() {
-            const params = new URLSearchParams(location.search);
-            const id = params.get('id');
-            if (!id) { document.getElementById('skeleton-detail').innerHTML = '<div class="alert alert-error">No issue ID provided.</div>'; return; }
+        try {
+            const issue = await API.get(`/api/issues/${id}`);
+            console.log('[IssueDetail] Issue loaded:', issue);
 
-            try {
-                const issue = await API.get(`/api/issues/${id}`);
-                document.getElementById('skeleton-detail').style.display = 'none';
-                document.getElementById('issue-content').style.display = 'block';
-
-                document.title = `${issue.title} — RESOLVIT`;
-                document.getElementById('d-category').textContent = issue.category;
-                document.getElementById('d-cat-badge').textContent = issue.category;
-                document.getElementById('d-cat-badge').classList.add(`cat-${issue.category}`);
-                document.getElementById('d-status-badge').innerHTML = `<div class="badge-dot"></div> ${issue.status.replace('_', ' ')}`;
-                document.getElementById('d-status-badge').classList.add(`badge-${issue.status}`);
-                document.getElementById('d-title').textContent = issue.title;
-                document.getElementById('d-id').textContent = id.substring(0, 8) + '...';
-                document.getElementById('d-created').textContent = formatDate(issue.created_at);
-                document.getElementById('d-reporter').textContent = issue.reporter_name || 'Citizen';
-                document.getElementById('d-description').textContent = issue.description;
-
-                const score = issue.priority_score;
-                const scoreEl = document.getElementById('d-priority');
-                scoreEl.textContent = score;
-                scoreEl.className = 'priority-score ' + (score >= 80 ? 'priority-critical' : score >= 60 ? 'priority-high' : score >= 40 ? 'priority-medium' : 'priority-low');
-                document.getElementById('d-priority-bar').style.width = score + '%';
-                document.getElementById('d-priority-bar').style.background = score >= 80 ? 'var(--red)' : score >= 60 ? 'var(--orange)' : score >= 40 ? 'var(--yellow)' : 'var(--green)';
-
-                if (issue.status === 'escalated') {
-                    document.getElementById('d-escalation-banner').style.display = 'flex';
-                    document.getElementById('d-escalation-reason').textContent = `Unresolved for ${issue.days_unresolved} days — SLA breached.`;
-                }
-                if (issue.cluster_id) {
-                    document.getElementById('d-cluster-badge').innerHTML = '<span class="badge badge-clustered">🤖 AI Clustered</span>';
-                }
-
-                // Timeline
-                document.getElementById('d-timeline').innerHTML = buildTimeline(issue);
-
-                // Metrics
-                const dots = Array.from({ length: 5 }, (_, i) => `<div class="urgency-dot ${i < issue.urgency ? 'filled' : ''}"></div>`).join('');
-                document.getElementById('d-urgency-dots').innerHTML = dots;
-                document.getElementById('d-impact').textContent = (issue.impact_scale || 0).toLocaleString() + ' people';
-                document.getElementById('d-safety').textContent = Math.round((issue.safety_risk_probability || 0) * 100) + '%';
-                document.getElementById('d-days').textContent = issue.days_unresolved + ' days';
-                document.getElementById('d-cluster-info').textContent = issue.cluster_id ? '🔗 Part of cluster' : 'Standalone';
-
-                // Authority
-                if (issue.authority_name) {
-                    document.getElementById('d-authority').innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:40px;height:40px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">${issue.authority_name[0].toUpperCase()}</div>
-          <div><div style="font-weight:600;">${issue.authority_name}</div><div style="font-size:0.8rem;color:var(--text-muted);">Assigned Authority</div></div>
-        </div>`;
-                }
-
-                // Resolution
-                if (issue.resolution_note) {
-                    document.getElementById('d-resolution-section').style.display = 'block';
-                    document.getElementById('d-resolution-note').textContent = issue.resolution_note;
-                }
-
-                // Image
-                if (issue.image_url) {
-                    document.getElementById('d-image-section').style.display = 'block';
-                    document.getElementById('d-image').src = issue.image_url;
-                }
-
-                loadRBAC(issue);
-                startTimer(issue);
-
-                // Load Audit Chain
-                try {
-                    const audit = await API.get(`/api/audit/${id}`);
-                    document.getElementById('chain-valid-badge').textContent = audit.chain_valid ? '✅ Chain Valid' : '⚠️ Integrity Warning';
-                    document.getElementById('chain-valid-badge').className = 'badge ' + (audit.chain_valid ? 'badge-resolved' : 'badge-escalated');
-                    document.getElementById('audit-chain').innerHTML = audit.audit_chain.map(b => `
-        <div style="padding:10px 12px;border-radius:8px;background:var(--bg-secondary);margin-bottom:8px;border-left:3px solid var(--accent);">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-            <strong style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;">${b.event_type}</strong>
-            <span style="font-size:0.75rem;color:var(--text-muted);">${new Date(b.timestamp).toLocaleString()}</span>
-          </div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--text-muted);word-break:break-all;">${b.hash}</div>
-        </div>`).join('') || '<p style="color:var(--text-muted);font-size:0.85rem;">No audit entries yet.</p>';
-                } catch { document.getElementById('audit-chain').innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Audit log not available.</p>'; }
-
-            } catch (err) {
-                document.getElementById('skeleton-detail').innerHTML = `<div class="alert alert-error">❌ Failed to load issue: ${err.message}</div>`;
-            }
-        }
-
-        function loadRBAC(issue) {
-            const user = Auth.getUser();
-            if (!user) return;
-
-            const isAuth = user.role === 'authority' || user.role === 'admin';
-            const isAdmin = user.role === 'admin';
-
-            if (isAuth) {
-                document.getElementById('authority-control-card').style.display = 'block';
-                document.getElementById('action-status').value = issue.status;
+            // Validate minimum required fields
+            if (!issue || !issue.id) {
+                throw new Error('Issue data is missing or malformed.');
             }
 
-            if (isAdmin) {
-                document.getElementById('admin-control-card').style.display = 'block';
+            // Swap skeleton → content
+            document.getElementById('issue-skeleton').style.display = 'none';
+            document.getElementById('issue-content').style.display  = 'block';
+
+            renderIssueDetail(issue);
+
+            // Load audit chain non-blockingly
+            loadAuditChain(id);
+
+        } catch (err) {
+            console.error('[IssueDetail] Load failed:', err);
+            const is404 = err.status === 404 || err.message?.includes('404') || err.message?.includes('not found');
+            const is403 = err.status === 403 || err.message?.includes('403') || err.message?.includes('Access denied');
+
+            if (is404) {
+                showError('Issue Not Found',
+                    'This issue does not exist in the database. It may have been a demo/simulation issue that was cleared, or the ID is invalid.',
+                    [{ label: '← Back to Dashboard', href: 'dashboard.html' }]);
+            } else if (is403) {
+                showError('Access Denied',
+                    'You do not have permission to view this issue. Authorities can only view issues in their department.',
+                    [{ label: '← Back', onclick: 'history.back()' }]);
+            } else if (err.message?.includes('TIMEOUT') || err.message?.includes('fetch')) {
+                showError('Connection Error',
+                    'Could not reach the backend. Please check that the server is running.',
+                    [{ label: '🔄 Retry', onclick: 'loadIssue()' }]);
+            } else {
+                showError('Load Failed',
+                    `Unexpected error: ${err.message}`,
+                    [{ label: '🔄 Retry', onclick: 'loadIssue()' }, { label: '← Dashboard', href: 'dashboard.html' }]);
             }
         }
+    }
 
-        async function submitOfficerUpdate() {
-            const params = new URLSearchParams(location.search);
-            const id = params.get('id');
-            const status = document.getElementById('action-status').value;
-            const resolution_note = document.getElementById('action-note').value;
-            const resolution_proof_url = document.getElementById('action-proof').value;
+    function showError(title, message, actions = []) {
+        document.getElementById('issue-skeleton').style.display = 'none';
+        const errEl = document.getElementById('issue-error');
+        errEl.style.display = 'block';
+        errEl.innerHTML = `
+            <div class="detail-error">
+                <div style="font-size:3rem;margin-bottom:16px;">⚠️</div>
+                <h2>${title}</h2>
+                <p>${message}</p>
+                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                    ${actions.map(a =>
+                        a.href
+                            ? `<a href="${a.href}" class="btn btn-outline">${a.label}</a>`
+                            : `<button class="btn btn-outline" onclick="${a.onclick}">${a.label}</button>`
+                    ).join('')}
+                    ${actions.length === 0 ? `<a href="dashboard.html" class="btn btn-primary">← Back to Dashboard</a>` : ''}
+                </div>
+            </div>`;
+    }
 
-            try {
-                await API.patch(`/api/issues/${id}`, {
-                    status,
-                    resolution_note,
-                    resolution_proof_url
-                });
-                showToast('🚀 Issue state updated successfully!', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } catch (err) {
-                showToast('❌ Update failed: ' + err.message, 'error');
-            }
+    // ─── Officer Actions ───────────────────────────────────────
+    async function submitOfficerUpdate() {
+        const id = new URLSearchParams(window.location.search).get('id');
+        const status  = document.getElementById('oc-status').value;
+        const note    = document.getElementById('oc-note').value;
+        const proof   = document.getElementById('oc-proof').value;
+        try {
+            await API.patch(`/api/issues/${id}`, { status, resolution_note: note, resolution_proof_url: proof });
+            showToast('🚀 Issue updated successfully!', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } catch (err) {
+            showToast('❌ Update failed: ' + err.message, 'error');
         }
+    }
 
-        async function deleteIssue() {
-            if (!confirm('🚨 Are you sure? This will PERMANENTLY remove this civic submission.')) return;
-            const params = new URLSearchParams(location.search);
-            const id = params.get('id');
-            try {
-                await API.post(`/api/simulation/clear`, { issue_id: id }); // Fallback or direct delete
-                showToast('🗑️ Issue purged from system.', 'success');
-                setTimeout(() => window.location.href = 'dashboard.html', 1000);
-            } catch (err) {
-                showToast('❌ Deletion failed.', 'error');
-            }
+    async function adminDeleteIssue() {
+        if (!confirm('🚨 Permanently delete this civic submission? This cannot be undone.')) return;
+        const id = new URLSearchParams(window.location.search).get('id');
+        try {
+            await API.delete(`/api/issues/${id}`);
+            showToast('🗑️ Issue deleted.', 'success');
+            setTimeout(() => window.location.href = 'dashboard.html', 800);
+        } catch (err) {
+            showToast('❌ Deletion failed: ' + err.message, 'error');
         }
+    }
 
-        async function escalateManually() {
-            const params = new URLSearchParams(location.search);
-            const id = params.get('id');
-            try {
-                await API.patch(`/api/issues/${id}`, { status: 'escalated' });
-                showToast('🚨 Manual escalation triggered.', 'warning');
-                setTimeout(() => location.reload(), 1000);
-            } catch (err) {
-                showToast('❌ Escalation failed.', 'error');
-            }
+    async function adminEscalate() {
+        const id = new URLSearchParams(window.location.search).get('id');
+        try {
+            await API.patch(`/api/issues/${id}`, { status: 'escalated' });
+            showToast('🚨 Manual escalation triggered.', 'warning');
+            setTimeout(() => location.reload(), 1000);
+        } catch (err) {
+            showToast('❌ Escalation failed: ' + err.message, 'error');
         }
+    }
 
-        window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
-            loadIssue();
+    async function adminExportIssue() {
+        const id = new URLSearchParams(window.location.search).get('id');
+        if (typeof exportSingleIssue === 'function') {
+            exportSingleIssue(id);
+        } else {
+            showToast('❌ Export not available.', 'error');
+        }
+    }
+
+    // ─── Boot ──────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar')?.classList.toggle('scrolled', window.scrollY > 50);
         });
+        loadIssue();
+    });
+
+    // Expose to HTML
+    window.submitOfficerUpdate = submitOfficerUpdate;
+    window.adminDeleteIssue    = adminDeleteIssue;
+    window.adminEscalate       = adminEscalate;
+    window.adminExportIssue    = adminExportIssue;
     </script>
 
-    <!-- Smooth Scroll & Hardware Acceleration Engine -->
     <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
     <script src="js/smooth-scroll.js"></script>
-</body>
 
+</body>
 </html>

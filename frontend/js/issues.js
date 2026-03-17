@@ -94,6 +94,10 @@ function renderIssueCard(issue, opts = {}) {
   const slaInfo = formatSlaCountdown(issue.sla_seconds_remaining);
   const slaCountdownId = `sla-${issue.id}`;
 
+  // Detect demo / simulation issues — they have no DB record, so clicking
+  // issue.html?id=... would 404 → perpetual loading state.
+  const isDemo = !!(issue.is_simulated || issue.is_demo);
+
   const statusLabels = {
     reported: "REPOR", verified: "VERIF", clustered: "CLUS",
     assigned: "ASSIG", in_progress: "PROGR", escalated: "ESCAL", resolved: "RESOL"
@@ -102,11 +106,17 @@ function renderIssueCard(issue, opts = {}) {
   const badgeClass = `badge-${issue.status || 'reported'}`;
   const isCritical = score >= 80;
 
+  const clickAction = isDemo
+    ? `event.stopPropagation(); if(typeof showToast==='function') showToast('🧠 Demo issue — no detail page in simulation mode.','info');`
+    : `window.location.href='issue.html?id=${issue.id}'`;
+
   return `
     <div class="glass-card-premium issue-card-v2 gpu-accelerate ${isCritical ? 'pulse-critical' : ''}" 
-         style="border-left: 5px solid ${band.color}; cursor:pointer; content-visibility: auto; contain-intrinsic-size: 0 160px;" 
-         onclick="window.location.href='issue.html?id=${issue.id}'">
+         style="border-left: 5px solid ${band.color}; cursor:${isDemo ? 'default' : 'pointer'}; content-visibility: auto; contain-intrinsic-size: 0 160px; position:relative;" 
+         onclick="${clickAction}">
       
+      ${isDemo ? `<div style="position:absolute;top:10px;right:10px;font-size:0.62rem;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 8px;border-radius:20px;font-weight:700;border:1px solid rgba(99,102,241,0.3);pointer-events:none;">🧠 DEMO</div>` : ''}
+
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="font-size:1.5rem; background:rgba(255,255,255,0.05); padding:8px; border-radius:12px;">${icon}</div>
@@ -115,8 +125,8 @@ function renderIssueCard(issue, opts = {}) {
             <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:800; margin-top:2px;">PRIORITY</div>
           </div>
         </div>
-        <div class="badge ${badgeClass}" style="font-size:0.6rem; letter-spacing:1px; border:1px solid currentColor; background:transparent; padding:4px 10px;">
-          ${(statusLabels[issue.status] || issue.status).toUpperCase()}
+        <div class="badge ${badgeClass}" style="font-size:0.6rem; letter-spacing:1px; border:1px solid currentColor; background:transparent; padding:4px 10px; margin-right:${isDemo ? '62px' : '0'};">
+          ${(statusLabels[issue.status] || issue.status || 'REPOR').toUpperCase()}
         </div>
       </div>
 
@@ -146,10 +156,10 @@ function renderIssueCard(issue, opts = {}) {
 
       <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px;">
           <div style="display:flex; align-items:center; gap:10px;">
-             ${opts.showUpvote ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); upvoteIssue('${issue.id}', this)">👍 ${issue.upvotes || 0}</button>` : ''}
-             <button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); exportSingleIssue('${issue.id}')" title="Download Official Record">📁</button>
+             ${opts.showUpvote && !isDemo ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); upvoteIssue('${issue.id}', this)">👍 ${issue.upvotes || 0}</button>` : ''}
+             ${!isDemo ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); exportSingleIssue('${issue.id}')" title="Download Official Record">📁</button>` : ''}
           </div>
-          <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">#${issue.id.slice(-6)}</span>
+          <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">#${(issue.id || '').slice(-6)}</span>
       </div>
     </div>
   `;
