@@ -14,11 +14,19 @@ cd /path/to/resolvit
 docker-compose up -d
 ```
 
-| Service  | URL                              |
-|----------|----------------------------------|
 | Frontend | http://localhost:3000            |
 | API      | http://localhost:8000/api/docs  |
-| Database | localhost:5432                   |
+| Auth     | Auth0 + PostgreSQL Sync         |
+
+---
+
+## 🛡️ Authentication Architecture (NEW)
+
+The platform has migrated to a hybrid **Auth0 + Local Security** model:
+- **Google OAuth 2.0**: Official government-grade identity verification.
+- **GitHub**: Integrated developer/authority login portal.
+- **Enterprise Database**: Secure local PostgreSQL fallback.
+- **Session Management**: JWT-based stateless security with transparent redirect flows.
 
 ---
 
@@ -189,6 +197,16 @@ Score range: 0–100
 - Each event (create, update, escalate, resolve) is an immutable block
 - Chain integrity verifiable via `GET /api/audit/{id}`
 
+### 🖥️ High-Fidelity Responsive Engine (v2.5)
+- **Mobile-First Core**: 100% horizontal scroll-free experience on all devices (320px+).
+- **Fluid Typography**: Dynamic `clamp()`-based scaling for elite readability.
+- **Cinematic Landing**: Isolated landing background to `index.html` for maximum performance on portal pages.
+- **Responsive Tables**: Governance reports and audit logs utilize a mobile-scrolling engine.
+
+### 📄 Document Intelligence — Exports
+- **Real-Time PDF Generation**: Instant professional resolution reports.
+- **CSV Data Streaming**: Full civic data exports for transparency.
+
 ---
 
 ## 🔒 Security
@@ -220,10 +238,12 @@ PORT=8000
 | Phase | Feature |
 |-------|---------|
 | ✅ 1 | Core MVP — auth, issues, AI clustering, priority, audit |
-| 🔜 2 | WebSocket real-time updates, Redis caching |
-| 🔜 3 | ML severity classifier, smart heatmap |
-| 🔜 4 | Mobile app (React Native), SMS notifications |
-| 🔜 5 | Multi-city expansion, OpenData API |
+| ✅ 2 | Auth0 Integration (Google/GitHub), Responsive Portal v2.5 |
+| ✅ 3 | Cinematic Landing isolation & Performance Optimization |
+| ✅ 4 | PDF/CSV Export System Implementation |
+| 🔜 5 | WebSocket real-time updates, Redis caching |
+| 🔜 6 | ML severity classifier, smart heatmap |
+| 🔜 7 | Mobile app (React Native), SMS notifications |
 
 ---
 
