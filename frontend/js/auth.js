@@ -13,7 +13,8 @@ const Auth = {
             id: data.user_id,
             username: data.username,
             role: data.role,
-            department: data.department
+            department: data.department,
+            auth_provider: 'database'
         }));
         return data;
     },

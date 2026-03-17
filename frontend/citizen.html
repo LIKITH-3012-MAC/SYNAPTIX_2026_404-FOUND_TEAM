@@ -26,8 +26,8 @@
         content="https://raw.githubusercontent.com/LIKITH-3012-MAC/MY-PIC-GALLERY/main/LIKITH-NAIDU_ANUMAKONDA.jpeg">
 
     <link rel="stylesheet" href="css/styles.css" />
-   type="image/png" href="">
-  
+    <link rel="stylesheet" href="css/profile-premium.css" />
+    
   <!-- Auth0 Runtime Configuration -->
   <script>
     window.AUTH0_CONFIG = {
@@ -41,7 +41,7 @@
   <link rel="shortcut icon" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
 </head>
 
-<body>
+<body data-role="citizen">
 
     <nav class="navbar" id="navbar">
         <div class="navbar-inner">
@@ -60,227 +60,65 @@
     </nav>
 
     <div class="citizen-layout">
-
-        <!-- Profile Hero -->
-        <div class="profile-hero" id="profile-hero">
-            <div class="badge-display" id="hero-badge">🌱</div>
-            <h1 id="hero-name">Loading...</h1>
-            <div class="sub" id="hero-sub">Civic Credit Profile</div>
-            <div class="profile-stats">
-                <div class="profile-stat">
-                    <div class="val" id="ps-points">—</div>
-                    <div class="lbl">Total Points</div>
-                </div>
-                <div class="profile-stat">
-                    <div class="val" id="ps-rank">—</div>
-                    <div class="lbl">Global Rank</div>
-                </div>
-                <div class="profile-stat">
-                    <div class="val" id="ps-issues">—</div>
-                    <div class="lbl">Issues Reported</div>
-                </div>
+        
+        <!-- Sidebar Identity Section -->
+        <aside id="identity-sidebar">
+            <div class="identity-card" style="padding: 60px 0; opacity: 0.5;">
+                <div class="profile-avatar-wrapper" style="width:100px; height:100px; background: rgba(255,255,255,0.05); border-radius:50%; margin: 0 auto; animation: pulse 2s infinite;"></div>
+                <div style="margin-top:20px; font-weight:700;">Decrypting Identity...</div>
             </div>
-        </div>
+        </aside>
 
-        <!-- Badge Progress -->
-        <div class="panel">
-            <h3>🏅 Badge Progress</h3>
-            <div id="badge-progress-area"></div>
-        </div>
-
-        <!-- My Issues + Timeline -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-
-            <!-- My Issues -->
-            <div class="panel">
-                <h3>📋 My Reported Issues</h3>
-                <div id="my-issues-list">
-                    <p style="color:#94a3b8;text-align:center;padding:24px;">Loading...</p>
+        <!-- Main Content Area -->
+        <main class="profile-content-area" id="profile-content-area">
+            
+            <!-- Welcome Identity Hero (Role Specific Stats are injected here) -->
+            <div class="panel-premium" style="opacity: 0.5;">
+                <div class="panel-header">
+                    <div class="panel-title">⭐ Contribution Statistics</div>
+                </div>
+                <div class="stat-grid-premium">
+                    <div class="stat-card-premium"><div style="height:40px; background:rgba(255,255,255,0.05); width:80%;"></div></div>
+                    <div class="stat-card-premium"><div style="height:40px; background:rgba(255,255,255,0.05); width:80%;"></div></div>
+                    <div class="stat-card-premium"><div style="height:40px; background:rgba(255,255,255,0.05); width:80%;"></div></div>
                 </div>
             </div>
 
-            <!-- Points Feed -->
-            <div class="panel">
-                <h3>💰 Recent Points Activity</h3>
-                <div id="credits-feed">
-                    <p style="color:#94a3b8;text-align:center;padding:24px;">Loading...</p>
-                </div>
-            </div>
-        </div>
+            <!-- More Content Injected by JS -->
 
-        <!-- Issue Timeline Modal (shown on issue card click) -->
-        <div class="modal-overlay" id="timeline-modal" style="display:none;">
-            <div class="modal-box" style="max-width:520px;max-height:80vh;overflow-y:auto;">
-                <button onclick="document.getElementById('timeline-modal').style.display='none'"
-                    style="position:absolute;top:16px;right:16px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:#94a3b8;">✕</button>
-                <h3 style="margin-bottom:4px;" id="tm-title">Issue Timeline</h3>
-                <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:24px;" id="tm-status"></p>
-                <div id="timeline-content" class="timeline"></div>
-            </div>
-        </div>
-
+        </main>
     </div>
+
+    <!-- Legacy / Preserved Modal Support -->
+    <div class="modal-overlay" id="timeline-modal" style="display:none;">
+        <div class="modal-box" style="max-width:520px;max-height:80vh;overflow-y:auto;">
+            <button onclick="document.getElementById('timeline-modal').style.display='none'"
+                style="position:absolute;top:16px;right:16px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:#94a3b8;">✕</button>
+            <h3 style="margin-bottom:4px;" id="tm-title">Issue Timeline</h3>
+            <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:24px;" id="tm-status"></p>
+            <div id="timeline-content" class="timeline"></div>
+        </div>
+    </div>
+
     <div class="toast-container" id="toast-container"></div>
       
-  
-  
-  
+    <!-- Core Infrastructure -->
     <script src="js/auth.js"></script>
-  <script src="js/libs/auth0-spa-js.production.min.js"></script>
-  <script>console.log("Auth0 SDK Init - Global:", typeof createAuth0Client, "Namespace:", typeof (window.auth0 && window.auth0.createAuth0Client));</script>
-  <script src="js/auth0-integration.js"></script>
-  <script src="js/api.js"></script>
-      
-  
-  
-  
-  
-  
-  
-  
-  
-  
+    <script src="js/libs/auth0-spa-js.production.min.js"></script>
+    <script src="js/auth0-integration.js"></script>
+    <script src="js/api.js"></script>
     <script src="js/theme-manager.js"></script>
-      
-  
-  
     <script src="js/animations.js"></script>
     <script src="js/ui-enhancements.js"></script>
     <script src="js/issues.js"></script>
-    <script src="js/simulation.js"></script>
+    <script src="js/profile-manager.js"></script>
+
+    <!-- Smooth Scroll & Hardware Acceleration Engine -->
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+    <script src="js/smooth-scroll.js"></script>
 
     <script>
-        const BADGES = [
-            { pts: 5000, icon: "🏆", label: "Urban Champion" },
-            { pts: 1000, icon: "🦸", label: "Civic Hero" },
-            { pts: 500, icon: "🛡️", label: "City Guardian" },
-            { pts: 100, icon: "⭐", label: "Contributor" },
-            { pts: 0, icon: "🌱", label: "Newcomer" },
-        ];
-
-        const ACTION_ICONS = {
-            report_issue: { icon: "📝", color: "#6366f1", label: "Reported Issue" },
-            upvote: { icon: "👍", color: "#3b82f6", label: "Upvoted Issue" },
-            issue_resolved: { icon: "✅", color: "#16a34a", label: "Issue Resolved" },
-            helpful_evidence: { icon: "📎", color: "#f59e0b", label: "Helpful Evidence" },
-            community_mark: { icon: "🌟", color: "#ec4899", label: "Community Mark" },
-        };
-
-        const TIMELINE_EVENT_LABELS = {
-            created: { label: "Issue Created", dot: "created" },
-            updated: { label: "Status Updated", dot: "assigned" },
-            escalated: { label: "Escalated", dot: "escalated" },
-            resolved: { label: "Resolved", dot: "resolved" },
-            clustered: { label: "Merged / Clustered", dot: "in_progress" },
-        };
-
-        document.addEventListener("DOMContentLoaded", () => {
-            if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
-            const user = Auth.getUser();
-            if (!user) {
-                showToast("Please log in to view your profile", "warning");
-                setTimeout(() => location.href = "index.html", 1500);
-                return;
-            }
-            document.getElementById("hero-name").textContent = user.full_name || user.username;
-            initCitizenProfile(user);
-            window.addEventListener("scroll", () => document.getElementById("navbar").classList.toggle("scrolled", window.scrollY > 50));
-        });
-
-        async function initCitizenProfile(user) {
-            await Promise.all([loadCredits(user), loadMyIssues(user)]);
-        }
-
-        async function loadCredits(user) {
-            try {
-                const credits = await API.get("/api/credits/me");
-                const pts = credits.total_points || 0;
-                document.getElementById("hero-badge").textContent = BADGES.find(b => pts >= b.pts)?.icon || "🌱";
-                document.getElementById("ps-points").textContent = pts.toLocaleString();
-                document.getElementById("ps-rank").textContent = "#" + (credits.rank || "?");
-                document.getElementById("hero-sub").textContent = credits.badge + " · Rank #" + (credits.rank || "?");
-
-                // Badge progress
-                renderBadgeProgress(pts);
-
-                // Credits feed
-                const feed = document.getElementById("credits-feed");
-                if (!credits.transactions?.length) {
-                    feed.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:24px;">No activity yet. Report an issue to earn points!</p>`;
-                } else {
-                    feed.innerHTML = credits.transactions.map(t => {
-                        const a = ACTION_ICONS[t.action_type] || { icon: "💰", color: "#94a3b8", label: t.action_type };
-                        const dt = new Date(t.created_at).toLocaleDateString();
-                        return `<div class="credit-row">
-          <div class="credit-icon" style="background:${a.color}15;color:${a.color};">${a.icon}</div>
-          <div style="flex:1;"><div style="font-size:0.88rem;font-weight:600;color:#1e293b;">${t.description || a.label}</div>
-            <div style="font-size:0.75rem;color:#94a3b8;">${dt}</div></div>
-          <div class="credit-pts" style="color:${a.color};">+${t.points}</div>
-        </div>`;
-                    }).join("");
-                }
-            } catch (e) { console.warn("Credits:", e); }
-        }
-
-        function renderBadgeProgress(pts) {
-            const el = document.getElementById("badge-progress-area");
-            el.innerHTML = BADGES.slice(0, -1).map(b => {
-                const prev = BADGES[BADGES.indexOf(b) + 1] || { pts: 0 };
-                const earned = pts >= b.pts;
-                const progress = earned ? 100 : pts < prev.pts ? 0 : Math.round(((pts - prev.pts) / (b.pts - prev.pts)) * 100);
-                return `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-      <div style="font-size:1.5rem;filter:${earned ? 'none' : 'grayscale(1) opacity(0.4)'};">${b.icon}</div>
-      <div style="flex:1;">
-        <div style="display:flex;justify-content:space-between;font-size:0.85rem;font-weight:600;margin-bottom:4px;">
-          <span style="color:${earned ? '#6366f1' : '#94a3b8'};">${b.label}</span>
-          <span style="color:#94a3b8;">${b.pts.toLocaleString()} pts ${earned ? "✅" : ""}</span>
-        </div>
-        <div class="badge-progress-track">
-          <div class="badge-progress-fill" style="width:${progress}%;"></div>
-        </div>
-      </div>
-    </div>`;
-            }).join("");
-        }
-
-        async function loadMyIssues(user) {
-            try {
-                const issues = await API.get(`/api/issues?limit=50&sort_by=created_at&order=desc`);
-                // Filter to reporter's own issues client-side (simplest approach)
-                const mine = issues.filter(i => i.reporter_id === user.sub || i.reporter_name === user.username);
-                document.getElementById("ps-issues").textContent = mine.length;
-                const container = document.getElementById("my-issues-list");
-                if (!mine.length) {
-                    container.innerHTML = `<div style="text-align:center;padding:32px;color:#94a3b8;">
-        <div style="font-size:2rem;margin-bottom:8px;">📭</div>
-        <p>No issues reported yet!</p>
-        <a href="submit.html" class="btn btn-primary" style="margin-top:12px;display:inline-block;">+ Report Your First Issue</a>
-      </div>`;
-                    return;
-                }
-                container.innerHTML = mine.map(issue => {
-                    const band = getPriorityBand(issue.priority_score || 0);
-                    const statusColors = { reported: "#94a3b8", verified: "#3b82f6", in_progress: "#f59e0b", escalated: "#dc2626", resolved: "#16a34a", assigned: "#6366f1" };
-                    const sc = statusColors[issue.status] || "#94a3b8";
-                    return `<div class="my-issue-card border-${band.label.toLowerCase()}" onclick="openTimeline('${issue.id}', '${issue.title.replace(/'/g, "\\'")}', '${issue.status}')">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-          <div style="font-weight:700;font-size:0.9rem;line-height:1.3;flex:1;">${issue.title}</div>
-          <span style="font-weight:800;color:${band.color};margin-left:8px;">${issue.priority_score}</span>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:0.75rem;">
-          <span style="color:${sc};font-weight:600;">${issue.status.replace("_", " ")}</span>
-          <span style="color:#94a3b8;">${issue.category}</span>
-          <span style="color:#94a3b8;">📅 ${issue.days_unresolved}d ago</span>
-        </div>
-        ${issue.sla_seconds_remaining != null && !issue.sla_breached && issue.sla_seconds_remaining < 7200
-                            ? `<div style="color:#dc2626;font-size:0.72rem;font-weight:700;margin-top:4px;">⏰ SLA at risk!</div>` : ""}
-        ${issue.sla_breached ? `<div style="color:#dc2626;font-size:0.72rem;font-weight:700;margin-top:4px;animation:pulse 1s infinite;">🚨 SLA BREACHED</div>` : ""}
-      </div>`;
-                }).join("");
-            } catch (e) { console.warn("My issues:", e); }
-        }
-
+        // Backward compatibility hooks for any internal issues code
         async function openTimeline(issueId, title, status) {
             document.getElementById("timeline-modal").style.display = "flex";
             document.getElementById("tm-title").textContent = title;
@@ -293,35 +131,33 @@
                     content.innerHTML = `<p style="color:#94a3b8;">No audit log entries yet.</p>`;
                     return;
                 }
-                const eventOrder = ["created", "updated", "clustered", "escalated", "resolved"];
+                const eventLabels = {
+                    created: { label: "Issue Created", dot: "created" },
+                    updated: { label: "Status Updated", dot: "assigned" },
+                    escalated: { label: "Escalated", dot: "escalated" },
+                    resolved: { label: "Resolved", dot: "resolved" },
+                    clustered: { label: "Merged / Clustered", dot: "in_progress" },
+                };
                 const sorted = logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                 content.innerHTML = sorted.map((log, i) => {
-                    const ev = TIMELINE_EVENT_LABELS[log.event_type] || { label: log.event_type, dot: "other" };
+                    const ev = eventLabels[log.event_type] || { label: log.event_type, dot: "other" };
                     const dt = new Date(log.timestamp);
                     const timeStr = dt.toLocaleDateString() + " " + dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                    const detail = log.new_value?.status
-                        ? `→ ${log.new_value.status.replace("_", " ")}`
-                        : log.new_value?.priority_score
-                            ? `Priority: ${log.new_value.priority_score}`
-                            : "";
+                    const detail = log.new_value?.status ? `→ ${log.new_value.status.replace("_", " ")}` : log.new_value?.priority_score ? `Priority: ${log.new_value.priority_score}` : "";
                     return `
-      <div class="timeline-entry" style="animation-delay:${i * 0.08}s;">
-        <div class="timeline-dot ${ev.dot}"></div>
-        <div class="timeline-time">${timeStr}</div>
-        <div class="timeline-label">${ev.label}</div>
-        ${detail ? `<div class="timeline-detail">${detail}</div>` : ""}
-        ${log.actor_name ? `<div class="timeline-detail">by ${log.actor_name}</div>` : ""}
-      </div>`;
+                        <div class="timeline-entry" style="animation-delay:${i * 0.08}s;">
+                            <div class="timeline-dot ${ev.dot}"></div>
+                            <div class="timeline-time">${timeStr}</div>
+                            <div class="timeline-label">${ev.label}</div>
+                            ${detail ? `<div class="timeline-detail">${detail}</div>` : ""}
+                            ${log.actor_name ? `<div class="timeline-detail">by ${log.actor_name}</div>` : ""}
+                        </div>`;
                 }).join("");
             } catch (e) {
                 content.innerHTML = `<p style="color:#94a3b8;">Could not load timeline.</p>`;
             }
         }
     </script>
-
-    <!-- Smooth Scroll & Hardware Acceleration Engine -->
-    <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
-    <script src="js/smooth-scroll.js"></script>
 </body>
 
 </html>
