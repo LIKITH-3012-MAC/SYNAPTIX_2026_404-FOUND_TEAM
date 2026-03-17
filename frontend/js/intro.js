@@ -11,7 +11,7 @@
         if (!container) return;
         
         // Add 20-30 ambient coordinate nodes
-        const count = window.innerWidth < 768 ? 15 : 30;
+        const count = window.innerWidth < 768 ? 10 : 25;
         for (let i = 0; i < count; i++) {
             const node = document.createElement('div');
             node.className = 'intro-node';
