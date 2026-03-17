@@ -1,18 +1,22 @@
 /**
- * RESOLVIT - Auth0 Google Login Integration (Debug Enabled)
+ * RESOLVIT - Auth0 Google Login Integration (Global Config Mode)
  * Uses @auth0/auth0-spa-js for Google OAuth via Auth0.
  */
 
 const Auth0Integration = {
-    // Auth0 Configuration - Hardcoded for Vanilla JS (Vercel Env Vars not accessible in browser)
-    config: {
-        domain: 'resolvit-ai.us.auth0.com',
-        clientId: 'wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI',
-        // Use exact URI from Vercel config when in production, or localhost for dev
-        redirectUri: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? window.location.origin + '/index.html'
-            : 'https://resolvit-app-2026.vercel.app',
-        cacheLocation: 'localstorage'
+    // Auth0 Configuration - Loads from window.AUTH0_CONFIG for vanilla JS compatibility
+    get config() {
+        const globalConfig = window.AUTH0_CONFIG || {};
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        return {
+            domain: globalConfig.domain || 'resolvit-ai.us.auth0.com',
+            clientId: globalConfig.clientId || 'wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI',
+            redirectUri: isLocal 
+                ? window.location.origin + '/index.html' 
+                : (globalConfig.redirectUri || 'https://resolvit-app-2026.vercel.app'),
+            cacheLocation: 'localstorage'
+        };
     },
 
     _client: null,
@@ -22,42 +26,38 @@ const Auth0Integration = {
      * Initialize the Auth0 SPA client.
      */
     async init() {
-        console.log('[Auth0] Starting initialization...');
+        const conf = this.config;
+        console.log('[Auth0] Initializing with config:', conf);
+
         if (this._initialized) return;
 
-        // Wait up to 5 seconds for the global createAuth0Client to be available
+        // Verify SDK presence
         const waitForSDK = async (retries = 10) => {
             for (let i = 0; i < retries; i++) {
-                if (typeof createAuth0Client !== 'undefined') {
-                    console.log('[Auth0] SDK found in global scope.');
-                    return true;
-                }
-                console.warn(`[Auth0] SDK not found yet, retrying... (${i+1}/10)`);
+                if (typeof createAuth0Client !== 'undefined') return true;
                 await new Promise(r => setTimeout(r, 500));
             }
             return false;
         };
 
-        const isLoaded = await waitForSDK();
-        if (!isLoaded) {
-            console.error('[Auth0] CRITICAL: Auth0 SDK (createAuth0Client) failed to load from CDN.');
-            throw new Error('Auth0 SDK not loaded. Check script tag order.');
+        if (!(await waitForSDK())) {
+            throw new Error('Auth0 SDK (createAuth0Client) not found. Check script tag order.');
         }
 
         try {
             this._client = await createAuth0Client({
-                domain: this.config.domain,
-                clientId: this.config.clientId,
+                domain: conf.domain,
+                clientId: conf.clientId,
                 authorizationParams: {
-                    redirect_uri: this.config.redirectUri
+                    redirect_uri: conf.redirectUri
                 },
-                cacheLocation: this.config.cacheLocation
+                cacheLocation: conf.cacheLocation
             });
 
             this._initialized = true;
-            console.log('[Auth0] Logic: Client initialized with Redirect URI:', this.config.redirectUri);
+            console.log('[Auth0] Client initialized. Ready for Google Login.');
         } catch (error) {
-            console.error('[Auth0] Initialization failed with error:', error);
+            console.error('[Auth0] Initialization failed:', error);
             throw error;
         }
     },
@@ -66,59 +66,45 @@ const Auth0Integration = {
      * Handle the OAuth redirect callback.
      */
     async _handleCallback() {
-        console.log('[Auth0] Checking for callback params in URL...');
         const query = window.location.search;
         if (query.includes('code=') && query.includes('state=')) {
-            console.log('[Auth0] Callback params detected. Processing...');
+            console.log('[Auth0] Handling authentication callback...');
             try {
                 if (!this._client) await this.init();
-                
                 await this._client.handleRedirectCallback();
-                console.log('[Auth0] Callback processed successfully.');
-                
-                // Clean up URL
                 window.history.replaceState({}, document.title, window.location.pathname);
                 
                 const auth0User = await this._client.getUser();
                 if (auth0User) {
-                    console.log('[Auth0] Authenticated user retrieved:', auth0User.email);
                     await this._syncWithBackend(auth0User);
                 }
             } catch (error) {
-                console.error('[Auth0] Callback processing failed:', error);
+                console.error('[Auth0] Callback error:', error);
             }
         }
     },
 
     /**
-     * Sync with RESOLVIT backend
+     * Sync authenticated user with backend
      */
     async _syncWithBackend(auth0User) {
-        const email = auth0User.email;
-        const name = auth0User.name || auth0User.nickname || email.split('@')[0];
-
-        console.log('[Auth0] Syncing user with RESOLVIT backend via OAuth Login...');
+        console.log('[Auth0] Syncing user with database...');
         try {
             const response = await fetch(`${BASE_URL}/api/auth/oauth-login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: email,
-                    name: name,
+                    email: auth0User.email,
+                    name: auth0User.name || auth0User.nickname || auth0User.email.split('@')[0],
                     provider: 'google',
                     provider_id: auth0User.sub,
                     picture: auth0User.picture || ''
                 })
             });
 
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.detail || 'OAuth sync failed');
-            }
+            if (!response.ok) throw new Error('Backend sync failed');
 
             const data = await response.json();
-            console.log('[Auth0] Backend sync successful. User Role:', data.role);
-
             localStorage.setItem('resolvit_token', data.access_token);
             localStorage.setItem('resolvit_user', JSON.stringify({
                 id: data.user_id,
@@ -130,61 +116,52 @@ const Auth0Integration = {
             }));
 
             if (typeof showToast === 'function') {
-                showToast(`✅ Welcome, ${data.username}!`, 'success');
+                showToast(`✅ Welcome back, ${data.username}!`, 'success');
             }
 
-            // Role-based redirect
+            // Route to target page
             setTimeout(() => {
-                const role = data.role;
-                if (role === 'admin') window.location.href = 'admin.html';
-                else if (role === 'authority') window.location.href = 'authority.html';
+                if (data.role === 'admin') window.location.href = 'admin.html';
+                else if (data.role === 'authority') window.location.href = 'authority.html';
                 else window.location.href = 'dashboard.html';
-            }, 800);
+            }, 600);
 
         } catch (error) {
-            console.error('[Auth0] Backend sync failed:', error);
-            if (typeof showToast === 'function') {
-                showToast('❌ Backend sync failed: ' + error.message, 'error');
-            }
+            console.error('[Auth0] Sync error:', error);
         }
     },
 
     /**
-     * Start Google Login
+     * Trigger Google Login flow
      */
-    async loginWithGoogle(event) {
-        console.log('[Auth0] Login initiated via Google button.');
-        
-        // Manual event capture for better browser compatibility
-        const currentEvent = event || window.event;
-        const btn = currentEvent?.currentTarget || currentEvent?.srcElement;
-
+    async loginWithGoogle() {
+        // Find existing button for state update
+        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithGoogle"]');
         if (btn) {
-            btn.dataset.originalText = btn.innerText;
-            btn.innerText = 'Connecting to Secure Server...';
+            btn.dataset.originalContent = btn.innerHTML;
+            btn.innerHTML = 'Establishing Secure Connection...';
             btn.disabled = true;
-            btn.style.opacity = '0.7';
         }
 
         try {
+            const conf = this.config;
+            console.log('[Auth0] Starting redirect with config:', conf);
+            
             if (!this._client) await this.init();
             
-            console.log('[Auth0] Redirecting to Auth0 LoginPage...');
             await this._client.loginWithRedirect({
                 authorizationParams: {
                     connection: 'google-oauth2',
-                    redirect_uri: this.config.redirectUri
+                    redirect_uri: conf.redirectUri
                 }
             });
         } catch (error) {
-            console.error('[Auth0] Login Initiation CRITICAL ERROR:', error);
-            alert(`Google login could not be initiated.\n\nReason: ${error.message}\n\nPlease check your console logs for details.`);
+            console.error('[Auth0] Login Initiation Error:', error);
+            alert(`Google login failed. \n\nCause: ${error.message}\n\nPlease ensure your Auth0 dashboard allows the redirect URI: ${this.config.redirectUri}`);
             
-            // Restore button
             if (btn) {
-                btn.innerText = btn.dataset.originalText || 'Continue with Google';
+                btn.innerHTML = btn.dataset.originalContent;
                 btn.disabled = false;
-                btn.style.opacity = '1';
             }
         }
     },
@@ -193,25 +170,17 @@ const Auth0Integration = {
      * Logout
      */
     async logout() {
-        console.log('[Auth0] Logging out...');
         localStorage.removeItem('resolvit_token');
         localStorage.removeItem('resolvit_user');
-        
         if (this._client) {
-            await this._client.logout({
-                logoutParams: { returnTo: window.location.origin }
-            });
+            await this._client.logout({ logoutParams: { returnTo: window.location.origin } });
         } else {
             window.location.href = 'index.html';
         }
     }
 };
 
-// Handle callback on load
-document.addEventListener('DOMContentLoaded', () => {
-    Auth0Integration._handleCallback();
-});
-
-// Global bindings
-window.loginWithGoogle = (e) => Auth0Integration.loginWithGoogle(e);
+// Global handlers
+document.addEventListener('DOMContentLoaded', () => Auth0Integration._handleCallback());
+window.loginWithGoogle = () => Auth0Integration.loginWithGoogle();
 window.Auth0Integration = Auth0Integration;
