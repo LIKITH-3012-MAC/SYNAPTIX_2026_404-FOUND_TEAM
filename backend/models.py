@@ -82,6 +82,8 @@ class UserResponse(BaseModel):
     role:       str
     full_name:  Optional[str]
     department: Optional[str]
+    auth_provider: Optional[str] = 'database'
+    profile_picture: Optional[str] = None
     created_at: Optional[datetime]
 
 

@@ -128,6 +128,13 @@ def oauth_login(payload: OAuthLogin):
                 detail="Account is disabled. Contact administrator."
             )
 
+        # Sync latest profile metadata
+        with get_db() as cursor:
+            cursor.execute(
+                "UPDATE users SET profile_picture = %s, full_name = %s WHERE id = %s",
+                (payload.picture, payload.name, user["id"])
+            )
+
         token = create_access_token(
             user_id=str(user["id"]),
             role=user["role"],
@@ -157,9 +164,9 @@ def oauth_login(payload: OAuthLogin):
 
             cursor.execute(
                 """
-                INSERT INTO users (id, username, email, password_hash, role, full_name)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id, username, email, role
+                INSERT INTO users (id, username, email, password_hash, role, full_name, auth_provider, profile_picture)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, username, email, role, department
                 """,
                 (
                     user_id,
@@ -167,7 +174,9 @@ def oauth_login(payload: OAuthLogin):
                     payload.email,
                     hash_password(random_password),
                     "citizen",
-                    payload.name
+                    payload.name,
+                    payload.provider,
+                    payload.picture
                 )
             )
             new_user = dict(cursor.fetchone())

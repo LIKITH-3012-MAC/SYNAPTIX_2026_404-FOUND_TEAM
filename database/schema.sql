@@ -13,16 +13,21 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- For text similarity search
 CREATE TABLE IF NOT EXISTS users (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username    VARCHAR(64) UNIQUE NOT NULL,
-    email       VARCHAR(255) UNIQUE NOT NULL,
+    email       VARCHAR(255) UNIQUE NOT NULL CHECK(email ILIKE '%@gmail.com%' or email ILIKE '%@yahoo.com%'),
     password_hash TEXT NOT NULL,
     role        VARCHAR(32) NOT NULL DEFAULT 'citizen'
                   CHECK (role IN ('citizen', 'authority', 'admin')),
     full_name   VARCHAR(128),
     department  VARCHAR(128),       -- For authority users
     is_active   BOOLEAN DEFAULT TRUE,
+    is_verified BOOLEAN DEFAULT FALSE,
     created_at  TIMESTAMPTZ DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ DEFAULT NOW()
+    updated_at  TIMESTAMPTZ DEFAULT NOW(),
     
+    -- Personalization & Auth persistence
+    auth_provider   VARCHAR(32) DEFAULT 'database', -- database, google, github, twitter
+    profile_picture TEXT,
+    points_cache    INTEGER DEFAULT 0
 );
 
 CREATE INDEX idx_users_email  ON users(email);
