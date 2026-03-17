@@ -145,6 +145,7 @@ const API = {
 
 // Expose globally
 window.API = API;
+window.BASE_URL = BASE_URL; // expose for auth0-integration.js + any legacy refs
 
 // ────────────────────────────────────────────────────────────────
 // Toast Notification — global utility used across ALL pages

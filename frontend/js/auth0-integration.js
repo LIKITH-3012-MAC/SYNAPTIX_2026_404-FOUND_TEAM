@@ -1,157 +1,168 @@
 /**
  * RESOLVIT - Auth0 OAuth Integration (Production-Ready)
- * Full support: Google, GitHub, Twitter via Auth0.
- * Uses @auth0/auth0-spa-js (local UMD bundle).
+ * Supports: Google, GitHub, Twitter via Auth0.
  *
- * Architecture notes:
- *  - window.AUTH0_CONFIG injected in each HTML page's <head>
- *  - BASE_URL resolved from window.APP_BASE_URL (set by api.js before this runs)
- *    OR falls back to environment detection here.
- *  - loginWith* functions set on window for inline onclick compatibility.
+ * Architecture:
+ *  - Plain object (NOT IIFE) so BASE_URL from api.js is accessible as a
+ *    global variable — matches the proven pattern from commit 9762355.
+ *  - window.AUTH0_CONFIG injected in each page's <head> script block.
+ *  - Callback handled on DOMContentLoaded (not readyState check) to avoid
+ *    race conditions with the DOM not being ready.
+ *  - Redirect URI must EXACTLY match Auth0 Dashboard allowed callback URLs.
  */
 
-const Auth0Integration = (() => {
-    // ─── Config ────────────────────────────────────────────────
-    function getConfig() {
+const Auth0Integration = {
+
+    // ─── Config ────────────────────────────────────────────────────
+    get config() {
         const gc = window.AUTH0_CONFIG || {};
-        const isLocal = !window.location.hostname ||
-            window.location.hostname === 'localhost' ||
-            window.location.hostname === '127.0.0.1' ||
-            window.location.hostname === '0.0.0.0';
+        const host = window.location.hostname;
+        const isLocal = !host ||
+            host === 'localhost' ||
+            host === '127.0.0.1' ||
+            host === '0.0.0.0' ||
+            host.endsWith('.local');
+
+        // CRITICAL: redirectUri MUST exactly match what is in the Auth0 Dashboard
+        // "Allowed Callback URLs" field. Even a trailing slash or /index.html
+        // difference will cause "invalid_redirect_uri" → redirect loop.
+        const redirectUri = isLocal
+            ? window.location.origin + '/index.html'     // local dev: http://127.0.0.1:3000/index.html
+            : (gc.redirectUri || 'https://resolvit-app-2026.vercel.app');  // production: exact match
 
         return {
-            domain:      gc.domain    || 'resolvit-ai.us.auth0.com',
-            clientId:    gc.clientId  || 'wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI',
-            redirectUri: isLocal
-                ? window.location.origin + '/index.html'
-                : (gc.redirectUri || 'https://resolvit-app-2026.vercel.app/index.html'),
+            domain:        gc.domain    || 'resolvit-ai.us.auth0.com',
+            clientId:      gc.clientId  || 'wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI',
+            redirectUri,
             cacheLocation: 'localstorage'
         };
-    }
+    },
 
-    // ─── Resolve backend base URL without depending on api.js load order ──
-    function getBackendUrl() {
-        if (window.BASE_URL) return window.BASE_URL;             // set by api.js
-        if (window.APP_BASE_URL) return window.APP_BASE_URL;
-        const host = window.location.hostname;
-        const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
-        return isLocal
-            ? 'http://127.0.0.1:8000'
-            : 'https://synaptix-2026-404-found-team.onrender.com';
-    }
+    // ─── State ─────────────────────────────────────────────────────
+    _client:      null,
+    _initialized: false,
+    _initPromise: null,   // singleton guard — prevents double-init race
 
-    // ─── SDK loader ────────────────────────────────────────────
-    function getSdkFactory() {
+    // ─── SDK finder ────────────────────────────────────────────────
+    _getFactory() {
         if (typeof createAuth0Client === 'function') return createAuth0Client;
         if (window.auth0 && typeof window.auth0.createAuth0Client === 'function')
             return window.auth0.createAuth0Client;
         return null;
-    }
+    },
 
-    // ─── Private state ─────────────────────────────────────────
-    let _client       = null;
-    let _initialized  = false;
-    let _initPromise  = null;   // prevent double-init race
+    // ─── Init ──────────────────────────────────────────────────────
+    async init() {
+        if (this._initialized && this._client) return;
+        if (this._initPromise) return this._initPromise;
 
-    // ─── Init ──────────────────────────────────────────────────
-    async function init() {
-        if (_initialized && _client) return;
-        if (_initPromise) return _initPromise;
-
-        _initPromise = (async () => {
-            const conf = getConfig();
+        this._initPromise = (async () => {
+            const conf = this.config;
             console.log('[Auth0] Initializing →', conf.domain, '| redirectUri:', conf.redirectUri);
 
-            // Wait up to 8 seconds for SDK to load
+            // Wait up to 8 seconds for SDK to load (it comes from local bundle)
             let factory = null;
             for (let i = 0; i < 16; i++) {
-                factory = getSdkFactory();
+                factory = this._getFactory();
                 if (factory) break;
                 console.warn(`[Auth0] SDK not ready, retrying (${i + 1}/16)…`);
                 await new Promise(r => setTimeout(r, 500));
             }
 
             if (!factory) {
-                const msg = '[Auth0] CRITICAL: SDK (createAuth0Client) never loaded. Check that js/libs/auth0-spa-js.production.min.js is reachable.';
+                const msg = '[Auth0] CRITICAL: createAuth0Client not found after 8s. Check js/libs/auth0-spa-js.production.min.js';
                 console.error(msg);
+                this._initPromise = null;
                 throw new Error(msg);
             }
 
             try {
-                _client = await factory({
+                this._client = await factory({
                     domain:    conf.domain,
                     clientId:  conf.clientId,
                     authorizationParams: { redirect_uri: conf.redirectUri },
                     cacheLocation: conf.cacheLocation
                 });
-                _initialized = true;
+                this._initialized = true;
                 console.log('[Auth0] ✅ Client initialized.');
             } catch (err) {
                 console.error('[Auth0] Init failed:', err);
-                _initPromise = null;
+                this._initPromise = null;
                 throw err;
             }
         })();
 
-        return _initPromise;
-    }
+        return this._initPromise;
+    },
 
-    // ─── OAuth Redirect Callback Handler ──────────────────────
-    async function handleCallback() {
+    // ─── Callback Handler ── called on DOMContentLoaded ────────────
+    async _handleCallback() {
         const qs = window.location.search;
-        const hasCode  = qs.includes('code=');
-        const hasState = qs.includes('state=');
-        const hasError = qs.includes('error=');
 
-        if (hasError) {
+        // Handle error returned by Auth0 (e.g., access_denied, login_required)
+        if (qs.includes('error=')) {
             const params = new URLSearchParams(qs);
-            console.error('[Auth0] OAuth error:', params.get('error'), params.get('error_description'));
+            const errCode = params.get('error');
+            const errDesc = params.get('error_description') || errCode;
+            console.error('[Auth0] OAuth error response:', errCode, errDesc);
             window.history.replaceState({}, document.title, window.location.pathname);
             if (typeof showToast === 'function') {
-                showToast('❌ Login failed: ' + (params.get('error_description') || params.get('error')), 'error');
+                showToast('❌ Login failed: ' + errDesc, 'error');
             }
             return;
         }
 
-        if (!hasCode || !hasState) return;   // no callback in progress
+        // Only process if this looks like an Auth0 callback
+        if (!qs.includes('code=') || !qs.includes('state=')) return;
 
-        console.log('[Auth0] Callback detected — processing…');
+        console.log('[Auth0] OAuth callback detected — processing…');
+
         try {
-            await init();
-            await _client.handleRedirectCallback();
+            await this.init();
+            await this._client.handleRedirectCallback();
+
+            // Clean the URL immediately so a page refresh doesn't re-trigger
             window.history.replaceState({}, document.title, window.location.pathname);
 
-            const auth0User = await _client.getUser();
+            const auth0User = await this._client.getUser();
             if (auth0User) {
-                await syncWithBackend(auth0User);
+                await this._syncWithBackend(auth0User);
             } else {
-                console.error('[Auth0] getUser() returned null after callback');
+                console.error('[Auth0] getUser() returned null after handleRedirectCallback');
+                if (typeof showToast === 'function') {
+                    showToast('❌ Login failed — could not retrieve user profile. Please try again.', 'error');
+                }
             }
         } catch (err) {
             console.error('[Auth0] Callback handling failed:', err);
+            // Always clean URL to prevent infinite loops
             window.history.replaceState({}, document.title, window.location.pathname);
             if (typeof showToast === 'function') {
-                showToast('❌ Login callback failed. Please try again.', 'error');
+                showToast('❌ Login callback failed: ' + err.message, 'error');
             }
         }
-    }
+    },
 
-    // ─── Backend Sync ──────────────────────────────────────────
-    async function syncWithBackend(auth0User) {
+    // ─── Backend Sync ──────────────────────────────────────────────
+    async _syncWithBackend(auth0User) {
         const sub = auth0User.sub || '';
         const provider = sub.startsWith('google')  ? 'google'  :
                          sub.startsWith('github')  ? 'github'  :
                          sub.startsWith('twitter') ? 'twitter' : 'auth0';
 
-        console.log('[Auth0] Syncing user to backend. Provider:', provider, '| Email:', auth0User.email);
+        console.log('[Auth0] Syncing to backend. Provider:', provider, '| Email:', auth0User.email);
 
-        const backendUrl = getBackendUrl();
+        // BASE_URL is defined in api.js and exposed as window.BASE_URL
+        // It's also available as a plain global (const) since both scripts
+        // run in the same window scope (no module bundler).
+        const backendBase = (typeof BASE_URL !== 'undefined') ? BASE_URL 
+                          : (window.BASE_URL || 'https://synaptix-2026-404-found-team.onrender.com');
 
         try {
-            const res = await fetch(`${backendUrl}/api/auth/oauth-login`, {
+            const res = await fetch(`${backendBase}/api/auth/oauth-login`, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({
+                body: JSON.stringify({
                     email:       auth0User.email,
                     name:        auth0User.name || auth0User.nickname || (auth0User.email || '').split('@')[0],
                     provider:    provider,
@@ -161,8 +172,8 @@ const Auth0Integration = (() => {
             });
 
             if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.detail || `Backend returned ${res.status}`);
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || `Backend responded ${res.status}`);
             }
 
             const data = await res.json();
@@ -177,113 +188,121 @@ const Auth0Integration = (() => {
                 auth_provider: provider
             }));
 
-            console.log('[Auth0] ✅ Sync complete. Role:', data.role);
+            console.log('[Auth0] ✅ Sync complete. Role:', data.role, '| Username:', data.username);
+
             if (typeof showToast === 'function') {
-                showToast(`✅ Welcome, ${data.username}!`, 'success');
+                showToast(`✅ Welcome back, ${data.username}!`, 'success');
             }
 
-            // Role-based redirect (delay to let toast show)
+            // Role-based redirect
             setTimeout(() => {
                 if      (data.role === 'admin')     window.location.href = 'admin.html';
                 else if (data.role === 'authority') window.location.href = 'authority.html';
                 else                                window.location.href = 'dashboard.html';
-            }, 700);
+            }, 600);
 
         } catch (err) {
             console.error('[Auth0] Backend sync failed:', err);
             if (typeof showToast === 'function') {
-                showToast('❌ Could not complete sign-in: ' + err.message, 'error');
+                showToast('❌ Sign-in error: ' + err.message, 'error');
             }
         }
-    }
+    },
 
-    // ─── Generic redirect login ────────────────────────────────
-    async function loginWithProvider(connection, btnEl) {
-        if (btnEl) {
-            btnEl._origHTML    = btnEl.innerHTML;
-            btnEl.innerHTML    = '<span style="display:inline-flex;align-items:center;gap:8px;">⏳ Connecting…</span>';
-            btnEl.disabled     = true;
-        }
-
-        const restore = () => {
-            if (btnEl) { btnEl.innerHTML = btnEl._origHTML || btnEl.innerHTML; btnEl.disabled = false; }
-        };
+    // ─── Google Login ──────────────────────────────────────────────
+    async loginWithGoogle() {
+        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithGoogle"]');
+        if (btn) { btn._orig = btn.innerHTML; btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
+        const restore = () => { if (btn) { btn.innerHTML = btn._orig || btn.innerHTML; btn.disabled = false; } };
 
         try {
-            await init();
-            const conf = getConfig();
-            await _client.loginWithRedirect({
+            if (!this._client) await this.init();
+            await this._client.loginWithRedirect({
                 authorizationParams: {
-                    connection:   connection,
-                    redirect_uri: conf.redirectUri
+                    connection:   'google-oauth2',
+                    redirect_uri: this.config.redirectUri
                 }
             });
-            // Page will redirect — no restore needed
+            // Page redirects — no restore
         } catch (err) {
-            console.error(`[Auth0] loginWithProvider(${connection}) failed:`, err);
+            console.error('[Auth0] Google login failed:', err);
             restore();
-            if (typeof showToast === 'function') {
-                showToast(`❌ ${connection} login failed: ${err.message}`, 'error');
-            } else {
-                alert(`Login failed (${connection}): ${err.message}`);
-            }
+            if (typeof showToast === 'function') showToast('❌ Google login failed: ' + err.message, 'error');
+            else alert('Google login failed: ' + err.message);
         }
-    }
+    },
 
-    // ─── Public API ────────────────────────────────────────────
-    return {
-        get _client() { return _client; },
+    // ─── GitHub Login ──────────────────────────────────────────────
+    async loginWithGitHub() {
+        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithGitHub"]');
+        if (btn) { btn._orig = btn.innerHTML; btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
+        const restore = () => { if (btn) { btn.innerHTML = btn._orig || btn.innerHTML; btn.disabled = false; } };
 
-        init,
-        handleCallback,
-        syncWithBackend,
-
-        async loginWithGoogle(btnEl) {
-            await loginWithProvider('google-oauth2', btnEl);
-        },
-
-        async loginWithGitHub(btnEl) {
-            await loginWithProvider('github', btnEl);
-        },
-
-        /**
-         * Twitter / X — Auth0 connection name is 'twitter'.
-         * If the connection is not enabled in your Auth0 dashboard,
-         * this will fail gracefully and show an error toast.
-         */
-        async loginWithTwitter(btnEl) {
-            await loginWithProvider('twitter', btnEl);
-        },
-
-        async logout() {
-            localStorage.removeItem('resolvit_token');
-            localStorage.removeItem('resolvit_user');
-            if (_client) {
-                try {
-                    await _client.logout({
-                        logoutParams: { returnTo: window.location.origin + '/index.html' }
-                    });
-                } catch (e) {
-                    console.warn('[Auth0] Logout error:', e);
-                    window.location.href = 'index.html';
+        try {
+            if (!this._client) await this.init();
+            await this._client.loginWithRedirect({
+                authorizationParams: {
+                    connection:   'github',
+                    redirect_uri: this.config.redirectUri
                 }
-            } else {
+            });
+        } catch (err) {
+            console.error('[Auth0] GitHub login failed:', err);
+            restore();
+            if (typeof showToast === 'function') showToast('❌ GitHub login failed: ' + err.message, 'error');
+        }
+    },
+
+    // ─── Twitter Login ─────────────────────────────────────────────
+    // Requires Twitter connection to be configured in Auth0 dashboard.
+    async loginWithTwitter() {
+        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithTwitter"]');
+        if (btn) { btn._orig = btn.innerHTML; btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
+        const restore = () => { if (btn) { btn.innerHTML = btn._orig || btn.innerHTML; btn.disabled = false; } };
+
+        try {
+            if (!this._client) await this.init();
+            await this._client.loginWithRedirect({
+                authorizationParams: {
+                    connection:   'twitter',
+                    redirect_uri: this.config.redirectUri
+                }
+            });
+        } catch (err) {
+            console.error('[Auth0] Twitter login failed:', err);
+            restore();
+            if (typeof showToast === 'function') showToast('❌ Twitter login failed: ' + err.message, 'error');
+        }
+    },
+
+    // ─── Logout ────────────────────────────────────────────────────
+    async logout() {
+        localStorage.removeItem('resolvit_token');
+        localStorage.removeItem('resolvit_user');
+        if (this._client) {
+            try {
+                await this._client.logout({
+                    logoutParams: { returnTo: window.location.origin + '/index.html' }
+                });
+            } catch (e) {
+                console.warn('[Auth0] Logout error:', e);
                 window.location.href = 'index.html';
             }
+        } else {
+            window.location.href = 'index.html';
         }
-    };
-})();
+    }
+};
 
-// ─── Global function bindings (for inline onclick compatibility) ──
-// We pass 'this' (the button element) so the handler can update its state.
-window.loginWithGoogle  = function() { Auth0Integration.loginWithGoogle(this); };
-window.loginWithGitHub  = function() { Auth0Integration.loginWithGitHub(this); };
-window.loginWithTwitter = function() { Auth0Integration.loginWithTwitter(this); };
+// ─── Global bindings for inline onclick handlers ────────────────
+// Using regular function (not arrow) so 'event' is the real DOM event
+window.loginWithGoogle  = function() { Auth0Integration.loginWithGoogle(); };
+window.loginWithGitHub  = function() { Auth0Integration.loginWithGitHub(); };
+window.loginWithTwitter = function() { Auth0Integration.loginWithTwitter(); };
 window.Auth0Integration = Auth0Integration;
 
-// ─── Run callback handler on page load ────────────────────────
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => Auth0Integration.handleCallback());
-} else {
-    Auth0Integration.handleCallback();
-}
+// ─── Fire callback handler AFTER DOM is ready ──────────────────
+// DOMContentLoaded is the proven pattern from commit 9762355.
+// DO NOT use readyState check here — it causes premature execution
+// before Auth.updateNavbar() and showToast() are bound.
+document.addEventListener('DOMContentLoaded', () => Auth0Integration._handleCallback());
