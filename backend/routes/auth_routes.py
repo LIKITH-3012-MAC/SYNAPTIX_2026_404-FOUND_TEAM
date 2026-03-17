@@ -2,18 +2,20 @@
 RESOLVIT - Auth Routes
 POST /api/auth/register
 POST /api/auth/login
+POST /api/auth/oauth-login
 GET  /api/auth/me
 POST /api/auth/forgot-password
 POST /api/auth/reset-password
 """
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr, Field
-from models import UserRegister, UserLogin, TokenResponse, UserResponse, MessageResponse
+from models import UserRegister, UserLogin, OAuthLogin, TokenResponse, UserResponse, MessageResponse
 from database import get_db
 from auth import hash_password, verify_password, create_access_token, get_current_user, create_password_reset_token, verify_password_reset_token
 from services.email_service import send_password_reset_email
 from core.security import limiter
 import uuid
+import secrets
 from fastapi import Request
 
 router = APIRouter()
@@ -102,6 +104,88 @@ def login(payload: UserLogin, request: Request):
         "username": user["username"],
         "department": user.get("department")
     }
+
+
+@router.post("/oauth-login", response_model=TokenResponse)
+def oauth_login(payload: OAuthLogin):
+    """
+    Authenticate via OAuth provider (Google via Auth0).
+    If the user exists, log them in.
+    If not, auto-register as a citizen and log in.
+    """
+    with get_db() as cursor:
+        cursor.execute(
+            "SELECT id, username, email, role, is_active, department FROM users WHERE email = %s",
+            (payload.email,)
+        )
+        user = cursor.fetchone()
+
+    if user:
+        # Existing user — log them in
+        if not user["is_active"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is disabled. Contact administrator."
+            )
+
+        token = create_access_token(
+            user_id=str(user["id"]),
+            role=user["role"],
+            email=user["email"],
+            department=user.get("department")
+        )
+
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "role": user["role"],
+            "user_id": str(user["id"]),
+            "username": user["username"],
+            "department": user.get("department")
+        }
+    else:
+        # New user — auto-register as citizen
+        user_id = str(uuid.uuid4())
+        username = payload.name.replace(" ", "_").lower()[:64]
+        random_password = secrets.token_urlsafe(32)
+
+        with get_db() as cursor:
+            # Check if username already taken
+            cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                username = f"{username}_{secrets.token_hex(3)}"
+
+            cursor.execute(
+                """
+                INSERT INTO users (id, username, email, password_hash, role, full_name)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id, username, email, role
+                """,
+                (
+                    user_id,
+                    username,
+                    payload.email,
+                    hash_password(random_password),
+                    "citizen",
+                    payload.name
+                )
+            )
+            new_user = dict(cursor.fetchone())
+
+        token = create_access_token(
+            user_id=str(new_user["id"]),
+            role=new_user["role"],
+            email=new_user["email"]
+        )
+
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "role": new_user["role"],
+            "user_id": str(new_user["id"]),
+            "username": new_user["username"],
+            "department": None
+        }
 
 
 @router.get("/me", response_model=UserResponse)

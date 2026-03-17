@@ -1,8 +1,22 @@
 :root {
     --intro-accent: #6366f1;
     --intro-accent-glow: rgba(99, 102, 241, 0.4);
-    --intro-glass-bg: rgba(15, 23, 42, 0.4);
-    --intro-glass-border: rgba(255, 255, 255, 0.1);
+    --intro-glass-bg: rgba(15, 23, 42, 0.5);
+    --intro-glass-border: rgba(255, 255, 255, 0.15);
+    --intro-text-glow: 0 0 20px rgba(99, 102, 241, 0.5);
+}
+
+/* Noise overlay for cinematic texture */
+.intro-noise {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    background: url('https://grainy-gradients.vercel.app/noise.svg');
+    opacity: 0.05;
+    pointer-events: none;
 }
 
 .intro-overlay {
@@ -30,8 +44,19 @@
 .intro-bg-container {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, #0f172a 0%, #050d1a 100%);
+    background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
     z-index: 1;
+}
+
+/* Circuit lines for added technical detail */
+.intro-circuits {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(var(--intro-accent) 0.5px, transparent 0.5px);
+    background-size: 30px 30px;
+    mask-image: linear-gradient(to bottom, transparent, black, transparent);
+    opacity: 0.1;
+    z-index: 2;
 }
 
 .intro-grid {
@@ -145,21 +170,27 @@
 }
 
 .intro-title {
-    font-size: 4.5rem;
+    font-size: 5rem;
     font-weight: 900;
     color: white;
-    letter-spacing: -3px;
+    letter-spacing: -4px;
     margin: 0;
-    background: linear-gradient(135deg, #ffffff 0%, #818cf8 100%);
+    background: linear-gradient(135deg, #ffffff 10%, #818cf8 90%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: titleBreath 8s ease-in-out infinite;
+    animation: titleBreath 10s ease-in-out infinite, titleGlow 4s ease-in-out infinite;
+    text-shadow: var(--intro-text-glow);
+}
+
+@keyframes titleGlow {
+    0%, 100% { filter: drop-shadow(0 0 5px rgba(99,102,241,0.2)); }
+    50% { filter: drop-shadow(0 0 15px rgba(99,102,241,0.5)); }
 }
 
 @keyframes titleBreath {
-    0%, 100% { letter-spacing: -3px; filter: brightness(1); }
-    50% { letter-spacing: 2px; filter: brightness(1.2); }
+    0%, 100% { letter-spacing: -4px; transform: scale(1); }
+    50% { letter-spacing: 2px; transform: scale(1.02); }
 }
 
 .intro-light-sweep {

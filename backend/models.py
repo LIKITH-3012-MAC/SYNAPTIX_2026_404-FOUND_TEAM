@@ -58,6 +58,14 @@ class UserLogin(BaseModel):
     password: str
 
 
+class OAuthLogin(BaseModel):
+    email:       EmailStr
+    name:        str
+    provider:    str = "google"
+    provider_id: str
+    picture:     Optional[str] = None
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type:   str = "bearer"

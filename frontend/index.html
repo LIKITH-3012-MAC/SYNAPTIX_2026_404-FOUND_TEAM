@@ -96,6 +96,7 @@
       background: url('https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/A_breathtaking_ultrawide_cinematic_landscape_photo_delpmaspu.png') no-repeat center center fixed !important;
       background-size: cover !important;
       position: relative;
+
     }
 
     /* Subtle Readability Layer */
@@ -106,14 +107,16 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(2, 6, 23, 0.4); /* Default dark overlay */
+      background: rgba(2, 6, 23, 0.4);
+      /* Default dark overlay */
       z-index: -1;
       pointer-events: none;
       transition: background 0.5s ease;
     }
 
     [data-theme="light"] body::after {
-      background: rgba(255, 255, 255, 0.2); /* Lighter overlay for light mode */
+      background: rgba(255, 255, 255, 0.2);
+      /* Lighter overlay for light mode */
     }
 
     /* ── Premium Glassmorphism Overrides ───────────────────── */
@@ -142,7 +145,8 @@
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
       margin-top: 2rem;
       margin-bottom: 2rem;
-      width: calc(100% - 32px) !important; /* Mobile safe width */
+      width: calc(100% - 32px) !important;
+      /* Mobile safe width */
       margin-left: auto !important;
       margin-right: auto !important;
     }
@@ -235,6 +239,7 @@
 
     /* ── Mobile UI Optimizations ──────────────────────────── */
     @media (max-width: 768px) {
+
       .hero-content,
       section .container,
       footer .container {
@@ -307,21 +312,23 @@
 </head>
 
 <body>
-  
+
   <!-- ── Premium Cinematic Intro ───────────────────────────── -->
   <div id="resolvit-intro-experience" class="intro-overlay">
-      <div class="intro-bg-container">
-          <div class="intro-grid"></div>
-          <div class="intro-nodes"></div>
-          <div class="intro-scanner"></div>
+    <div class="intro-noise"></div>
+    <div class="intro-bg-container">
+      <div class="intro-circuits"></div>
+      <div class="intro-grid"></div>
+      <div class="intro-nodes"></div>
+      <div class="intro-scanner"></div>
+    </div>
+    <div class="intro-panel">
+      <div class="intro-title-wrap">
+        <h1 class="intro-title">Welcome to RESOLVIT</h1>
+        <div class="intro-light-sweep"></div>
       </div>
-      <div class="intro-panel">
-          <div class="intro-title-wrap">
-              <h1 class="intro-title">Welcome to RESOLVIT</h1>
-              <div class="intro-light-sweep"></div>
-          </div>
-          <p class="intro-tagline">Resolve. Map. Act.</p>
-      </div>
+      <p class="intro-tagline">Resolve. Map. Act.</p>
+    </div>
   </div>
 
   <!-- ── Navigation ──────────────────────────────────────────── -->
@@ -408,25 +415,29 @@
         <div class="card animate-in" style="animation-delay: 0s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">📍</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_report_title">1. Report</h4>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_report_desc">Citizens submit issues with location, photo, and
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_report_desc">Citizens submit
+            issues with location, photo, and
             urgency rating in seconds.</p>
         </div>
         <div class="card animate-in" style="animation-delay: 0.1s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">🤖</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_ai_title">2. AI Cluster</h4>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_ai_desc">Our AI detects duplicate reports within 100m and
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_ai_desc">Our AI detects duplicate
+            reports within 100m and
             merges them to amplify impact.</p>
         </div>
         <div class="card animate-in" style="animation-delay: 0.2s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">📈</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_prioritize_title">3. Prioritize</h4>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_prioritize_desc">Dynamic scoring ranks issues by impact, urgency,
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_prioritize_desc">Dynamic scoring
+            ranks issues by impact, urgency,
             time, and safety risk automatically.</p>
         </div>
         <div class="card animate-in" style="animation-delay: 0.3s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">✅</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_resolve_title">4. Resolve</h4>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_resolve_desc">Authorities act under SLA. Non-compliance
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_resolve_desc">Authorities act
+            under SLA. Non-compliance
             auto-escalates with an immutable audit trail.</p>
         </div>
       </div>
@@ -477,13 +488,16 @@
     <div class="container">
       <div class="flex justify-center items-center gap-8"
         style="color: var(--text-muted); font-size: 0.9rem; flex-wrap: wrap; text-align: center; gap: 40px;">
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="audit_title">🔐 SHA-256
+        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="audit_title">🔐
+            SHA-256
             Audit</strong><span data-i18n="audit_desc">Immutable blockchain logs</span></div>
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="clustering_title">🤖 AI
+        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;"
+            data-i18n="clustering_title">🤖 AI
             Clustering</strong><span data-i18n="clustering_desc">100m radius deduplication</span></div>
         <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="sla_title">⏱️ SLA
             Enforcement</strong><span data-i18n="sla_desc">Auto-escalation on breach</span></div>
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="public_metrics_title">📊 Public
+        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;"
+            data-i18n="public_metrics_title">📊 Public
             Metrics</strong><span data-i18n="public_metrics_desc">Open performance scores</span></div>
       </div>
     </div>
@@ -507,25 +521,31 @@
   <footer>
     <div class="container">
       <div class="footer-brand">⚖️ RESOLVIT</div>
-      <div class="footer-tagline" data-i18n="footer_tagline">From Complaint to Completion. Building a more accountable government.</div>
+      <div class="footer-tagline" data-i18n="footer_tagline">From Complaint to Completion. Building a more accountable
+        government.</div>
       <div
         style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 32px; margin-bottom: 40px;">
         <div>
-          <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;" data-i18n="footer_platform">Platform</div>
+          <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;"
+            data-i18n="footer_platform">Platform</div>
           <div class="flex flex-col gap-4" style="gap: 8px;">
             <a href="dashboard.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;"
-              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'" data-i18n="footer_dashboard">Issue
+              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'"
+              data-i18n="footer_dashboard">Issue
               Dashboard</a>
             <a href="submit.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;"
-              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'" data-i18n="footer_submit">Submit
+              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'"
+              data-i18n="footer_submit">Submit
               Issue</a>
             <a href="authority.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;"
-              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'" data-i18n="footer_portal">Authority
+              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'"
+              data-i18n="footer_portal">Authority
               Portal</a>
           </div>
         </div>
         <div>
-          <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;" data-i18n="footer_tech">Technology</div>
+          <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;" data-i18n="footer_tech">
+            Technology</div>
           <div class="flex flex-col" style="gap: 8px; color: rgba(255,255,255,0.5); font-size: 0.85rem;">
             <span data-i18n="footer_tech_ai">AI Clustering Engine</span>
             <span data-i18n="footer_tech_bc">Blockchain Audit Trail</span>
@@ -555,6 +575,7 @@
   <script src="js/theme-manager.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/auth0-integration.js"></script>
   <script src="js/animations.js"></script>
   <script src="js/ui-enhancements.js"></script>
   <script src="js/gamification.js"></script>
