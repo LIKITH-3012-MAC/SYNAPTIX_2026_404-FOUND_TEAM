@@ -107,7 +107,7 @@ const ProfileManager = {
                 <div class="identity-meta">
                     <div class="meta-item">
                         <span class="meta-label">Account ID</span>
-                        <span class="meta-value">ID: ${user.id.substring(0, 8)}...</span>
+                        <span class="meta-value">ID: ${(user.id || 'pending').substring(0, 8)}…</span>
                     </div>
                     <div class="meta-item">
                         <span class="meta-label">Account Status</span>

@@ -97,6 +97,13 @@ const Auth0Integration = {
 
     // ─── Callback Handler ── called on DOMContentLoaded ────────────
     async _handleCallback() {
+        // ── Once-only guard ─────────────────────────────────────────
+        // Prevents double token exchange if DOMContentLoaded fires more
+        // than once, or if the script is accidentally loaded twice.
+        if (window._auth0CallbackHandled) {
+            console.log('[Auth0] Callback already handled — skipping duplicate.');
+            return;
+        }
         const qs = window.location.search;
 
         // Handle error returned by Auth0 (e.g., access_denied, login_required)
@@ -114,6 +121,9 @@ const Auth0Integration = {
 
         // Only process if this looks like an Auth0 callback
         if (!qs.includes('code=') || !qs.includes('state=')) return;
+
+        // ── Set guard immediately (before any async work) ───────────
+        window._auth0CallbackHandled = true;
 
         console.log('[Auth0] OAuth callback detected — processing…');
 

@@ -679,8 +679,8 @@
         const el = document.getElementById('d-audit-chain');
         const badge = document.getElementById('d-chain-badge');
         try {
-            // Correct endpoint: /api/audit/issue/{id}
-            const audit = await API.get(`/api/audit/issue/${id}`);
+            // Backend route: GET /api/audit/{issue_id}
+            const audit = await API.get(`/api/audit/${id}`);
             const isValid = audit.chain_valid !== false;
             badge.textContent = isValid ? '✅ Chain Valid' : '⚠️ Integrity Warning';
             badge.className   = `status-pill ${isValid ? 'sp-resolved' : 'sp-escalated'}`;

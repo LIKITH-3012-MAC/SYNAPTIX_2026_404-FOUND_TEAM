@@ -36,13 +36,16 @@ const Auth = {
         
         localStorage.removeItem('resolvit_token');
         localStorage.removeItem('resolvit_user');
+        // Reset Auth0 callback guard so next login works cleanly
+        window._auth0CallbackHandled = false;
         
         // For ALL OAuth logins (Google, GitHub, Twitter) also sign out from Auth0
         if (isOAuth && window.Auth0Integration) {
-            Auth0Integration.logout();  // handles Auth0 + redirect
+            Auth0Integration.logout();  // handles Auth0 session + redirect to index.html
             return;
         }
-        // Email/password: just stay on page (caller handles redirect)
+        // Email/password: redirect to index
+        window.location.href = 'index.html';
     },
 
     /**
@@ -138,7 +141,7 @@ const Auth = {
                 </button>
 
                 <!-- Twitter Login Button -->
-                <button type="button" onclick="loginWithTwitter()" class="btn" style="width:100%;padding:14px;margin-bottom:20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:14px;color:white;font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:all 0.3s ease;backdrop-filter:blur(8px);" onmouseover="this.style.background='rgba(29,161,242,0.15)';this.style.borderColor='#1da1f2'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.borderColor='rgba(255,255,255,0.15)'">
+                <button type="button" id="btn-twitter-login" onclick="Auth._twitterLogin(this)" class="btn" style="width:100%;padding:14px;margin-bottom:20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:14px;color:white;font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:all 0.3s ease;backdrop-filter:blur(8px);" onmouseover="this.style.background='rgba(29,161,242,0.15)';this.style.borderColor='#1da1f2'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.borderColor='rgba(255,255,255,0.15)'">
                     <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.25h-6.657l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.045 4.126H5.078z"/></svg>
                     Continue with Twitter
                 </button>
@@ -204,7 +207,9 @@ const Auth = {
                     const email    = document.getElementById('u-email').value.trim();
                     const pass     = document.getElementById('u-pass').value;
                     const fullName = document.getElementById('u-name').value.trim();
-                    await this.register({ username: fullName, email, password: pass, role: 'citizen' });
+                    // Global space→underscore replace (split/join, not single .replace)
+                    const username = fullName.split(' ').join('_').toLowerCase().slice(0, 64);
+                    await this.register({ username, email, password: pass, role: 'citizen', full_name: fullName });
                     const u = await this.login(email, pass);
                     // Enrich stored user with display name
                     const stored = this.getUser() || {};
@@ -283,7 +288,7 @@ const Auth = {
                     ${themeToggle}
                     ${portalLink}
                     <span class="nav-username">👤 ${user.username}</span>
-                    <button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();" data-i18n="nav_logout">Logout</button>
+                    <button class="btn btn-ghost btn-sm" onclick="Auth.logout()" data-i18n="nav_logout">Logout</button>
                 </div>
             `;
         }
@@ -312,7 +317,28 @@ const Auth = {
     }
 };
 
+// ── Twitter graceful wrapper ────────────────────────────────────
+// Called from the Twitter button via Auth._twitterLogin(this).
+// If Auth0 Twitter connection is not configured, loginWithRedirect
+// throws immediately (no redirect occurs) — we catch it here and
+// show a clear friendly message rather than a silent failure.
+Auth._twitterLogin = async function(btn) {
+    const orig = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
+
+    try {
+        await loginWithTwitter();
+        // If we reach here the redirect happened — do nothing.
+    } catch (err) {
+        // Redirect did not happen — connection likely not configured
+        console.warn('[Auth] Twitter login unavailable:', err.message);
+        if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+        if (typeof showToast === 'function') {
+            showToast('ℹ️ Twitter login is not yet configured. Please use Google or GitHub.', 'info');
+        }
+    }
+};
+
 // Global polyfill for index/submit.html
 window.openLogin = () => Auth.showModal('login');
 window.showAuthModal = () => Auth.showModal('login');
-
