@@ -90,7 +90,8 @@ def login(payload: UserLogin, request: Request):
     token = create_access_token(
         user_id=str(user["id"]),
         role=user["role"],
-        email=user["email"]
+        email=user["email"],
+        department=user.get("department")
     )
 
     return {
@@ -98,7 +99,8 @@ def login(payload: UserLogin, request: Request):
         "token_type": "bearer",
         "role": user["role"],
         "user_id": str(user["id"]),
-        "username": user["username"]
+        "username": user["username"],
+        "department": user.get("department")
     }
 
 

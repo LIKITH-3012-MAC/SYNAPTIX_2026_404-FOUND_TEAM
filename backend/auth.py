@@ -60,12 +60,13 @@ def verify_password_reset_token(token: str) -> Optional[str]:
 
 
 # ── JWT Utilities ─────────────────────────────────────────────
-def create_access_token(user_id: str, role: str, email: str) -> str:
+def create_access_token(user_id: str, role: str, email: str, department: Optional[str] = None) -> str:
     """Create a signed JWT access token."""
     payload = {
         "sub": user_id,
         "role": role,
         "email": email,
+        "department": department,
         "iat": datetime.utcnow(),
         "exp": datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     }

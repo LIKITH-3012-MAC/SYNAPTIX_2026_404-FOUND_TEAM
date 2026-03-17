@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Control Tower — RESOLVIT</title>
     <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/map-premium.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
@@ -414,20 +415,35 @@
                         }).addTo(radarMap);
                         radarCluster = L.markerClusterGroup({
                             showCoverageOnHover: false,
-                            maxClusterRadius: 50,
+                            zoomToBoundsOnClick: true,
+                            spiderfyOnMaxZoom: true,
+                            maxClusterRadius: 80,
                             iconCreateFunction: (cluster) => {
                                 const markers = cluster.getAllChildMarkers();
                                 let maxScore = 0;
                                 markers.forEach(m => maxScore = Math.max(maxScore, m.options.priorityScore || 0));
-                                let priorityClass = 'cluster-pulse-low';
-                                let type = 'low';
-                                if (maxScore >= 80) { priorityClass = 'cluster-blink-critical'; type = 'high'; }
-                                else if (maxScore >= 55) { priorityClass = 'cluster-pulse-high'; type = 'high'; }
-                                else if (maxScore >= 30) { priorityClass = 'cluster-pulse-medium'; type = 'medium'; }
+                                
+                                const count = cluster.getChildCount();
+                                let size = 48;
+                                if (count > 50) size = 64;
+                                else if (count > 10) size = 56;
+
+                                let glowClass = 'glow-low';
+                                if (maxScore >= 80) glowClass = 'glow-critical';
+                                else if (maxScore >= 55) glowClass = 'glow-high';
+                                else if (maxScore >= 30) glowClass = 'glow-medium';
+
                                 return L.divIcon({
-                                    html: `<div class="cluster-shield cluster-${type}-priority ${priorityClass}"><span>${cluster.getChildCount()}</span></div>`,
-                                    className: 'cluster-icon-wrapper',
-                                    iconSize: L.point(40, 40)
+                                    html: `
+                                        <div class="premium-cluster" style="width:${size}px; height:${size}px;">
+                                            <div class="cluster-glow ${glowClass}"></div>
+                                            <div class="cluster-glass-shell" style="width:${size - 8}px; height:${size - 8}px;">
+                                                <span class="cluster-count" style="pointer-events:none;">${count}</span>
+                                            </div>
+                                        </div>`,
+                                    className: 'cluster-premium-wrapper',
+                                    iconSize: L.point(size, size),
+                                    iconAnchor: [size / 2, size / 2]
                                 });
                             }
                         });

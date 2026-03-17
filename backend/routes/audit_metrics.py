@@ -7,13 +7,18 @@ GET /api/metrics/summary           - Platform-wide stats
 """
 from fastapi import APIRouter, HTTPException
 from database import get_db
+from auth import get_current_user
+from fastapi import APIRouter, HTTPException, Depends
 from services.blockchain import get_audit_chain, verify_chain_integrity
 
 # ── Audit Router ──────────────────────────────────────────────
 audit_router = APIRouter()
 
 @audit_router.get("/{issue_id}")
-def get_audit_log(issue_id: str):
+def get_audit_log(
+    issue_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Return the full immutable blockchain audit log for an issue.
     Each entry is SHA-256 chained to the previous.
@@ -25,6 +30,17 @@ def get_audit_log(issue_id: str):
 
     if not issue:
         raise HTTPException(status_code=404, detail="Issue not found.")
+
+    role = current_user.get("role")
+    user_dept = current_user.get("department")
+
+    # Authorities can only view audit logs for their own department issues
+    if role == "authority":
+        with get_db() as cursor:
+            cursor.execute("SELECT category FROM issues WHERE id = %s", (issue_id,))
+            issue_cat = cursor.fetchone()
+            if issue_cat and issue_cat["category"] != user_dept:
+                raise HTTPException(status_code=403, detail="Access denied to this audit log.")
 
     chain = get_audit_chain(issue_id)
     integrity = verify_chain_integrity(issue_id)
@@ -79,11 +95,21 @@ def get_leaderboard():
 
 
 @metrics_router.get("/summary")
-def get_platform_summary():
+def get_platform_summary(current_user: dict = Depends(get_current_user)):
     """Return platform-wide statistics for the dashboard."""
+    role = current_user.get("role")
+    user_dept = current_user.get("department")
+
+    where_clause = ""
+    params = []
+
+    if role == "authority" and user_dept:
+        where_clause = "WHERE category = %s"
+        params = [user_dept]
+
     with get_db() as cursor:
         cursor.execute(
-            """
+            f"""
             SELECT
                 COUNT(*)                                            AS total_issues,
                 COUNT(*) FILTER (WHERE status = 'resolved')        AS resolved_issues,
@@ -94,20 +120,28 @@ def get_platform_summary():
                 COUNT(DISTINCT reporter_id)                         AS unique_reporters,
                 SUM(impact_scale)                                   AS total_people_impacted
             FROM issues
-            """
+            {where_clause}
+            """,
+            params
         )
         stats = dict(cursor.fetchone())
 
-        cursor.execute("SELECT COUNT(*) AS total_authorities FROM users WHERE role = 'authority' AND is_active = true")
+        auth_query = "SELECT COUNT(*) AS total_authorities FROM users WHERE role = 'authority' AND is_active = true"
+        if role == "authority" and user_dept:
+            auth_query += " AND department = %s"
+        
+        cursor.execute(auth_query, params if "department = %s" in auth_query else [])
         auth_count = cursor.fetchone()
 
         cursor.execute(
-            """
+            f"""
             SELECT category, COUNT(*) AS count
             FROM issues
+            {where_clause}
             GROUP BY category
             ORDER BY count DESC
-            """
+            """,
+            params
         )
         by_category = [dict(r) for r in cursor.fetchall()]
 

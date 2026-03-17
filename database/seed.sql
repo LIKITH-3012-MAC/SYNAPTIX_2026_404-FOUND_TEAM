@@ -6,9 +6,9 @@
 -- Seed Users (admin, authorities, citizens)
 INSERT INTO users (id, username, email, password_hash, role, full_name, department) VALUES
   ('00000000-0000-0000-0000-000000000001', 'admin', 'admin@resolvit.gov', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'admin', 'System Administrator', 'IT'),
-  ('00000000-0000-0000-0000-000000000002', 'auth_roads', 'roads@resolvit.gov', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'authority', 'Roads Department', 'Public Works'),
-  ('00000000-0000-0000-0000-000000000003', 'auth_water', 'water@resolvit.gov', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'authority', 'Water Board', 'Municipality'),
-  ('00000000-0000-0000-0000-000000000004', 'auth_elec', 'electricity@resolvit.gov', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'authority', 'Electricity Board', 'BESCOM'),
+  ('00000000-0000-0000-0000-000000000002', 'auth_roads', 'roads@resolvit.gov', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'authority', 'Roads Department', 'Roads'),
+  ('00000000-0000-0000-0000-000000000003', 'auth_water', 'water@resolvit.gov', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'authority', 'Water Board', 'Water'),
+  ('00000000-0000-0000-0000-000000000004', 'auth_elec', 'electricity@resolvit.gov', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'authority', 'Electricity Board', 'Electricity'),
   ('00000000-0000-0000-0000-000000000005', 'citizen1', 'citizen1@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'citizen', 'Rahul Kumar', NULL),
   ('00000000-0000-0000-0000-000000000006', 'citizen2', 'citizen2@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMZJaaaSwm.Gs6EY5D4G.3XNzG', 'citizen', 'Priya Singh', NULL)
 ON CONFLICT DO NOTHING;

@@ -46,7 +46,9 @@ const MapManager = (() => {
                 scrollWheelZoom: true,
                 preferCanvas: true, // Extreme performance for rendering many points
                 wheelDebounceTime: 150, // Optimize scroll wheel zooms on Mac/touchpads
-                zoomAnimation: true
+                zoomAnimation: true,
+                tap: false, // Disable legacy tap handler - fixes many mobile interaction issues on modern browsers
+                bounceAtZoomLimits: false
             }).setView(coords, 13);
 
             // Support Light/Dark Theme dynamically
@@ -61,10 +63,17 @@ const MapManager = (() => {
                 if (_baseLayer) _baseLayer.setUrl(currentIsDark ? TILE_DARK : TILE_LIGHT);
             });
 
-            // Universal Cluster Group
+            // Elite Cluster Group Configuration
             _clusterGroup = L.markerClusterGroup({
                 showCoverageOnHover: false,
-                maxClusterRadius: 50,
+                zoomToBoundsOnClick: true,
+                spiderfyOnMaxZoom: true,
+                removeOutsideVisibleBounds: true,
+                animate: true,
+                animateAddingMarkers: true,
+                maxClusterRadius: 80, // Balanced for visual density
+                disableClusteringAtZoom: 18,
+                chunkedLoading: true, // Performance for large datasets
                 iconCreateFunction: (cluster) => {
                     const markers = cluster.getAllChildMarkers();
                     let maxScore = 0;
@@ -73,29 +82,49 @@ const MapManager = (() => {
                         maxScore = Math.max(maxScore, s);
                     });
 
-                    // Priority-based pulsing logic
-                    let priorityClass = 'cluster-pulse-low';
-                    let type = 'low';
-
-                    if (maxScore >= 80) { priorityClass = 'cluster-blink-critical'; type = 'high'; }
-                    else if (maxScore >= 55) { priorityClass = 'cluster-pulse-high'; type = 'high'; }
-                    else if (maxScore >= 30) { priorityClass = 'cluster-pulse-medium'; type = 'medium'; }
-
                     const count = cluster.getChildCount();
+                    
+                    // Intelligent Sizing Logic
+                    let size = 48;
+                    if (count > 100) size = 72;
+                    else if (count > 50) size = 64;
+                    else if (count > 10) size = 56;
+
+                    // Priority Visualization
+                    let glowClass = 'glow-low';
+                    if (maxScore >= 80) glowClass = 'glow-critical';
+                    else if (maxScore >= 55) glowClass = 'glow-high';
+                    else if (maxScore >= 30) glowClass = 'glow-medium';
+
+                    const isHigh = maxScore >= 60;
+
                     return L.divIcon({
-                        html: `<div class="cluster-shield cluster-${type}-priority ${priorityClass}"><span>${count}</span></div>`,
-                        className: 'cluster-icon-wrapper',
-                        iconSize: L.point(40, 40)
+                        html: `
+                            <div class="premium-cluster" style="width:${size}px; height:${size}px;">
+                                <div class="cluster-glow ${glowClass}"></div>
+                                ${isHigh ? '<div class="cluster-orbit"></div>' : ''}
+                                <div class="cluster-glass-shell" style="width:${size - 8}px; height:${size - 8}px;">
+                                    <span class="cluster-count" style="pointer-events:none;">${count}</span>
+                                </div>
+                            </div>`,
+                        className: 'cluster-premium-wrapper',
+                        iconSize: L.point(size, size),
+                        iconAnchor: [size / 2, size / 2]
                     });
                 }
             });
 
             // Interaction: Trigger Intelligence Panel on Cluster Click
             _clusterGroup.on('clusterclick', (a) => {
+                // Ensure interaction doesn't fire if map is being panned
+                if (_map.dragging && _map.dragging.moved()) return;
+                
                 a.layer.zoomToBounds({ padding: [20, 20] }); // Natively spiderfy/zoom
                 const markers = a.layer.getAllChildMarkers();
                 if (typeof window.openClusterIntel === 'function') {
-                    window.openClusterIntel(markers);
+                    // Slight delay for mobile to ensure zoom doesn't jitter the panel open
+                    const delay = ('ontouchstart' in window) ? 300 : 0;
+                    setTimeout(() => window.openClusterIntel(markers), delay);
                 }
             });
 
@@ -135,67 +164,21 @@ const MapManager = (() => {
             if (typeof renderDensityOverlays === 'function') {
                 renderDensityOverlays(_map, issues);
             }
-        },
-
-        injectGlobalMapStyles() {
-            if (document.getElementById('map-manager-styles')) return;
+        },        injectGlobalMapStyles() {
+            if (document.getElementById('map-manager-premium-base')) return;
             const style = document.createElement('style');
-            style.id = 'map-manager-styles';
+            style.id = 'map-manager-premium-base';
             style.textContent = `
-                .cluster-shield {
-                    width: 40px;
-                    height: 48px;
-                    background: var(--accent);
-                    margin: auto;
-                    color: white;
-                    font-weight: 800;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 50% 100%, 0% 75%);
-                    font-size: 0.9rem;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                    border: 2px solid rgba(255,255,255,0.3);
-                }
-                .cluster-high-priority { background: var(--red, #dc2626) !important; border-color: #ffcccc; position: relative; }
-                .cluster-medium-priority { background: var(--orange, #f97316) !important; border-color: #ffe4cc; position: relative; }
-                .cluster-low-priority { background: var(--green, #16a34a) !important; border-color: #ccffcc; position: relative; }
-                
-                @keyframes pulse-low {
-                    0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
-                    70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
-                }
-                @keyframes pulse-medium {
-                    0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.6); }
-                    70% { box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
-                }
-                @keyframes pulse-high {
-                    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8); }
-                    70% { box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
-                }
-                @keyframes blink-critical {
-                    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px rgba(220, 38, 38, 0.8); }
-                    50% { opacity: 0.7; transform: scale(1.1); box-shadow: 0 0 25px rgba(220, 38, 38, 1); }
-                }
-                
-                .cluster-pulse-low { animation: pulse-low 2s infinite; }
-                .cluster-pulse-medium { animation: pulse-medium 1.5s infinite; }
-                .cluster-pulse-high { animation: pulse-high 1s infinite; }
-                .cluster-blink-critical { animation: blink-critical 0.6s infinite; }
-
-                .cluster-icon-wrapper {
+                .cluster-premium-wrapper {
                     background: transparent !important;
                     border: none !important;
                 }
-
-                /* Lockdown style removal */
                 .leaflet-container {
-                    filter: none !important; /* No Inversion */
-                    background: #f1f5f9 !important;
+                    background: #0f172a !important; /* Premium dark void background */
                 }
+                /* Hide default cluster group styles to prevent flicker */
+                .marker-cluster { background: none !important; }
+                .marker-cluster div { background: none !important; }
             `;
             document.head.appendChild(style);
         }

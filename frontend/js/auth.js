@@ -13,6 +13,7 @@ const Auth = {
             id: data.user_id,
             username: data.username,
             role: data.role,
+            department: data.department
         }));
         return data;
     },

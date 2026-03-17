@@ -64,6 +64,7 @@ class TokenResponse(BaseModel):
     role:         str
     user_id:      str
     username:     str
+    department:   Optional[str] = None
 
 
 class UserResponse(BaseModel):

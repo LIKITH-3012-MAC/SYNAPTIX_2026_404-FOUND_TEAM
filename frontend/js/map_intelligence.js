@@ -140,10 +140,10 @@ function buildUrbanNodePopup(issue, role = "citizen") {
   const escalationLabel = ["—", "Dept Head", "City Commissioner", "Govt Oversight"][escalation] || `L${escalation}`;
 
   let html = `
-  <div class="glass urban-node-popup-v2" style="border-top: 4px solid ${band.color}; border-radius:14px; overflow:hidden; min-width:260px;">
-    <div class="popup-header" style="padding:16px;">
+  <div class="urban-node-premium-card" style="border-top: 4px solid ${band.color};">
+    <div class="popup-header">
       <div class="flex justify-between items-center">
-        <span class="badge" style="background:${band.color}20; color:${band.color}; padding:4px 12px; border-radius:999px; font-weight:800; font-size:0.75rem;">${band.label} ${score}</span>
+        <span class="badge" style="background:${band.color}20; color:${band.color};">${band.label} ${score}</span>
         <span class="text-muted" style="font-size:0.7rem;">#${issue.id.slice(-6)}</span>
       </div>
       <h4 style="margin:8px 0; color:white; font-size:1rem;">${issue.title}</h4>
@@ -229,28 +229,34 @@ function renderUrbanNodes(map, issues, role = "citizen", clusterGroup = null) {
     const glowColor = issue.sla_breached ? "#dc2626" : densityInfo?.color || band.color;
 
     const icon = L.divIcon({
-      className: "urban-marker-container",
-      html: `<div class="urban-marker" style="
-        width:${size}px;height:${size}px;
-        background:${band.color};
-        box-shadow:0 0 12px ${glowColor}66;
-        ${pulse ? `animation:mapPulse ${speed} ease-in-out infinite;` : ""}
-      "></div>
-      ${(issue.escalation_level && issue.escalation_level >= 1) ? `<div style="position:absolute; top:-6px; right:-6px; font-size:10px; background:white; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.3); z-index:10;">🔵</div>` : ""}
-      ${issue.is_simulated ? `<div class="sim-badge" style="position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); font-size:8px;">🤖</div>` : ""}
+      className: "premium-marker-wrapper",
+      html: `
+        <div class="urban-marker-premium" style="width:${size}px; height:${size}px;">
+            <div class="marker-inner-core" style="background:${band.color}; box-shadow:0 0 15px ${glowColor}aa;"></div>
+            ${pulse ? `<div class="marker-pulse-ring" style="border-color:${band.color}; animation-duration:${speed};"></div>` : ""}
+            ${(issue.escalation_level && issue.escalation_level >= 1) ? `<div class="marker-esc-badge">!</div>` : ""}
+            ${issue.is_simulated ? `<div class="marker-sim-badge">AI</div>` : ""}
+        </div>
       `,
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
     });
 
-    const marker = L.marker([issue.latitude, issue.longitude], { icon, priorityScore: score })
-      .bindPopup(buildUrbanNodePopup(issue, role), {
-        maxWidth: 300,
-        className: "urban-node-popup",
-      });
+    const marker = L.marker([issue.latitude, issue.longitude], { 
+        icon, 
+        priorityScore: score,
+        id: issue.id,
+        issueData: issue 
+    }).bindPopup(buildUrbanNodePopup(issue, role), {
+        maxWidth: 320,
+        className: "leaflet-popup-premium",
+        closeButton: false
+    });
 
-    // Add Hover Interactions
-    marker.on("mouseover", function (e) { this.openPopup(); });
+    // Add Hover Interactions (Desktop only to prevent mobile jitter)
+    if (!('ontouchstart' in window)) {
+        marker.on("mouseover", function (e) { this.openPopup(); });
+    }
     // Keep open on hover by preventing immediate close unless they leave marker bounds without entering popup bounds
     // Alternatively, just do click for open and hover for preview. By requested interactions:
     // marker.on("mouseout", function(e) { this.closePopup(); }); 
@@ -284,25 +290,72 @@ function injectMapStyles() {
   const s = document.createElement("style");
   s.id = "map-intelligence-styles";
   s.textContent = `
-    @keyframes mapPulse {
-      0%   { transform: scale(1);   opacity: 1; box-shadow: 0 0 0px var(--accent-glow); }
-      50%  { transform: scale(1.4); opacity: 0.7; box-shadow: 0 0 20px var(--accent-glow); }
-      100% { transform: scale(1);   opacity: 1; box-shadow: 0 0 0px var(--accent-glow); }
+    .urban-node-premium-card {
+        padding: 0;
+        border-radius: 18px;
+        overflow: hidden;
+    }
+    .urban-node-premium-card .popup-header {
+        padding: 20px;
+    }
+    .urban-node-premium-card .badge {
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+    .premium-marker-wrapper {
+        background: transparent !important;
+        border: none !important;
+    }
+    .marker-pulse-ring {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        border: 2px solid;
+        border-radius: 50%;
+        opacity: 0;
+        animation: premiumMarkerPulse 1.5s ease-out infinite;
+    }
+    @keyframes premiumMarkerPulse {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(2.5); opacity: 0; }
+    }
+    .marker-esc-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ef4444;
+        color: white;
+        font-size: 10px;
+        font-weight: 900;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .marker-sim-badge {
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #8b5cf6;
+        color: white;
+        font-size: 8px;
+        font-weight: 900;
+        padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid white;
     }
     @keyframes markerDrop {
-      from { transform: translateY(-50px) scale(0); opacity: 0; }
-      to { transform: translateY(0) scale(1); opacity: 1; }
+        from { transform: translateY(-30px) scale(0); opacity: 0; }
+        to { transform: translateY(0) scale(1); opacity: 1; }
     }
-    .urban-marker {
-      border-radius: 50%;
-      border: 2px solid white;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    .urban-marker:hover {
-      transform: scale(1.2);
-      filter: brightness(1.2);
-    }
+
     .sim-badge {
       position: absolute;
       top: -4px;

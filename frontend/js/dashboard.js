@@ -230,10 +230,27 @@ async function initGamificationUI() {
 
 /* ── Initialization ────────────────────────────────────────────── */
 async function initDashboard() {
+    pruneAuthorityFilters();
     await fetchIssues();
     await fetchSummary();
     await initGamificationUI();
     setInterval(fetchIssues, 15000);  // Live polling restored
+}
+
+/**
+ * Authorities should only see their own category filter to avoid confusion/clutter.
+ */
+function pruneAuthorityFilters() {
+    const user = Auth.getUser();
+    if (user && user.role === 'authority' && user.department) {
+        const filters = document.querySelectorAll('#cat-filters .filter-btn');
+        filters.forEach(btn => {
+            const cat = btn.getAttribute('data-cat');
+            if (cat && cat !== user.department) {
+                btn.style.display = 'none';
+            }
+        });
+    }
 }
 
 // Re-expose to global

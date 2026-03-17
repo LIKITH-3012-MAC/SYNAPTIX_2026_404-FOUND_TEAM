@@ -211,15 +211,32 @@ def list_issues(
     sort_by:  str            = Query("priority_score", regex="^(priority_score|created_at|impact_scale|urgency|sla_expires_at)$"),
     order:    str            = Query("desc", regex="^(asc|desc)$"),
     limit:    int            = Query(50, ge=1, le=10000),
-    offset:   int            = Query(0, ge=0)
+    offset:   int            = Query(0, ge=0),
+    current_user: dict       = Depends(get_current_user)
 ):
     """Paginated, filterable issue list with SLA and credit fields."""
     conditions = []
     params = []
 
-    if category:
+    role = current_user.get("role")
+    user_dept = current_user.get("department")
+
+    # Strict Role-Based Filtering
+    if role == "authority":
+        if not user_dept:
+            # If an authority has no department assigned, safely show nothing
+            return []
+        
+        # Override client-requested category with authority's fixed department
+        # Authorities cannot look outside their scope even if they try via URL params
         conditions.append("i.category = %s")
-        params.append(category)
+        params.append(user_dept)
+    else:
+        # Citizens and Admins can filter by category if they want
+        if category:
+            conditions.append("i.category = %s")
+            params.append(category)
+
     if status:
         conditions.append("i.status = %s")
         params.append(status)
@@ -251,7 +268,10 @@ def list_issues(
 
 # ── GET ONE ───────────────────────────────────────────────────
 @router.get("/{issue_id}", response_model=IssueResponse)
-def get_issue(issue_id: str):
+def get_issue(
+    issue_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     """Get full details of a single issue with SLA and breach risk."""
     with get_db() as cursor:
         cursor.execute(
@@ -273,7 +293,20 @@ def get_issue(issue_id: str):
 
     if not row:
         raise HTTPException(status_code=404, detail="Issue not found.")
-    return _serialize_issue(dict(row))
+    
+    issue_data = dict(row)
+    role = current_user.get("role")
+    user_dept = current_user.get("department")
+
+    # Access Control: Authorities only see their department's issues
+    if role == "authority":
+        if issue_data.get("category") != user_dept:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Access denied. This issue belongs to the {issue_data.get('category')} department."
+            )
+
+    return _serialize_issue(issue_data)
 
 
 # ── UPDATE ────────────────────────────────────────────────────
@@ -292,6 +325,8 @@ def update_issue(
         raise HTTPException(status_code=404, detail="Issue not found.")
 
     role = current_user.get("role")
+    user_dept = current_user.get("department")
+
     if role == "citizen":
         if str(existing["reporter_id"]) != current_user["sub"]:
             raise HTTPException(status_code=403, detail="You can only modify your own issues.")
@@ -308,7 +343,15 @@ def update_issue(
     
     # Status updates restricted to authorities/admin
     if payload.status is not None:
-        if role in ("authority", "admin"):
+        if role == "admin":
+            fields["status"] = payload.status.value
+        elif role == "authority":
+            # Strict department check
+            if existing["category"] != user_dept:
+                raise HTTPException(
+                    status_code=403, 
+                    detail=f"Access denied. Your department ({user_dept}) cannot update {existing['category']} issues."
+                )
             fields["status"] = payload.status.value
         else:
             raise HTTPException(status_code=403, detail="Only authorities or admins can update issue status.")
@@ -323,8 +366,16 @@ def update_issue(
         
     if payload.safety_risk_probability is not None: fields["safety_risk_probability"] = payload.safety_risk_probability
     
-    if payload.assigned_authority_id is not None and role in ("authority", "admin"):
-        fields["assigned_authority_id"] = payload.assigned_authority_id
+    if payload.assigned_authority_id is not None:
+        if role == "admin":
+            fields["assigned_authority_id"] = payload.assigned_authority_id
+        elif role == "authority":
+            # Authorities can only assign to themselves or stay within their department
+            if existing["category"] != user_dept:
+                raise HTTPException(status_code=403, detail="Cannot assign issues outside your department.")
+            fields["assigned_authority_id"] = payload.assigned_authority_id
+        else:
+            raise HTTPException(status_code=403, detail="Only authorities/admins can assign issues.")
 
     is_resolving = payload.status and payload.status.value == "resolved"
     if is_resolving:
