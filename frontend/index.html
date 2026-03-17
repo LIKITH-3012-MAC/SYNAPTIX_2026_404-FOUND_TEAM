@@ -104,10 +104,14 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(2, 6, 23, 0.4);
-      /* Premium dark overlay */
+      background: rgba(2, 6, 23, 0.4); /* Default dark overlay */
       z-index: -1;
       pointer-events: none;
+      transition: background 0.5s ease;
+    }
+
+    [data-theme="light"] body::after {
+      background: rgba(255, 255, 255, 0.2); /* Lighter overlay for light mode */
     }
 
     /* ── Premium Glassmorphism Overrides ───────────────────── */
@@ -310,9 +314,9 @@
         RESOLVIT
       </a>
       <div class="nav-links">
-        <a href="dashboard.html" class="nav-link">Issues</a>
-        <a href="submit.html" class="nav-link">Report</a>
-        <a href="authority.html" class="nav-link">Authorities</a>
+        <a href="dashboard.html" class="nav-link" data-i18n="nav_issues">Issues</a>
+        <a href="submit.html" class="nav-link" data-i18n="nav_report">Report</a>
+        <a href="authority.html" class="nav-link" data-i18n="nav_authorities">Authorities</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <!-- Unified Navbar updated via Auth.updateNavbar() -->
@@ -325,15 +329,15 @@
     <div class="hero-bg"></div>
     <div class="hero-grid"></div>
     <div class="hero-content">
-      <div class="hero-badge">
+      <div class="hero-badge" data-i18n="hero_badge">
         <span class="hero-badge-dot"></span>
         India's First AI-Powered Civic Resolution Engine
       </div>
 
       <div style="max-width: 780px;">
-        <h1>Your Voice.<br />Government Action.</h1>
-        <div class="hero-tagline">"From Complaint to Completion."</div>
-        <p class="hero-subtitle">
+        <h1 data-i18n="hero_title">Your Voice.<br />Government Action.</h1>
+        <div class="hero-tagline" data-i18n="hero_tagline">"From Complaint to Completion."</div>
+        <p class="hero-subtitle" data-i18n="hero_subtitle">
           RESOLVIT connects citizens directly with government authorities.
           AI clustering, real-time tracking, and immutable audit trails —
           accountability at scale.
@@ -341,10 +345,10 @@
       </div>
 
       <div class="hero-cta">
-        <a href="submit.html" class="btn-hero">
+        <a href="submit.html" class="btn-hero" data-i18n="btn_report">
           🚨 Report an Issue
         </a>
-        <a href="dashboard.html" class="btn-hero-outline">
+        <a href="dashboard.html" class="btn-hero-outline" data-i18n="btn_view_live">
           📊 View Live Issues
         </a>
       </div>
@@ -352,19 +356,19 @@
       <div class="hero-stats">
         <div class="stat-item">
           <div class="stat-number" id="stat-resolved">0</div>
-          <div class="stat-label">Issues Resolved</div>
+          <div class="stat-label" data-i18n="stat_resolved">Issues Resolved</div>
         </div>
         <div class="stat-item">
           <div class="stat-number" id="stat-response">0h</div>
-          <div class="stat-label">Avg Response Time</div>
+          <div class="stat-label" data-i18n="stat_response">Avg Response Time</div>
         </div>
         <div class="stat-item">
           <div class="stat-number" id="stat-authorities">0</div>
-          <div class="stat-label">Active Authorities</div>
+          <div class="stat-label" data-i18n="stat_active">Active Authorities</div>
         </div>
         <div class="stat-item">
           <div class="stat-number" id="stat-impacted">0</div>
-          <div class="stat-label">Citizens Impacted</div>
+          <div class="stat-label" data-i18n="stat_impacted">Citizens Impacted</div>
         </div>
       </div>
     </div>
@@ -374,9 +378,9 @@
   <section class="section" style="background: var(--bg-secondary);">
     <div class="container">
       <div class="section-header" style="text-align: center;">
-        <div class="section-label">Process</div>
-        <h2>How RESOLVIT Works</h2>
-        <p
+        <div class="section-label" data-i18n="section_process">Process</div>
+        <h2 data-i18n="how_it_works">How RESOLVIT Works</h2>
+        <p data-i18n="how_subtitle"
           style="color: var(--text-secondary); margin-top: 16px; font-size: 1.1rem; max-width: 560px; margin-left: auto; margin-right: auto;">
           A transparent, AI-powered pipeline from issue submission to resolution.
         </p>
@@ -385,26 +389,26 @@
       <div class="grid-4">
         <div class="card animate-in" style="animation-delay: 0s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">📍</div>
-          <h4 style="color: var(--accent); margin-bottom: 8px;">1. Report</h4>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Citizens submit issues with location, photo, and
+          <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_report_title">1. Report</h4>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_report_desc">Citizens submit issues with location, photo, and
             urgency rating in seconds.</p>
         </div>
         <div class="card animate-in" style="animation-delay: 0.1s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">🤖</div>
-          <h4 style="color: var(--accent); margin-bottom: 8px;">2. AI Cluster</h4>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Our AI detects duplicate reports within 100m and
+          <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_ai_title">2. AI Cluster</h4>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_ai_desc">Our AI detects duplicate reports within 100m and
             merges them to amplify impact.</p>
         </div>
         <div class="card animate-in" style="animation-delay: 0.2s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">📈</div>
-          <h4 style="color: var(--accent); margin-bottom: 8px;">3. Prioritize</h4>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Dynamic scoring ranks issues by impact, urgency,
+          <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_prioritize_title">3. Prioritize</h4>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_prioritize_desc">Dynamic scoring ranks issues by impact, urgency,
             time, and safety risk automatically.</p>
         </div>
         <div class="card animate-in" style="animation-delay: 0.3s; text-align: center; padding: 36px 24px;">
           <div style="font-size: 2.5rem; margin-bottom: 16px;">✅</div>
-          <h4 style="color: var(--accent); margin-bottom: 8px;">4. Resolve</h4>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Authorities act under SLA. Non-compliance
+          <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_resolve_title">4. Resolve</h4>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_resolve_desc">Authorities act under SLA. Non-compliance
             auto-escalates with an immutable audit trail.</p>
         </div>
       </div>
@@ -416,14 +420,14 @@
     <div class="container">
       <div class="flex justify-between items-center" style="margin-bottom: 40px; flex-wrap: wrap; gap: 16px;">
         <div>
-          <div class="section-label">Live Feed</div>
-          <h2>Top Priority Issues</h2>
+          <div class="section-label" data-i18n="live_feed">Live Feed</div>
+          <h2 data-i18n="top_priority">Top Priority Issues</h2>
         </div>
         <div class="flex items-center gap-4">
           <div class="live-indicator">
-            <div class="live-dot"></div> LIVE
+            <div class="live-dot"></div> <span data-i18n="live_indicator">LIVE</span>
           </div>
-          <a href="dashboard.html" class="btn btn-outline">View All Issues →</a>
+          <a href="dashboard.html" class="btn btn-outline" data-i18n="view_all">View All Issues →</a>
         </div>
       </div>
 
@@ -441,10 +445,10 @@
     <div class="container">
       <div class="flex justify-between items-center" style="margin-bottom: 32px; flex-wrap:wrap; gap:16px;">
         <div>
-          <div class="section-label">Heatmap</div>
-          <h2>Issue Density Heatmap</h2>
+          <div class="section-label" data-i18n="heatmap_label">Heatmap</div>
+          <h2 data-i18n="heatmap_title">Issue Density Heatmap</h2>
         </div>
-        <a href="dashboard.html" class="btn btn-primary">Open Full Map →</a>
+        <a href="dashboard.html" class="btn btn-primary" data-i18n="open_full_map">Open Full Map →</a>
       </div>
       <div id="map"></div>
     </div>
@@ -455,14 +459,14 @@
     <div class="container">
       <div class="flex justify-center items-center gap-8"
         style="color: var(--text-muted); font-size: 0.9rem; flex-wrap: wrap; text-align: center; gap: 40px;">
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;">🔐 SHA-256
-            Audit</strong>Immutable blockchain logs</div>
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;">🤖 AI
-            Clustering</strong>100m radius deduplication</div>
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;">⏱️ SLA
-            Enforcement</strong>Auto-escalation on breach</div>
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;">📊 Public
-            Metrics</strong>Open performance scores</div>
+        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="audit_title">🔐 SHA-256
+            Audit</strong><span data-i18n="audit_desc">Immutable blockchain logs</span></div>
+        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="clustering_title">🤖 AI
+            Clustering</strong><span data-i18n="clustering_desc">100m radius deduplication</span></div>
+        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="sla_title">⏱️ SLA
+            Enforcement</strong><span data-i18n="sla_desc">Auto-escalation on breach</span></div>
+        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="public_metrics_title">📊 Public
+            Metrics</strong><span data-i18n="public_metrics_desc">Open performance scores</span></div>
       </div>
     </div>
   </section>
@@ -470,12 +474,12 @@
   <!-- ── CTA Banner ─────────────────────────────────────────── -->
   <section class="section" style="text-align: center;">
     <div class="container" style="max-width: 700px;">
-      <h2 style="margin-bottom: 16px;">See a problem?<br />Take action now.</h2>
-      <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 40px;">
+      <h2 style="margin-bottom: 16px;" data-i18n="cta_title">See a problem?<br />Take action now.</h2>
+      <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 40px;" data-i18n="cta_desc">
         Every report you submit contributes to a better, more accountable city.
         Your voice directly moves government resources.
       </p>
-      <a href="submit.html" class="btn btn-primary btn-xl">
+      <a href="submit.html" class="btn btn-primary btn-xl" data-i18n="btn_report_free">
         🚨 Report an Issue — It's Free
       </a>
     </div>
@@ -485,35 +489,34 @@
   <footer>
     <div class="container">
       <div class="footer-brand">⚖️ RESOLVIT</div>
-      <div class="footer-tagline">From Complaint to Completion. Building a more accountable government.</div>
+      <div class="footer-tagline" data-i18n="footer_tagline">From Complaint to Completion. Building a more accountable government.</div>
       <div
         style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 32px; margin-bottom: 40px;">
         <div>
-          <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">Platform</div>
+          <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;" data-i18n="footer_platform">Platform</div>
           <div class="flex flex-col gap-4" style="gap: 8px;">
             <a href="dashboard.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;"
-              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Issue
+              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'" data-i18n="footer_dashboard">Issue
               Dashboard</a>
             <a href="submit.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;"
-              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Submit
+              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'" data-i18n="footer_submit">Submit
               Issue</a>
             <a href="authority.html" style="color: rgba(255,255,255,0.5); font-size: 0.85rem; transition: color 0.2s;"
-              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Authority
+              onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.5)'" data-i18n="footer_portal">Authority
               Portal</a>
           </div>
         </div>
         <div>
-          <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">Technology</div>
+          <div style="color: white; font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;" data-i18n="footer_tech">Technology</div>
           <div class="flex flex-col" style="gap: 8px; color: rgba(255,255,255,0.5); font-size: 0.85rem;">
-            <span>AI Clustering Engine</span>
-            <span>Blockchain Audit Trail</span>
-            <span>Dynamic Priority Scoring</span>
+            <span data-i18n="footer_tech_ai">AI Clustering Engine</span>
+            <span data-i18n="footer_tech_bc">Blockchain Audit Trail</span>
+            <span data-i18n="footer_tech_score">Dynamic Priority Scoring</span>
           </div>
         </div>
       </div>
       <div class="footer-bottom flex justify-between items-center" style="flex-wrap: wrap; gap: 12px;">
-        <span>© 2026 RESOLVIT. Civic technology for the people.</span>
-        <span>Built with Python · FastAPI · PostgreSQL · Vanilla JS</span>
+        <span data-i18n="footer_copy">© 2026 RESOLVIT. Civic technology for the people.</span>
       </div>
     </div>
   </footer>
@@ -532,6 +535,7 @@
   <!-- ── Scripts ────────────────────────────────────────────── -->
   <script src="js/api.js"></script>
   <script src="js/theme-manager.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/animations.js"></script>
   <script src="js/ui-enhancements.js"></script>

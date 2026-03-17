@@ -6,7 +6,6 @@
 const UIEnhancements = {
     init() {
         this.createFloatingToggle();
-        this.initStatusIndicator();
         this.initCounters();
         this.setupScrollEffects();
     },
@@ -45,54 +44,7 @@ const UIEnhancements = {
         toggle.className = `floating-toggle ${currentTheme}`;
     },
 
-    initStatusIndicator() {
-        // Find or create status indicator in navbar
-        const navActions = document.getElementById('nav-actions');
-        if (!navActions) return;
 
-        let statusBox = document.getElementById('backend-status-indicator');
-        if (!statusBox) {
-            statusBox = document.createElement('div');
-            statusBox.id = 'backend-status-indicator';
-            statusBox.className = 'status-box';
-            navActions.prepend(statusBox);
-        }
-
-        // Listen for API status changes
-        window.addEventListener('resolvit-api-status', (e) => {
-            const status = e.detail;
-            this.updateStatusUI(status);
-        });
-
-        // Initial check if API is already loaded
-        if (window.API && window.API.status) {
-            this.updateStatusUI(window.API.status);
-        }
-    },
-
-    updateStatusUI(status) {
-        const box = document.getElementById('backend-status-indicator');
-        if (!box) return;
-
-        let label = 'Offline';
-        let color = 'var(--red)';
-        let pulse = false;
-
-        if (status === 'online') {
-            label = 'Live';
-            color = 'var(--green)';
-        } else if (status === 'waking' || status === 'connecting') {
-            label = 'Waking';
-            color = 'var(--yellow)';
-            pulse = true;
-        }
-
-        box.innerHTML = `
-            <span class="status-dot" style="background:${color}; ${pulse ? 'animation: pulse 1.5s infinite;' : ''}"></span>
-            <span class="status-label">${label}</span>
-        `;
-        box.className = `status-box ${status}`;
-    },
 
     initCounters() {
         const observer = new IntersectionObserver((entries) => {

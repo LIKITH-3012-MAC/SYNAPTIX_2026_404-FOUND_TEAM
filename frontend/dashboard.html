@@ -39,9 +39,9 @@
                 <div class="nav-logo-icon">⚖️</div>RESOLVIT
             </a>
             <div class="nav-links">
-                <a href="dashboard.html" class="nav-link active">Issues</a>
-                <a href="submit.html" class="nav-link">Report</a>
-                <a href="authority.html" class="nav-link">Authorities</a>
+                <a href="dashboard.html" class="nav-link active" data-i18n="nav_issues">Issues</a>
+                <a href="submit.html" class="nav-link" data-i18n="nav_report">Report</a>
+                <a href="authority.html" class="nav-link" data-i18n="nav_authorities">Authorities</a>
             </div>
             <div class="nav-actions" id="nav-actions">
                 <!-- Unified Navbar -->
@@ -53,14 +53,14 @@
         <div class="container">
             <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px;">
                 <div>
-                    <div class="section-label">Public Feed</div>
-                    <h1 style="font-size:2rem;margin-top:8px;">Issue Dashboard</h1>
+                    <div class="section-label" data-i18n="dash_hint">Public Feed</div>
+                    <h1 style="font-size:2rem;margin-top:8px;" data-i18n="dash_title">Issue Dashboard</h1>
                 </div>
                 <div class="flex items-center gap-4">
                     <div class="live-indicator">
-                        <div class="live-dot"></div> LIVE — refreshes every 15s
+                        <div class="live-dot"></div> <span data-i18n="dash_live">LIVE — refreshes every 15s</span>
                     </div>
-                    <button class="btn btn-outline btn-sm" onclick="fetchIssues()">↻ Refresh Now</button>
+                    <button class="btn btn-outline btn-sm" onclick="fetchIssues()" data-i18n="dash_refresh">↻ Refresh Now</button>
                 </div>
             </div>
 
@@ -79,24 +79,24 @@
             <div class="main-dashboard-column">
                 <!-- Filter / Sort Bar -->
                 <div class="filter-bar">
-                    <input type="text" id="search-input" class="search-input" placeholder="🔍 Search issues..."
+                    <input type="text" id="search-input" class="search-input" data-i18n="dash_search" placeholder="🔍 Search issues..."
                         oninput="filterIssues()" />
                     <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cat-filters">
-                        <button class="filter-btn active" data-cat="" onclick="setCatFilter('')">All</button>
-                        <button class="filter-btn" data-cat="Roads" onclick="setCatFilter('Roads')">🛣 Roads</button>
-                        <button class="filter-btn" data-cat="Water" onclick="setCatFilter('Water')">💧 Water</button>
-                        <button class="filter-btn" data-cat="Electricity" onclick="setCatFilter('Electricity')">⚡
+                        <button class="filter-btn active" data-cat="" onclick="setCatFilter('')" data-i18n="dash_filter_all">All</button>
+                        <button class="filter-btn" data-cat="Roads" onclick="setCatFilter('Roads')" data-i18n="dash_filter_roads">🛣 Roads</button>
+                        <button class="filter-btn" data-cat="Water" onclick="setCatFilter('Water')" data-i18n="dash_filter_water">💧 Water</button>
+                        <button class="filter-btn" data-cat="Electricity" onclick="setCatFilter('Electricity')" data-i18n="dash_filter_electric">⚡
                             Electric</button>
-                        <button class="filter-btn" data-cat="Sanitation" onclick="setCatFilter('Sanitation')">🗑
+                        <button class="filter-btn" data-cat="Sanitation" onclick="setCatFilter('Sanitation')" data-i18n="dash_filter_sanitation">🗑
                             Sanitation</button>
-                        <button class="filter-btn" data-cat="Safety" onclick="setCatFilter('Safety')">🚨 Safety</button>
+                        <button class="filter-btn" data-cat="Safety" onclick="setCatFilter('Safety')" data-i18n="dash_filter_safety">🚨 Safety</button>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                        <label style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">Sort:</label>
+                        <label style="font-size:0.8rem;color:var(--text-muted);font-weight:600;" data-i18n="dash_sort_label">Sort:</label>
                         <select class="form-select" id="sort-select" onchange="fetchIssues()"
                             style="padding:8px 28px 8px 12px;width:auto;min-width:160px;">
-                            <option value="priority_score">Priority Score ↓</option>
-                            <option value="created_at">Newest First</option>
+                            <option value="priority_score" data-i18n="dash_sort_priority">Priority Score ↓</option>
+                            <option value="created_at" data-i18n="dash_sort_newest">Newest First</option>
                             <option value="impact_scale">Most Impacted</option>
                             <option value="urgency">Urgency</option>
                         </select>
@@ -107,14 +107,14 @@
                 <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;" id="status-filters">
                     <span
                         style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;margin-right:4px;">Status:</span>
-                    <button class="filter-btn active" data-status="" onclick="setStatusFilter('')">All</button>
+                    <button class="filter-btn active" data-status="" onclick="setStatusFilter('')" data-i18n="dash_status_all">All</button>
                     <button class="filter-btn" data-status="reported"
-                        onclick="setStatusFilter('reported')">Reported</button>
-                    <button class="filter-btn" data-status="in_progress" onclick="setStatusFilter('in_progress')">In
+                        onclick="setStatusFilter('reported')" data-i18n="dash_status_reported">Reported</button>
+                    <button class="filter-btn" data-status="in_progress" onclick="setStatusFilter('in_progress')" data-i18n="dash_status_progress">In
                         Progress</button>
-                    <button class="filter-btn" data-status="escalated" onclick="setStatusFilter('escalated')">🔴
+                    <button class="filter-btn" data-status="escalated" onclick="setStatusFilter('escalated')" data-i18n="dash_status_escalated">🔴
                         Escalated</button>
-                    <button class="filter-btn" data-status="resolved" onclick="setStatusFilter('resolved')">✅
+                    <button class="filter-btn" data-status="resolved" onclick="setStatusFilter('resolved')" data-i18n="dash_status_resolved">✅
                         Resolved</button>
                 </div>
 
@@ -178,6 +178,7 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="js/api.js"></script>
     <script src="js/theme-manager.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/gamification.js"></script>
     <script src="js/issues.js"></script>

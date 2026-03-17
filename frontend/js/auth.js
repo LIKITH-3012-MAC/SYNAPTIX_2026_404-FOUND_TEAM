@@ -192,44 +192,55 @@ const Auth = {
 
         // Theme Toggle HTML
         const themeToggle = `
-            <button class="theme-toggle" onclick="ThemeManager.toggle()" title="Toggle Theme" style="background:none;border:none;cursor:pointer;font-size:1.4rem;">
+            <button class="theme-toggle" onclick="ThemeManager.toggle()" title="Toggle Theme" style="background:none;border:none;cursor:pointer;font-size:1.4rem;display:flex;align-items:center;">
                 <span class="sun">🌞</span><span class="moon">🌙</span>
             </button>
         `;
 
-        // Backend Status HTML
-        const statusBadge = `
-            <div id="backend-status" class="status-badge" style="display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 10px;background:var(--bg-secondary);border-radius:20px;">
-                <span class="status-dot" style="width:8px;height:8px;border-radius:50%;background:#faad14;"></span>
-                <span class="status-text">Detecting...</span>
+        // Language Selector HTML
+        const langOptions = Object.entries(i18n.languages).map(([code, meta]) => 
+            `<option value="${code}" ${i18n.currentLang === code ? 'selected' : ''}>${meta.flag} ${meta.name}</option>`
+        ).join('');
+
+        const langSelector = `
+            <div class="lang-selector-wrap" style="position:relative;display:flex;align-items:center;">
+                <select class="lang-select" onchange="i18n.setLanguage(this.value)" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:12px;padding:4px 8px;font-size:0.8rem;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;">
+                    ${langOptions}
+                </select>
+                <div style="position:absolute;right:8px;pointer-events:none;font-size:0.6rem;opacity:0.5;">▼</div>
             </div>
         `;
+
+
 
         if (!user) {
             el.innerHTML = `
                 <div class="desktop-actions" style="display:flex;align-items:center;gap:15px;">
-                    ${statusBadge}
+                    ${langSelector}
                     ${themeToggle}
-                    <button class="btn btn-outline btn-sm" onclick="Auth.showModal('login')">Login</button>
-                    <a href="submit.html" class="btn btn-primary btn-sm">Report Issue</a>
+                    <button class="btn btn-outline btn-sm" onclick="Auth.showModal('login')" data-i18n="nav_login">Login</button>
+                    <a href="submit.html" class="btn btn-primary btn-sm" data-i18n="nav_report">Report Issue</a>
                 </div>
             `;
         } else {
             let portalLink = '';
-            if (user.role === 'citizen') portalLink = `<a href="citizen.html" class="btn btn-ghost btn-sm" id="nav-pts-badge">⭐ Profile</a>`;
-            else if (user.role === 'admin') portalLink = `<a href="admin.html" class="btn btn-ghost btn-sm">🏛️ Admin</a>`;
-            else portalLink = `<a href="authority.html" class="btn btn-ghost btn-sm">🏢 Portal</a>`;
+            if (user.role === 'citizen') portalLink = `<a href="citizen.html" class="btn btn-ghost btn-sm" id="nav-pts-badge" data-i18n="nav_profile">⭐ Profile</a>`;
+            else if (user.role === 'admin') portalLink = `<a href="admin.html" class="btn btn-ghost btn-sm" data-i18n="nav_admin">🏛️ Admin</a>`;
+            else portalLink = `<a href="authority.html" class="btn btn-ghost btn-sm" data-i18n="nav_portal">🏢 Portal</a>`;
 
             el.innerHTML = `
                 <div class="desktop-actions" style="display:flex;align-items:center;gap:15px;">
-                    ${statusBadge}
+                    ${langSelector}
                     ${themeToggle}
                     ${portalLink}
-                    <span style="font-size:0.85rem;font-weight:700;">👤 ${user.username}</span>
-                    <button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();">Logout</button>
+                    <span class="nav-username">👤 ${user.username}</span>
+                    <button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();" data-i18n="nav_logout">Logout</button>
                 </div>
             `;
         }
+
+        // Apply translations immediately to the new elements
+        if (window.i18n) i18n.apply();
 
         // Mobile Menu Generator — inject standard hamburger button into navbar-inner if missing
         let mobileBtn = document.getElementById('mobile-menu-btn');
@@ -246,16 +257,7 @@ const Auth = {
             el.parentElement.appendChild(mobileBtn);
         }
 
-        // Init Status Listener
-        window.addEventListener('resolvit-api-status', e => {
-            const badge = document.getElementById('backend-status');
-            if (!badge) return;
-            const dot = badge.querySelector('.status-dot');
-            const txt = badge.querySelector('.status-text');
-            if (e.detail === 'online') { dot.style.background = '#52c41a'; txt.textContent = 'Connected'; }
-            else if (e.detail === 'waking') { dot.style.background = '#faad14'; txt.textContent = 'Waking...'; }
-            else { dot.style.background = '#f5222d'; txt.textContent = 'Offline'; }
-        });
+
 
         if (typeof API !== 'undefined') API.checkHealth();
     }

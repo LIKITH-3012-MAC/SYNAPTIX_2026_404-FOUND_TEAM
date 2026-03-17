@@ -25,11 +25,21 @@ const ThemeManager = {
         this.theme = this.theme === 'dark' ? 'light' : 'dark';
         this.apply();
         localStorage.setItem('resolvit_theme', this.theme);
-        showToast(`🌙 Theme switched to ${this.theme.toUpperCase()}`, 'info');
+        
+        if (typeof showToast === 'function') {
+            const icon = this.theme === 'dark' ? '🌙' : '🌞';
+            showToast(`${icon} Theme set to ${this.theme.toUpperCase()}`, 'info');
+        }
     },
 
     apply() {
         document.documentElement.setAttribute('data-theme', this.theme);
+        
+        // Update all toggle buttons on page
+        document.querySelectorAll('.theme-toggle').forEach(btn => {
+            btn.setAttribute('aria-label', `Switch to ${this.theme === 'dark' ? 'light' : 'dark'} mode`);
+        });
+
         // Dispatch event for components that need to re-render (like charts or maps)
         window.dispatchEvent(new CustomEvent('resolvit-theme-change', { detail: this.theme }));
     },
@@ -40,6 +50,14 @@ const ThemeManager = {
             if (!localStorage.getItem('resolvit_theme')) {
                 this.theme = e.matches ? 'dark' : 'light';
                 this.apply();
+            }
+        });
+        
+        // Ensure UI stays in sync if theme is changed from another script
+        window.addEventListener('resolvit-theme-change', (e) => {
+            if (e.detail !== this.theme) {
+                this.theme = e.detail;
+                document.documentElement.setAttribute('data-theme', this.theme);
             }
         });
     }

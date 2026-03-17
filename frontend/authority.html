@@ -36,8 +36,8 @@
                 <div class="nav-logo-icon">⚖️</div>RESOLVIT
             </a>
             <div class="nav-links">
-                <a href="dashboard.html" class="nav-link">Public Feed</a>
-                <a href="authority.html" class="nav-link active">Authority Portal</a>
+                <a href="dashboard.html" class="nav-link" data-i18n="nav_issues">Public Feed</a>
+                <a href="authority.html" class="nav-link active" data-i18n="nav_portal">Authority Portal</a>
             </div>
             <div class="nav-actions" id="nav-actions">
                 <!-- Unified Navbar -->
@@ -49,7 +49,7 @@
         <div class="container">
             <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px;">
                 <div>
-                    <div class="section-label">Authority Portal</div>
+                    <div class="section-label" data-i18n="nav_portal">Authority Portal</div>
                     <h1 style="font-size:2rem;margin-top:8px;">Authority Dashboard</h1>
                     <p style="color:var(--text-secondary);margin-top:8px;">Manage assigned issues. Respond fast. Protect
                         your performance score.</p>
@@ -222,6 +222,7 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="js/api.js"></script>
     <script src="js/theme-manager.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/issues.js"></script>
     <script src="js/map-manager.js"></script>

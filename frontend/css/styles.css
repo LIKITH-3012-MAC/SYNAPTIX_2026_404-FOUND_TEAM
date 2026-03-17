@@ -1,9 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Telugu:wght@400;700&family=Noto+Sans+Tamil:wght@400;700&family=Noto+Sans+Bengali:wght@400;700&family=Noto+Sans+Kannada:wght@400;700&family=Noto+Sans+Malayalam:wght@400;700&family=Noto+Sans+Gujarati:wght@400;700&family=Noto+Sans+Gurmukhi:wght@400;700&display=swap');
+
 /* ================================================================
    RESOLVIT — Ultra-Futuristic Civic intelligence
    Cyber-Premium Design System v2
    ================================================================ */
 
 :root {
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  /* Indian Scripts */
+  --font-hi: 'Noto Sans Devanagari', sans-serif;
+  --font-te: 'Noto Sans Telugu', sans-serif;
+  --font-ta: 'Noto Sans Tamil', sans-serif;
+  --font-bn: 'Noto Sans Bengali', sans-serif;
+  --font-kn: 'Noto Sans Kannada', sans-serif;
+  --font-ml: 'Noto Sans Malayalam', sans-serif;
+  --font-gu: 'Noto Sans Gujarati', sans-serif;
+  --font-pa: 'Noto Sans Gurmukhi', sans-serif;
+
   /* Neon Core Palette */
   --bg-primary: #020617;
   --bg-secondary: #0f172a;
@@ -241,7 +256,7 @@
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: var(--font-main);
   line-height: 1.6;
   overflow-x: hidden;
   background-image:
@@ -2385,3 +2400,12 @@ footer {
   border-radius: 50%;
   margin-right: 6px;
 }
+/* Script Overrides */
+body.script-devanagari { font-family: var(--font-hi), var(--font-main) !important; }
+body.script-telugu { font-family: var(--font-te), var(--font-main) !important; }
+body.script-tamil { font-family: var(--font-ta), var(--font-main) !important; }
+body.script-bengali { font-family: var(--font-bn), var(--font-main) !important; }
+body.script-kannada { font-family: var(--font-kn), var(--font-main) !important; }
+body.script-malayalam { font-family: var(--font-ml), var(--font-main) !important; }
+body.script-gujarati { font-family: var(--font-gu), var(--font-main) !important; }
+body.script-gurmukhi { font-family: var(--font-pa), var(--font-main) !important; }
