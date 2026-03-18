@@ -573,9 +573,16 @@
     }
 
     // ── Init ──────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
-      // 1. Theme and Navbar (Critical)
-      if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Restore Session (Async)
+      if (typeof Auth0Integration !== 'undefined') {
+        await Auth0Integration.checkSession();
+      }
+
+      // 2. Update UI
+      if (typeof Auth !== 'undefined' && Auth.updateNavbar) {
+        Auth.updateNavbar();
+      }
 
       // 2. Map initialized within loadHomeData()
 

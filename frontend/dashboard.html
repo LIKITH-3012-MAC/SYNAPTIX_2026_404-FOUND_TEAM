@@ -218,11 +218,18 @@
 
     <script>
         window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
-        document.addEventListener('DOMContentLoaded', () => {
-            initDashboard();
-            updateNavAuth();
-            // Init demo panel for admins (from simulation.js)
-            if (typeof initDemoPanel === "function") initDemoPanel();
+        document.addEventListener('DOMContentLoaded', async () => {
+             // 1. Restore Session (Async)
+             if (typeof Auth0Integration !== 'undefined') {
+                 await Auth0Integration.checkSession();
+             }
+             
+             // 2. Init Dashboard (uses user role for filters)
+             initDashboard();
+             updateNavAuth();
+             
+             // 3. Demo Panel
+             if (typeof initDemoPanel === "function") initDemoPanel();
         });
         function updateNavAuth() {
             if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();

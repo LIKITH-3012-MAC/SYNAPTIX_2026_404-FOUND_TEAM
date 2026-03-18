@@ -97,74 +97,77 @@ const Auth0Integration = {
 
     // ─── Callback Handler ── called on DOMContentLoaded ────────────
     async _handleCallback() {
-        // ── Once-only guard ─────────────────────────────────────────
-        // Prevents double token exchange if DOMContentLoaded fires more
-        // than once, or if the script is accidentally loaded twice.
-        if (window._auth0CallbackHandled) {
-            console.log('[Auth0] Callback already handled — skipping duplicate.');
-            return;
-        }
         const qs = window.location.search;
+        const isCallback = qs.includes('code=') && qs.includes('state=');
 
-        // Handle error returned by Auth0 (e.g., access_denied, login_required)
-        if (qs.includes('error=')) {
-            const params = new URLSearchParams(qs);
-            const errCode = params.get('error');
-            const errDesc = params.get('error_description') || errCode;
-            console.error('[Auth0] OAuth error response:', errCode, errDesc);
-            window.history.replaceState({}, document.title, window.location.pathname);
-            if (typeof showToast === 'function') {
-                showToast('❌ Login failed: ' + errDesc, 'error');
+        // Only process callback if query params match
+        if (isCallback) {
+            if (window._auth0CallbackHandled) return;
+            window._auth0CallbackHandled = true;
+
+            console.log('[Auth0] OAuth callback detected — processing…');
+            try {
+                await this.init();
+                await this._client.handleRedirectCallback();
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                const auth0User = await this._client.getUser();
+                if (auth0User) {
+                    await this._syncWithBackend(auth0User); // Redirect sync
+                }
+            } catch (err) {
+                console.error('[Auth0] Callback error:', err);
+                window.history.replaceState({}, document.title, window.location.pathname);
+                if (typeof showToast === 'function') showToast('❌ Login failed: ' + err.message, 'error');
             }
-            return;
+        } else {
+            // Not a callback — just a regular page load or refresh.
+            // Silently check if we have a session to restore from cookie.
+            this.checkSession();
         }
+    },
 
-        // Only process if this looks like an Auth0 callback
-        if (!qs.includes('code=') || !qs.includes('state=')) return;
-
-        // ── Set guard immediately (before any async work) ───────────
-        window._auth0CallbackHandled = true;
-
-        console.log('[Auth0] OAuth callback detected — processing…');
-
+    /**
+     * Silent check for active session (session restoration on refresh)
+     */
+    async checkSession() {
         try {
             await this.init();
-            await this._client.handleRedirectCallback();
-
-            // Clean the URL immediately so a page refresh doesn't re-trigger
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            const auth0User = await this._client.getUser();
-            if (auth0User) {
-                await this._syncWithBackend(auth0User);
-            } else {
-                console.error('[Auth0] getUser() returned null after handleRedirectCallback');
-                if (typeof showToast === 'function') {
-                    showToast('❌ Login failed — could not retrieve user profile. Please try again.', 'error');
+            
+            // Check if user is authenticated via cookie (silent check)
+            const authenticated = await this._client.isAuthenticated();
+            
+            if (authenticated) {
+                console.log('[Auth0] Active session detected.');
+                const auth0User = await this._client.getUser();
+                const localUser = localStorage.getItem('resolvit_user');
+                
+                // If we're authenticated but localStorage is empty or mismatched, restore it.
+                if (auth0User && !localUser) {
+                    console.log('[Auth0] Local session missing — restoring silently…');
+                    await this._executeSync(auth0User, { silent: true });
                 }
+            } else {
+                // If not authenticated via Auth0 but we have local data, it might be stale 
+                // email/password login or we might be logged out of SSO.
+                // We leave email/password local sessions alone.
             }
-        } catch (err) {
-            console.error('[Auth0] Callback handling failed:', err);
-            // Always clean URL to prevent infinite loops
-            window.history.replaceState({}, document.title, window.location.pathname);
-            if (typeof showToast === 'function') {
-                showToast('❌ Login callback failed: ' + err.message, 'error');
-            }
+        } catch (e) {
+            console.warn('[Auth0] Session check failed:', e);
         }
     },
 
     // ─── Backend Sync ──────────────────────────────────────────────
     async _syncWithBackend(auth0User) {
+        return this._executeSync(auth0User, { silent: false });
+    },
+
+    async _executeSync(auth0User, { silent = false } = {}) {
         const sub = auth0User.sub || '';
         const provider = sub.startsWith('google')  ? 'google'  :
                          sub.startsWith('github')  ? 'github'  :
                          sub.startsWith('twitter') ? 'twitter' : 'auth0';
 
-        console.log('[Auth0] Syncing to backend. Provider:', provider, '| Email:', auth0User.email);
-
-        // BASE_URL is defined in api.js and exposed as window.BASE_URL
-        // It's also available as a plain global (const) since both scripts
-        // run in the same window scope (no module bundler).
         const backendBase = (typeof BASE_URL !== 'undefined') ? BASE_URL 
                           : (window.BASE_URL || 'https://synaptix-2026-404-found-team.onrender.com');
 
@@ -198,22 +201,29 @@ const Auth0Integration = {
                 auth_provider: provider
             }));
 
-            console.log('[Auth0] ✅ Sync complete. Role:', data.role, '| Username:', data.username);
+            console.log(`[Auth0] ✅ ${silent ? 'Restoration' : 'Sync'} complete.`, data.username);
 
-            if (typeof showToast === 'function') {
+            // Update UI immediate notification if reachable
+            if (typeof Auth !== 'undefined' && Auth.updateNavbar) {
+                Auth.updateNavbar();
+            }
+
+            if (!silent && typeof showToast === 'function') {
                 showToast(`✅ Welcome back, ${data.username}!`, 'success');
             }
 
-            // Role-based redirect
-            setTimeout(() => {
-                if      (data.role === 'admin')     window.location.href = 'admin.html';
-                else if (data.role === 'authority') window.location.href = 'authority.html';
-                else                                window.location.href = 'dashboard.html';
-            }, 600);
+            // Role-based redirect only if NOT silent
+            if (!silent) {
+                setTimeout(() => {
+                    if      (data.role === 'admin')     window.location.href = 'admin.html';
+                    else if (data.role === 'authority') window.location.href = 'authority.html';
+                    else                                window.location.href = 'dashboard.html';
+                }, 600);
+            }
 
         } catch (err) {
-            console.error('[Auth0] Backend sync failed:', err);
-            if (typeof showToast === 'function') {
+            console.error('[Auth0] Sync failed:', err);
+            if (!silent && typeof showToast === 'function') {
                 showToast('❌ Sign-in error: ' + err.message, 'error');
             }
         }

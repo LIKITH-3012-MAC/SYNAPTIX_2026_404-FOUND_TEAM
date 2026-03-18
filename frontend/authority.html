@@ -269,7 +269,13 @@
         let allIssues = [];
         let currentUser = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Restore/Wait for Session
+            if (typeof Auth0Integration !== 'undefined') {
+                await Auth0Integration.checkSession();
+            }
+
+            // 2. Auth Check
             if (!Auth.getUser()) {
                 Auth.showModal('login');
                 return;

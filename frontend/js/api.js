@@ -134,7 +134,7 @@ const API = {
   getIssue: (id) => API._fetch("GET", `/api/issues/${id}`),
   updateIssue: (id, data) => API._fetch("PATCH", `/api/issues/${id}`, data),
   deleteIssue: (id) => API._fetch("DELETE", `/api/issues/${id}`),
-  getAudit: (id) => API._fetch("GET", `/api/audit/issue/${id}`),
+  getAudit: (id) => API._fetch("GET", `/api/audit/${id}`),
   getLeaderboard: () => API._fetch("GET", "/api/credits/leaderboard"),
 
   register: (data) => API._fetch("POST", "/api/auth/register", data),

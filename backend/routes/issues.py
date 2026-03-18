@@ -221,21 +221,19 @@ def list_issues(
     role = current_user.get("role")
     user_dept = current_user.get("department")
 
-    # Strict Role-Based Filtering
-    if role == "authority":
-        if not user_dept:
-            # If an authority has no department assigned, safely show nothing
-            return []
-        
-        # Override client-requested category with authority's fixed department
-        # Authorities cannot look outside their scope even if they try via URL params
-        conditions.append("i.category = %s")
-        params.append(user_dept)
+    # Strict Role-Based Visibility
+    if role == "admin" or role == "authority":
+        # Full visibility for officials
+        pass
     else:
-        # Citizens and Admins can filter by category if they want
-        if category:
-            conditions.append("i.category = %s")
-            params.append(category)
+        # Citizens (default) see only their own issues
+        conditions.append("i.reporter_id = %s")
+        params.append(current_user["sub"])
+
+    # Additional filters (Category/Status)
+    if category:
+        conditions.append("i.category = %s")
+        params.append(category)
 
     if status:
         conditions.append("i.status = %s")
@@ -298,13 +296,12 @@ def get_issue(
     role = current_user.get("role")
     user_dept = current_user.get("department")
 
-    # Access Control: Authorities only see their department's issues
-    if role == "authority":
-        if issue_data.get("category") != user_dept:
-            raise HTTPException(
-                status_code=403, 
-                detail=f"Access denied. This issue belongs to the {issue_data.get('category')} department."
-            )
+    # Access Control: Citizens only see their own issues
+    if role not in ("admin", "authority") and str(issue_data.get("reporter_id")) != current_user["sub"]:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. You can only view details of issues you reported."
+        )
 
     return _serialize_issue(issue_data)
 

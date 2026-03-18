@@ -719,41 +719,41 @@
             const issue = await API.get(`/api/issues/${id}`);
             console.log('[IssueDetail] Issue loaded:', issue);
 
-            // Validate minimum required fields
             if (!issue || !issue.id) {
                 throw new Error('Issue data is missing or malformed.');
             }
 
-            // Swap skeleton → content
-            document.getElementById('issue-skeleton').style.display = 'none';
-            document.getElementById('issue-content').style.display  = 'block';
+            // Hide skeleton, show content
+            const skel = document.getElementById('issue-skeleton');
+            const cont = document.getElementById('issue-content');
+            if (skel) skel.style.display = 'none';
+            if (cont) cont.style.display = 'block';
 
             renderIssueDetail(issue);
-
-            // Load audit chain non-blockingly
             loadAuditChain(id);
 
         } catch (err) {
-            console.error('[IssueDetail] Load failed:', err);
-            const is404 = err.status === 404 || err.message?.includes('404') || err.message?.includes('not found');
-            const is403 = err.status === 403 || err.message?.includes('403') || err.message?.includes('Access denied');
+            console.error('[IssueDetail] Fatal Error:', err);
+            
+            // Ensure skeleton is hidden even on error
+            const skel = document.getElementById('issue-skeleton');
+            if (skel) skel.style.display = 'none';
+
+            const is404 = err.status === 404 || err.message?.includes('404') || err.message?.toLowerCase().includes('not found');
+            const is403 = err.status === 403 || err.message?.includes('403') || err.message?.toLowerCase().includes('denied');
 
             if (is404) {
                 showError('Issue Not Found',
-                    'This issue does not exist in the database. It may have been a demo/simulation issue that was cleared, or the ID is invalid.',
+                    'This issue does not exist in the database. It may have been a demo issue or was recently deleted.',
                     [{ label: '← Back to Dashboard', href: 'dashboard.html' }]);
             } else if (is403) {
                 showError('Access Denied',
-                    'You do not have permission to view this issue. Authorities can only view issues in their department.',
+                    'You do not have permission to view this issue. Authority access is restricted to assigned departments.',
                     [{ label: '← Back', onclick: 'history.back()' }]);
-            } else if (err.message?.includes('TIMEOUT') || err.message?.includes('fetch')) {
-                showError('Connection Error',
-                    'Could not reach the backend. Please check that the server is running.',
-                    [{ label: '🔄 Retry', onclick: 'loadIssue()' }]);
             } else {
                 showError('Load Failed',
-                    `Unexpected error: ${err.message}`,
-                    [{ label: '🔄 Retry', onclick: 'loadIssue()' }, { label: '← Dashboard', href: 'dashboard.html' }]);
+                    err.message || 'An unexpected connection error occurred.',
+                    [{ label: '🔄 Retry', onclick: 'location.reload()' }, { label: '← Dashboard', href: 'dashboard.html' }]);
             }
         }
     }
@@ -826,12 +826,24 @@
     }
 
     // ─── Boot ──────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Restore/Wait for Session
+        if (typeof Auth0Integration !== 'undefined') {
+            await Auth0Integration.checkSession();
+        }
+        
+        // 2. Update UI
+        if (typeof Auth !== 'undefined' && Auth.updateNavbar) {
+             Auth.updateNavbar();
+        }
+        
+        // 3. Load Data
+        loadIssue();
+        
+        // 4. Listeners
         window.addEventListener('scroll', () => {
             document.getElementById('navbar')?.classList.toggle('scrolled', window.scrollY > 50);
         });
-        loadIssue();
     });
 
     // Expose to HTML

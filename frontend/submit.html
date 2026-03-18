@@ -741,16 +741,23 @@
             document.getElementById('file-camera').value = '';
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initSubmitMap();
-            updatePriorityPreview();
-            updateNavAuth();
-            const user = Auth.getUser();
-            if (!user) {
-                const notice = document.getElementById('auth-notice');
-                if (notice) notice.style.display = 'flex';
-            }
-            window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50));
+        document.addEventListener('DOMContentLoaded', async () => {
+             // 1. Restore/Wait for Session
+             if (typeof Auth0Integration !== 'undefined') {
+                 await Auth0Integration.checkSession();
+             }
+             
+             // 2. Init UI
+             initSubmitMap();
+             updatePriorityPreview();
+             updateNavAuth();
+             
+             const user = Auth.getUser();
+             if (!user) {
+                 const notice = document.getElementById('auth-notice');
+                 if (notice) notice.style.display = 'flex';
+             }
+             window.addEventListener('scroll', () => document.getElementById('navbar')?.classList.toggle('scrolled', window.scrollY > 50));
         });
     </script>
 

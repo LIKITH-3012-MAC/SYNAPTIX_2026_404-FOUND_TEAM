@@ -34,13 +34,12 @@ def get_audit_log(
     role = current_user.get("role")
     user_dept = current_user.get("department")
 
-    # Authorities can only view audit logs for their own department issues
-    if role == "authority":
-        with get_db() as cursor:
-            cursor.execute("SELECT category FROM issues WHERE id = %s", (issue_id,))
-            issue_cat = cursor.fetchone()
-            if issue_cat and issue_cat["category"] != user_dept:
-                raise HTTPException(status_code=403, detail="Access denied to this audit log.")
+    # Access Control: Citizens only see audit logs for their own issues
+    if role not in ("admin", "authority"):
+        cursor.execute("SELECT reporter_id FROM issues WHERE id = %s", (issue_id,))
+        issue_owner = cursor.fetchone()
+        if issue_owner and str(issue_owner["reporter_id"]) != current_user["sub"]:
+            raise HTTPException(status_code=403, detail="Access denied. You can only view audit logs for your own issues.")
 
     chain = get_audit_chain(issue_id)
     integrity = verify_chain_integrity(issue_id)
@@ -103,9 +102,14 @@ def get_platform_summary(current_user: dict = Depends(get_current_user)):
     where_clause = ""
     params = []
 
-    if role == "authority" and user_dept:
-        where_clause = "WHERE category = %s"
-        params = [user_dept]
+    if role == "admin" or role == "authority":
+        # Officials see everything
+        where_clause = ""
+        params = []
+    else:
+        # Citizens see only their own stats
+        where_clause = "WHERE reporter_id = %s"
+        params = [current_user["sub"]]
 
     with get_db() as cursor:
         cursor.execute(

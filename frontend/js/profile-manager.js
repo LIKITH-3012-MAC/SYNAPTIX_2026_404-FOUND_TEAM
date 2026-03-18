@@ -8,8 +8,18 @@ const ProfileManager = {
 
     async init() {
         console.log("[Profile] Initializing Identity Dashboard...");
+        
+        // 1. Wait for Auth0 session check if available
+        if (typeof Auth0Integration !== 'undefined') {
+            await Auth0Integration.checkSession();
+        }
+
         this.user = Auth.getUser();
-        if (!this.user) return;
+        if (!this.user) {
+            console.warn("[Profile] No user session found. Redirecting to landing...");
+            window.location.href = 'index.html';
+            return;
+        }
 
         // Set role data attribute for CSS
         document.body.dataset.role = this.user.role || 'citizen';

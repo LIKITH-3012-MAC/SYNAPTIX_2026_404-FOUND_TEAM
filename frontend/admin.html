@@ -612,12 +612,21 @@
                 let dashboardData = null;
                 let adminMap = null;
 
-                document.addEventListener("DOMContentLoaded", () => {
+                document.addEventListener("DOMContentLoaded", async () => {
+                    // 1. Restore/Wait for Session
+                    if (typeof Auth0Integration !== 'undefined') {
+                        await Auth0Integration.checkSession();
+                    }
+
+                    // 2. Auth/RBAC Check
                     if (!Auth.getUser()) { Auth.showModal("login"); return; }
                     if (!Auth.requireRole("admin", "index.html")) return;
+                    
                     const user = Auth.getUser();
                     if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
                     document.getElementById('sidebar-user-name').textContent = `👤 ${user.username}`;
+                    
+                    // 3. Init Dashboard
                     initAdmin();
                     if (typeof initDemoPanel === "function") initDemoPanel();
                 });

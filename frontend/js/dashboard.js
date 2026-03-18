@@ -19,24 +19,28 @@ async function initDashboard() {
 
 /* ── Platform Summary Stats ──────────────────────────────────── */
 async function fetchSummary() {
+    const user = Auth.getUser();
+    const isOfficial = user && (user.role === 'admin' || user.role === 'authority');
+    const labelPrefix = isOfficial ? 'Global' : 'My';
+
     try {
         const data = await API.get('/api/metrics/summary');
         document.getElementById('summary-stats').innerHTML = `
       <div class="metric-card">
         <div class="metric-value" id="s-total">0</div>
-        <div class="metric-label">Total Issues</div>
+        <div class="metric-label">${labelPrefix} Issues</div>
       </div>
       <div class="metric-card">
         <div class="metric-value" id="s-active" style="color:var(--orange);">0</div>
-        <div class="metric-label">Active</div>
+        <div class="metric-label">${labelPrefix} Active</div>
       </div>
       <div class="metric-card">
         <div class="metric-value" id="s-escalated" style="color:var(--red);">0</div>
-        <div class="metric-label">Escalated</div>
+        <div class="metric-label">${labelPrefix} Escalated</div>
       </div>
       <div class="metric-card">
         <div class="metric-value" id="s-resolved" style="color:var(--green);">0</div>
-        <div class="metric-label">Resolved</div>
+        <div class="metric-label">${labelPrefix} Resolved</div>
       </div>`;
         animateCounter('s-total', data.total_issues || 0);
         animateCounter('s-active', data.active_issues || 0);
@@ -230,28 +234,13 @@ async function initGamificationUI() {
 
 /* ── Initialization ────────────────────────────────────────────── */
 async function initDashboard() {
-    pruneAuthorityFilters();
+    // Authorities now see all issues, so we no longer prune filters
     await fetchIssues();
     await fetchSummary();
     await initGamificationUI();
     setInterval(fetchIssues, 15000);  // Live polling restored
 }
 
-/**
- * Authorities should only see their own category filter to avoid confusion/clutter.
- */
-function pruneAuthorityFilters() {
-    const user = Auth.getUser();
-    if (user && user.role === 'authority' && user.department) {
-        const filters = document.querySelectorAll('#cat-filters .filter-btn');
-        filters.forEach(btn => {
-            const cat = btn.getAttribute('data-cat');
-            if (cat && cat !== user.department) {
-                btn.style.display = 'none';
-            }
-        });
-    }
-}
 
 // Re-expose to global
 window.initDashboard = initDashboard;
