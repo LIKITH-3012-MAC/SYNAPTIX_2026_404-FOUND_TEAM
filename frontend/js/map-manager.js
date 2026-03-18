@@ -116,15 +116,20 @@ const MapManager = (() => {
 
             // Interaction: Trigger Intelligence Panel on Cluster Click
             _clusterGroup.on('clusterclick', (a) => {
-                // Ensure interaction doesn't fire if map is being panned
                 if (_map.dragging && _map.dragging.moved()) return;
-                
-                a.layer.zoomToBounds({ padding: [20, 20] }); // Natively spiderfy/zoom
+                a.layer.zoomToBounds({ padding: [20, 20] });
                 const markers = a.layer.getAllChildMarkers();
                 if (typeof window.openClusterIntel === 'function') {
-                    // Slight delay for mobile to ensure zoom doesn't jitter the panel open
                     const delay = ('ontouchstart' in window) ? 300 : 0;
                     setTimeout(() => window.openClusterIntel(markers), delay);
+                }
+            });
+
+            // Handle individual marker clicks (even inside clusters)
+            _clusterGroup.on('click', (a) => {
+                const issue = a.layer.options?.issueData;
+                if (issue && typeof DetailManager !== 'undefined') {
+                    DetailManager.open(issue.id);
                 }
             });
 

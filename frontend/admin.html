@@ -606,6 +606,7 @@
             <script src="js/issues.js"></script>
             <script src="js/map-manager.js"></script>
             <script src="js/map_intelligence.js"></script>
+            <script src="js/detail-manager.js"></script>
             <script src="js/simulation.js"></script>
 
             <script>
@@ -695,13 +696,13 @@
                         }
                         tbody.innerHTML = rows.map(r => `
                         <tr>
-                          <td data-label="Issue"><a href="issue.html?id=${r.id}" style="font-weight:600;color:#6366f1;">${r.title}</a></td>
+                          <td data-label="Issue"><button onclick="DetailManager.open('${r.id}')" style="background:none;border:none;padding:0;color:#6366f1;cursor:pointer;font-weight:600;font-size:0.9rem;">${r.title}</button></td>
                           <td data-label="Category">${r.category}</td>
                           <td data-label="Dept" style="color:#64748b;">${r.department || r.authority_name || "—"}</td>
                           <td data-label="Level"><span class="level-badge level-${r.escalation_level}">${["—","L1: Dept Head","L2: Commissioner","L3: Govt"][r.escalation_level] || "L"+r.escalation_level}</span></td>
                           <td data-label="Overdue" style="color:${r.hours_overdue > 24 ? '#dc2626' : '#ea580c'};font-weight:700;">${r.hours_overdue}h</td>
                           <td data-label="Priority"><span style="font-weight:700;color:${r.priority_score >= 80 ? '#dc2626' : r.priority_score >= 55 ? '#ea580c' : '#ca8a04'}">${r.priority_score}</span></td>
-                          <td data-label="Action"><a href="issue.html?id=${r.id}" class="btn btn-primary btn-sm">View</a></td>
+                          <td data-label="Action"><button onclick="DetailManager.open('${r.id}')" class="btn btn-primary btn-sm">Inspect</button></td>
                         </tr>`).join("");
                     } catch (e) { console.warn("Escalations:", e); }
                 }
@@ -788,7 +789,7 @@
                             return `<div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
                               <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;">${i+1}</div>
                               <div style="flex:1;min-width:0;">
-                                <div style="font-weight:600;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><a href="issue.html?id=${r.id}" style="color:#6366f1;">${r.title}</a></div>
+                                <div style="font-weight:600;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><button onclick="DetailManager.open('${r.id}')" style="background:none;border:none;padding:0;color:#6366f1;cursor:pointer;font-weight:600;font-size:0.88rem;">${r.title}</button></div>
                                 <div style="display:flex;gap:8px;font-size:0.73rem;color:#94a3b8;margin-top:2px;flex-wrap:wrap;">
                                   <span>${r.category}</span><span>📢 ${r.report_count||1}</span><span>👍 ${r.upvotes||0}</span>
                                   <span style="color:${barColor};font-weight:700;">${r.pressure_label}</span>

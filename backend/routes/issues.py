@@ -9,10 +9,10 @@ DELETE /api/issues/{id}      - Delete issue (admin only)
 """
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, Query, Request, UploadFile, File
-from pydantic import BaseModel
+import json
 import os
-import uuid
 import shutil
+from pydantic import BaseModel
 from typing import Optional
 from models import IssueCreate, IssueUpdate, IssueResponse, MessageResponse
 from database import get_db
@@ -323,64 +323,29 @@ def update_issue(
         raise HTTPException(status_code=404, detail="Issue not found.")
 
     role = current_user.get("role")
-    user_dept = current_user.get("department")
-
-    if role == "citizen":
-        if str(existing["reporter_id"]) != current_user["sub"]:
-            raise HTTPException(status_code=403, detail="You can only modify your own issues.")
-        # Citizen can only edit before the issue is verified, assigned, or resolved
-        if existing["status"] not in ("reported", "clustered"):
-            raise HTTPException(
-                status_code=403, 
-                detail=f"Cannot edit issue once it has been {existing['status']}. Please contact support."
-            )
-
     fields = {}
     if payload.title is not None:             fields["title"] = payload.title
     if payload.description is not None:       fields["description"] = payload.description
-    
-    # Status updates restricted to authorities/admin
-    if payload.status is not None:
-        if role == "admin":
-            fields["status"] = payload.status.value
-        elif role == "authority":
-            # Strict department check
-            if existing["category"] != user_dept:
-                raise HTTPException(
-                    status_code=403, 
-                    detail=f"Access denied. Your department ({user_dept}) cannot update {existing['category']} issues."
-                )
-            fields["status"] = payload.status.value
-        else:
-            raise HTTPException(status_code=403, detail="Only authorities or admins can update issue status.")
-
+    if payload.category is not None:          fields["category"] = payload.category.value
+    if payload.subcategory is not None:       fields["subcategory"] = payload.subcategory
     if payload.urgency is not None:           fields["urgency"] = payload.urgency
+    if payload.severity is not None:          fields["severity"] = payload.severity
     if payload.impact_scale is not None:      fields["impact_scale"] = payload.impact_scale
-    
-    if payload.resolution_note is not None and role in ("authority", "admin"):
-        fields["resolution_note"] = payload.resolution_note
-    if payload.resolution_proof_url is not None and role in ("authority", "admin"):
-        fields["resolution_proof_url"] = payload.resolution_proof_url
-        
     if payload.safety_risk_probability is not None: fields["safety_risk_probability"] = payload.safety_risk_probability
-    
-    if payload.assigned_authority_id is not None:
-        if role == "admin":
-            fields["assigned_authority_id"] = payload.assigned_authority_id
-        elif role == "authority":
-            # Authorities can only assign to themselves or stay within their department
-            if existing["category"] != user_dept:
-                raise HTTPException(status_code=403, detail="Cannot assign issues outside your department.")
-            fields["assigned_authority_id"] = payload.assigned_authority_id
-        else:
-            raise HTTPException(status_code=403, detail="Only authorities/admins can assign issues.")
-
-    is_resolving = payload.status and payload.status.value == "resolved"
-    if is_resolving:
-        fields["resolved_at"] = datetime.now(timezone.utc)
+    if payload.assigned_authority_id is not None: fields["assigned_authority_id"] = payload.assigned_authority_id
+    if payload.resolution_note is not None:   fields["resolution_note"] = payload.resolution_note
+    if payload.resolution_proof_url is not None: fields["resolution_proof_url"] = payload.resolution_proof_url
+    if payload.latitude is not None:          fields["latitude"] = payload.latitude
+    if payload.longitude is not None:         fields["longitude"] = payload.longitude
+    if payload.sla_due_at is not None:        fields["sla_due_at"] = payload.sla_due_at
+    if payload.is_fake is not None:           fields["is_fake"] = payload.is_fake
+    if payload.is_archived is not None:       fields["is_archived"] = payload.is_archived
+    if payload.status is not None:            fields["status"] = payload.status.value
 
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update.")
+
+    is_resolving = fields.get("status") == "resolved" and existing["status"] != "resolved"
 
     set_clauses = ", ".join(f"{k} = %s" for k in fields)
     values = list(fields.values()) + [issue_id]
@@ -392,7 +357,28 @@ def update_issue(
         )
         updated = dict(cursor.fetchone())
 
-        # Award +50 civic credits to reporter upon resolution
+        # Record History for each changed field
+        for field, new_val in fields.items():
+            old_val = existing.get(field)
+            if str(old_val) != str(new_val):
+                _add_issue_history(
+                    cursor, issue_id, 
+                    action_type="field_update", 
+                    actor_id=current_user["sub"],
+                    actor_role=role,
+                    note=f"Update {field}",
+                    old_val={field: old_val},
+                    new_val={field: new_val}
+                )
+
+        # Audit log for admins
+        if role == "admin":
+            cursor.execute(
+                "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, old_value, new_value) VALUES (%s, 'issue', %s, %s, %s, %s)",
+                (current_user["sub"], issue_id, "issue_update", json.dumps({k:str(existing.get(k)) for k in fields}), json.dumps({k:str(v) for k,v in fields.items()}))
+            )
+
+        # Special action: Resolution credits
         if is_resolving:
             reporter_id = str(existing["reporter_id"])
             award_credits(

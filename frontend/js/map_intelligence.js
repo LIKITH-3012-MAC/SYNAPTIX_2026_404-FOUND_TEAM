@@ -188,7 +188,7 @@ function buildUrbanNodePopup(issue, role = "citizen") {
 
   html += `
     <div style="padding:0 16px 16px;">
-      <a href="issue.html?id=${issue.id}" class="btn-cyber" style="width:100%; font-size:0.8rem; justify-content:center; text-decoration:none; padding:10px; border-radius:10px; background:var(--accent); color:white; display:flex;">Enter Resolution Hub</a>
+      <button onclick="DetailManager.open('${issue.id}')" class="btn-cyber" style="width:100%; font-size:0.8rem; justify-content:center; text-decoration:none; padding:10px; border-radius:10px; background:var(--accent); color:white; display:flex; border:none; cursor:pointer;">Enter Resolution Hub</button>
     </div>
   </div>`;
 
@@ -489,7 +489,7 @@ function openClusterIntel(markers) {
         <h4 style="margin-bottom:16px; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; color:var(--text-secondary); font-weight:800;">AI Resolution Pathway</h4>
         <div class="flex flex-col gap-4" style="margin-bottom:32px;">
             ${issues.slice(0, 5).map(issue => `
-                <div class="glass card-hover" style="padding:16px; border-radius:12px; cursor:pointer;" onclick="location.href='issue.html?id=${issue.id}'">
+                <div class="glass card-hover" style="padding:16px; border-radius:12px; cursor:pointer;" onclick="DetailManager.open('${issue.id}')">
                     <div class="flex justify-between items-center">
                         <strong style="font-size:0.85rem; color:white;">${issue.title}</strong>
                         <span style="font-size:0.75rem; color:${getPriorityBand(issue.priority_score).color}; font-weight:900;">${issue.priority_score}</span>

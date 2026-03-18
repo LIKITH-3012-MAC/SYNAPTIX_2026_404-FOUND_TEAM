@@ -106,9 +106,7 @@ function renderIssueCard(issue, opts = {}) {
   const badgeClass = `badge-${issue.status || 'reported'}`;
   const isCritical = score >= 80;
 
-  const clickAction = isDemo
-    ? `event.stopPropagation(); if(typeof showToast==='function') showToast('🧠 Demo issue — no detail page in simulation mode.','info');`
-    : `window.location.href='issue.html?id=${issue.id}'`;
+  const clickAction = `event.stopPropagation(); if(typeof DetailManager !== 'undefined') DetailManager.open('${issue.id}'); else window.location.href='issue.html?id=${issue.id}';`;
 
   return `
     <div class="glass-card-premium issue-card-v2 gpu-accelerate ${isCritical ? 'pulse-critical' : ''}" 

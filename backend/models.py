@@ -123,6 +123,9 @@ class IssueUpdate(BaseModel):
     safety_risk_probability: Optional[float] = Field(None, ge=0.0, le=1.0)
     is_fake:                Optional[bool] = None
     is_archived:            Optional[bool] = None
+    latitude:               Optional[float] = Field(None, ge=-90, le=90)
+    longitude:              Optional[float] = Field(None, ge=-180, le=180)
+    sla_due_at:             Optional[datetime] = None
 
 
 class IssueResponse(BaseModel):

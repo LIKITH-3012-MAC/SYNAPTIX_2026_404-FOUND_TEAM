@@ -198,34 +198,7 @@
         </div>
     </section>
 
-    <!-- Update Issue Modal -->
-    <div class="modal-overlay" id="update-modal" style="display:none;">
-        <div class="modal-box">
-            <h3 style="margin-bottom:24px;">Update Issue Status</h3>
-            <input type="hidden" id="update-issue-id" />
-            <div class="flex flex-col" style="gap:16px;">
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select id="update-status" class="form-select">
-                        <option value="verified">Verified</option>
-                        <option value="assigned">Assigned</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="resolved">Resolved</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Authority Note / Resolution</label>
-                    <textarea id="update-note" class="form-textarea" placeholder="Add a note for the public record..."
-                        style="min-height:100px;"></textarea>
-                </div>
-                <div class="flex gap-4">
-                    <button class="btn btn-primary" style="flex:1;" onclick="submitUpdate()">Update Issue</button>
-                    <button class="btn btn-outline"
-                        onclick="document.getElementById('update-modal').style.display='none'">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Update Issue Modal Deprecated in favor of DetailManager Side Drawer -->
 
     <!-- Global toast container -->
     <div class="toast-container" id="toast-container"></div>
@@ -256,6 +229,7 @@
     
     
     <script src="js/issues.js"></script>
+    <script src="js/detail-manager.js"></script>
     <script src="js/map-manager.js"></script>
     <script src="js/map_intelligence.js"></script>
     <script src="js/ui-enhancements.js"></script>
@@ -404,12 +378,12 @@
                 requestAnimationFrame(() => {
                     tbody.innerHTML = allIssues.map(i => `
           <tr>
-            <td data-label="Title" style="max-width:200px;"><a href="issue.html?id=${i.id}" style="font-weight:600;color:var(--accent);">${i.title}</a></td>
+            <td data-label="Title" style="max-width:200px;"><button onclick="DetailManager.open('${i.id}')" style="background:none;border:none;padding:0;font-weight:600;color:var(--accent);cursor:pointer;text-align:left;">${i.title}</button></td>
             <td data-label="Category"><span class="cat-badge cat-${i.category}">${i.category}</span></td>
             <td data-label="Priority"><span class="priority-score priority-${i.priority_score >= 80 ? 'critical' : i.priority_score >= 60 ? 'high' : i.priority_score >= 40 ? 'medium' : 'low'}" style="font-size:1rem;">${i.priority_score}</span></td>
             <td data-label="Status"><span class="badge badge-${i.status}">${i.status.replace('_', ' ')}</span></td>
             <td data-label="Days Open" style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${i.days_unresolved}d</td>
-            <td data-label="Actions" style="display: ${isAuth ? '' : 'none'}"><button class="btn btn-primary btn-sm" onclick="updateIssue('${i.id}')">Update</button></td>
+            <td data-label="Actions" style="display: ${isAuth ? '' : 'none'}"><button class="btn btn-primary btn-sm" onclick="DetailManager.open('${i.id}')">Inspect</button></td>
           </tr>`).join('');
                 });
             } catch (err) {
