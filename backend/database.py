@@ -42,8 +42,8 @@ def init_pool():
     if _pool is None:
         print(f"[DB DEBUG] Initializing pool with DSN: {DATABASE_URL}")
         _pool = pool.ThreadedConnectionPool(
-            minconn=2,
-            maxconn=20,
+            minconn=5,
+            maxconn=100,
             dsn=DATABASE_URL,
             cursor_factory=RealDictCursor
         )
@@ -201,6 +201,12 @@ def execute_schema():
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;",
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS resolution_note TEXT;",
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;",
+        
+        # User Indexes
+        "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);",
+        "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);",
+        "CREATE INDEX IF NOT EXISTS idx_users_points ON users(points_cache DESC);",
+        "CREATE INDEX IF NOT EXISTS idx_users_status ON users(is_suspended, is_active);",
         
         # Adjusting Constraints
         "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_issues_cluster') THEN ALTER TABLE issues ADD CONSTRAINT fk_issues_cluster FOREIGN KEY (cluster_id) REFERENCES issue_clusters(id) ON DELETE SET NULL; END IF; END $$;",

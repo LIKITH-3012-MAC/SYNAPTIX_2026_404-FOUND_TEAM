@@ -47,9 +47,18 @@ echo "  ✅ .env file found."
 
 # ── 5. Start server ───────────────────────────────────────────
 echo ""
-echo "  🚀 Starting RESOLVIT API on http://localhost:8000"
+echo "  🚀 Starting RESOLVIT API Cluster (Load Balanced)"
 echo "  📊 API Docs: http://localhost:8000/api/docs"
-echo "  ❤️  Health:  http://localhost:8000/api/health"
+echo "  🛠️  Workers:  4 (UvicornWorker)"
 echo ""
+
 cd "$BACKEND_DIR"
-uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+# Use Gunicorn as a process manager for Uvicorn
+gunicorn app:app \
+    --workers 4 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:8000 \
+    --timeout 120 \
+    --keep-alive 5 \
+    --access-logformat '%({X-Real-IP}i)s %({X-Forwarded-For)i)s %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' \
+    --log-level info
