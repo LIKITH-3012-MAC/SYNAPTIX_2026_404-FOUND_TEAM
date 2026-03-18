@@ -126,6 +126,8 @@ class IssueUpdate(BaseModel):
     latitude:               Optional[float] = Field(None, ge=-90, le=90)
     longitude:              Optional[float] = Field(None, ge=-180, le=180)
     sla_due_at:             Optional[datetime] = None
+    priority_score:         Optional[float] = None
+    escalation_level:       Optional[int] = Field(None, ge=0, le=3)
 
 
 class IssueResponse(BaseModel):

@@ -169,7 +169,24 @@ const MapManager = (() => {
             if (typeof renderDensityOverlays === 'function') {
                 renderDensityOverlays(_map, issues);
             }
-        },        injectGlobalMapStyles() {
+
+            // RE-APPLY SELECTION: If an issue is open in DetailManager, ensure its marker is highlighted
+            if (window.DetailManager && window.DetailManager.currentIssueId) {
+                this.highlightSelectedMarker(window.DetailManager.currentIssueId);
+            }
+        },
+
+        highlightSelectedMarker(issueId) {
+            _clusterGroup.eachLayer(m => {
+                const id = m.options?.issueData?.id;
+                if (id === issueId) {
+                    const el = m.getElement();
+                    if (el) el.classList.add('marker-selected-active');
+                }
+            });
+        },
+
+        injectGlobalMapStyles() {
             if (document.getElementById('map-manager-premium-base')) return;
             const style = document.createElement('style');
             style.id = 'map-manager-premium-base';
@@ -184,6 +201,29 @@ const MapManager = (() => {
                 /* Hide default cluster group styles to prevent flicker */
                 .marker-cluster { background: none !important; }
                 .marker-cluster div { background: none !important; }
+
+                /* Selection Glow Effect */
+                .marker-selected-active {
+                    filter: drop-shadow(0 0 12px var(--accent)) brightness(1.2);
+                    z-index: 1000 !important;
+                    animation: marker-pulse-glow 2s infinite;
+                }
+                @keyframes marker-pulse-glow {
+                    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px var(--accent)); }
+                    50% { transform: scale(1.15); filter: drop-shadow(0 0 20px var(--accent)); }
+                }
+
+                /* Mobile Performance Hardening */
+                @media (max-width: 768px) {
+                    .glass-card-premium { backdrop-filter: blur(8px) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; }
+                    .premium-cluster { transform: scale(0.85); transition: none !important; }
+                    .cluster-orbit { display: none !important; } /* Heavy animation */
+                    .cluster-glow { opacity: 0.4 !important; }
+                    .leaflet-zoom-animated { will-change: transform; transition-duration: 150ms !important; }
+                    
+                    /* Force Touch Smoothness */
+                    * { -webkit-overflow-scrolling: touch; }
+                }
             `;
             document.head.appendChild(style);
         }

@@ -2625,3 +2625,60 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+
+/* ================================================================
+   STABLE SELECTION & PERFORMANCE HARDENING
+   ================================================================ */
+
+.active-selection-glow {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 30px var(--accent-glow), inset 0 0 10px var(--accent-glow) !important;
+  background: rgba(99,102,241,0.08) !important;
+  transform: translateY(-4px) scale(1.01) !important;
+  z-index: 10;
+}
+
+/* Card Containment for high-performance scrolling */
+.issue-card-v2 {
+  contain: layout paint !important;
+  content-visibility: auto;
+  will-change: transform, opacity;
+}
+
+/* --- MOBILE OPTIMIZATION OVERRIDES --- */
+@media (max-width: 768px) {
+  /* Reduce expensive blur/shadow for 60fps scrolling */
+  .glass, .glass-premium, .glass-card-premium {
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+  }
+  
+  .active-selection-glow {
+    box-shadow: 0 0 15px var(--accent-glow) !important;
+    animation: none !important; /* Save CPU */
+  }
+
+  /* GPU optimization */
+  .gpu-accelerate {
+    perspective: none !important;
+    backface-visibility: hidden;
+  }
+
+  /* Fix nested scroll containers */
+  .detail-drawer .drawer-body {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Tap Target Optimization */
+  .btn, .filter-btn, .nav-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Remove heavy animations */
+  .pulse-critical, .badge-escalated {
+    animation-duration: 2s !important;
+  }
+}

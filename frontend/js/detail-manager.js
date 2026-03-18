@@ -7,6 +7,8 @@
 const DetailManager = {
     currentIssueId: null,
     isOpen: false,
+    selectedIssueId: null, // Stable global state
+    _abortController: null,
 
     init() {
         if (document.getElementById('issue-detail-drawer')) return;
@@ -100,6 +102,10 @@ const DetailManager = {
                                 <input type="number" id="update-impact" class="form-input" min="1">
                             </div>
                             <div class="form-group">
+                                <label class="form-label">Escalation Level (0-3)</label>
+                                <input type="number" id="update-escalation" class="form-input" min="0" max="3">
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label">Latitude</label>
                                 <input type="number" id="update-lat" class="form-input" step="any">
                             </div>
@@ -108,12 +114,24 @@ const DetailManager = {
                                 <input type="number" id="update-lng" class="form-input" step="any">
                             </div>
                             <div class="form-group" style="grid-column: span 2;">
+                                <label class="form-label">Priority Score (Override)</label>
+                                <input type="number" id="update-priority" class="form-input" step="0.1" placeholder="Manual override...">
+                            </div>
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label class="form-label">Assigned Authority (User ID)</label>
+                                <input type="text" id="update-assigned" class="form-input" placeholder="Enter Authority UUID...">
+                            </div>
+                            <div class="form-group" style="grid-column: span 2;">
                                 <label class="form-label">Override SLA / Due Date</label>
                                 <input type="datetime-local" id="update-sla" class="form-input">
                             </div>
                             <div class="form-group" style="grid-column: span 2;">
-                                <label class="form-label">Authority Note</label>
-                                <textarea id="update-note" class="form-textarea" placeholder="Identify action or resolution..."></textarea>
+                                <label class="form-label">Resolution Proof URL (Image/Doc)</label>
+                                <input type="text" id="update-proof" class="form-input" placeholder="https://...">
+                            </div>
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label class="form-label">Resolution Summary / Authority Note</label>
+                                <textarea id="update-note" class="form-textarea" placeholder="Detail the specific actions taken for resolution..."></textarea>
                             </div>
                             <button id="btn-save-update" class="btn btn-primary" onclick="DetailManager.submitUpdate()" style="grid-column: span 2; padding:14px;">Commit MASTER Update</button>
                         </div>
@@ -181,23 +199,45 @@ const DetailManager = {
             return;
         }
 
+        const isSoftRefresh = this.isOpen && this.currentIssueId === issueId;
+        
+        // CANCEL previous pending request to prevent race condition flicker
+        if (this._abortController) this._abortController.abort();
+        this._abortController = new AbortController();
+        const { signal } = this._abortController;
+
         this.currentIssueId = issueId;
-        document.getElementById('issue-detail-drawer').classList.add('active');
-        this.setLoading(true);
+        this.selectedIssueId = issueId;
+        this.isOpen = true;
+
+        const drawer = document.getElementById('issue-detail-drawer');
+        drawer.classList.add('active');
+
+        // Only show heavy loading if it's a new issue selection
+        if (!isSoftRefresh) {
+            this.setLoading(true);
+        } else {
+             // SOFT VISUAL INDICATOR
+             document.getElementById('drawer-title').innerHTML += `<span id="drawer-updating-tag" style="margin-left:8px;font-size:0.65rem;color:var(--accent);vertical-align:middle;animation:pulse 1s infinite;">Updating...</span>`;
+             document.getElementById('drawer-body').style.opacity = '0.82';
+        }
 
         try {
             const [issue, history] = await Promise.all([
-                API.get(`/api/issues/${issueId}`),
-                API.get(`/api/issues/${issueId}/history`)
+                API.get(`/api/issues/${issueId}`, { signal }),
+                API.get(`/api/issues/${issueId}/history`, { signal })
             ]);
 
             this.render(issue, history, user);
         } catch (err) {
+            if (err.name === 'AbortError') return; // Ignore cancelled requests
             console.error(err);
             showToast('Failed to load issue details', 'error');
             this.close();
         } finally {
             this.setLoading(false);
+            const tag = document.getElementById('drawer-updating-tag');
+            if (tag) tag.remove();
         }
     },
 
@@ -277,7 +317,11 @@ const DetailManager = {
                 document.getElementById('update-sla').value = '';
             }
             
-            document.getElementById('update-note').value = '';
+            document.getElementById('update-priority').value = issue.priority_score || '';
+            document.getElementById('update-assigned').value = issue.assigned_authority_id || '';
+            document.getElementById('update-escalation').value = issue.escalation_level || 0;
+            document.getElementById('update-proof').value = issue.resolution_proof_url || '';
+            document.getElementById('update-note').value = issue.resolution_note || '';
         } else {
             updateSec.classList.add('hidden');
         }
@@ -315,6 +359,10 @@ const DetailManager = {
             impact_scale: parseInt(document.getElementById('update-impact').value),
             latitude: parseFloat(document.getElementById('update-lat').value) || null,
             longitude: parseFloat(document.getElementById('update-lng').value) || null,
+            priority_score: parseFloat(document.getElementById('update-priority').value) || null,
+            assigned_authority_id: document.getElementById('update-assigned').value || null,
+            escalation_level: parseInt(document.getElementById('update-escalation').value) || 0,
+            resolution_proof_url: document.getElementById('update-proof').value || null,
             resolution_note: document.getElementById('update-note').value
         };
 

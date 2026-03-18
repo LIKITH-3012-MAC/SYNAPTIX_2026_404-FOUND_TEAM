@@ -873,7 +873,7 @@
                     }
                     setTimeout(updateRadarData, 200);
                     if (radarInterval) clearInterval(radarInterval);
-                    radarInterval = setInterval(updateRadarData, 5000);
+                    radarInterval = setInterval(updateRadarData, 30000); // Controlled refresh: 30s
                 }
 
                 function exitRadarMode() {

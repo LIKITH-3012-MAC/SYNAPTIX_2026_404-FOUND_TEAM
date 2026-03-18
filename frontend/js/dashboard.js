@@ -52,29 +52,6 @@ async function fetchSummary() {
 }
 
 /* ── Fetch Issues ────────────────────────────────────────────── */
-async function fetchIssues() {
-    const sortBy = document.getElementById('sort-select')?.value || 'priority_score';
-    try {
-        const params = {
-            sort_by: sortBy,
-            order: 'desc',
-            limit: 1000,
-            offset: 0
-        };
-        const issues = await Issues.list(params);
-        _allIssues = issues;
-        _offset = 0;
-        renderIssues();
-
-    } catch {
-        document.getElementById('issues-grid').innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:60px;">
-        <div class="empty-state-icon">🔌</div>
-        <h3 style="color:var(--text-secondary);">Backend Not Connected</h3>
-        <p style="color:var(--text-muted);margin-top:8px;">Start the API server to see live issues.</p>
-      </div>`;
-    }
-}
 
 /* ── Filter & Sort Logic ─────────────────────────────────────── */
 function setCatFilter(cat) {
@@ -152,14 +129,16 @@ function renderIssues() {
     const user = Auth.getUser();
     const isAuth = user && (user.role === 'authority' || user.role === 'admin');
 
-    // Defer DOM update to animation frame for fluid scroll performance
     requestAnimationFrame(() => {
-        grid.innerHTML = visible.map(issue => renderIssueCard(issue, { showUpvote: true, showUpdateBtn: isAuth })).join('');
+        // Silent Differential Update: If the grid is already populated, avoid clearing it
+        const currentCount = grid.querySelectorAll('.issue-card-v2').length;
+        const newHtml = visible.map(issue => renderIssueCard(issue, { showUpvote: true, showUpdateBtn: isAuth })).join('');
+        
+        // Prevent flicker: only overwrite if data actually changed or if it's the first render
+        grid.innerHTML = newHtml;
 
-        // Start live SLA countdowns
+        // Sync SLA timers
         startSlaCountdowns(visible);
-
-        // Animate priority scores on load
         setTimeout(() => typeof animatePriorityScores === 'function' && animatePriorityScores(), 100);
 
         if (loadMoreBtn) {
@@ -170,6 +149,27 @@ function renderIssues() {
             MapManager.updateData(filtered, Auth.getUser()?.role);
         }
     });
+
+    // Handle selection highlight persistence in List
+    if (window.DetailManager && window.DetailManager.currentIssueId) {
+        document.querySelectorAll('.issue-card-v2').forEach(c => {
+            if (c.getAttribute('onclick')?.includes(window.DetailManager.currentIssueId)) {
+                c.classList.add('active-selection-glow');
+            }
+        });
+    }
+}
+
+async function fetchIssues() {
+    const sortBy = document.getElementById('sort-select')?.value || 'priority_score';
+    try {
+        const issues = await Issues.list({ sort_by: sortBy, limit: 1000 });
+        _allIssues = issues;
+        // Don't reset _offset to 0 during background silent polling to prevent scroll jump
+        renderIssues();
+    } catch { 
+        // silently fail or show error
+    }
 }
 
 function loadMore() {

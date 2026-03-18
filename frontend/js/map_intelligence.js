@@ -274,9 +274,27 @@ function renderUrbanNodes(map, issues, role = "citizen", clusterGroup = null) {
     bounds.push([issue.latitude, issue.longitude]);
   });
 
-  // Fit map to markers
-  if (bounds.length > 0) {
-    try { map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 }); } catch (e) { }
+  // Fit map to markers only on first load or if explicitly requested
+  if (bounds.length > 0 && !map._hasFittedOnce) {
+    try { 
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 }); 
+        map._hasFittedOnce = true;
+    } catch (e) { }
+  }
+
+  // RE-APPLY SELECTION GLOW: If an issue is open in DetailManager, highlight its marker
+  if (window.DetailManager && window.DetailManager.currentIssueId) {
+    const targetId = window.DetailManager.currentIssueId;
+    const layers = clusterGroup ? clusterGroup.getLayers() : map.eachLayer(l => l instanceof L.Marker ? [l] : []);
+    
+    // Use the reliable search method
+    const searchLayers = clusterGroup ? clusterGroup.getLayers() : [];
+    searchLayers.forEach(m => {
+        if (m.options?.id === targetId) {
+            const el = m.getElement();
+            if (el) el.classList.add('marker-selected-active');
+        }
+    });
   }
 
   // Inject refined map styles

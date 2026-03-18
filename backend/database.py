@@ -201,6 +201,7 @@ def execute_schema():
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;",
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS resolution_note TEXT;",
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;",
+        "ALTER TABLE issues ADD COLUMN IF NOT EXISTS priority_manual_override BOOLEAN DEFAULT FALSE;",
         
         # User Indexes
         "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);",

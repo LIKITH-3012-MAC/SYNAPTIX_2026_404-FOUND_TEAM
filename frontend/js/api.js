@@ -33,13 +33,17 @@ const API = {
   // NEW: track backend status
   status: 'connecting', // 'connecting', 'online', 'waking', 'offline'
 
-  async _fetch(method, path, body = null, retries = 3) {
+  async _fetch(method, path, body = null, retries = 3, options = {}) {
     const token = localStorage.getItem("resolvit_token");
     const headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const options = { method, headers };
-    if (body) options.body = JSON.stringify(body);
+    const fetchOptions = { 
+        method, 
+        headers, 
+        signal: options.signal // Support for AbortController
+    };
+    if (body) fetchOptions.body = JSON.stringify(body);
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
@@ -47,7 +51,7 @@ const API = {
           setTimeout(() => reject(new Error("TIMEOUT")), 10000);
         });
 
-        const fetchPromise = fetch(`${BASE_URL}${path}`, options);
+        const fetchPromise = fetch(`${BASE_URL}${path}`, fetchOptions);
         const response = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (response.status === 401) {
@@ -116,10 +120,10 @@ const API = {
     this._emitStatus();
   },
 
-  get: (path) => API._fetch("GET", path),
-  post: (path, body) => API._fetch("POST", path, body),
-  patch: (path, body) => API._fetch("PATCH", path, body),
-  delete: (path) => API._fetch("DELETE", path),
+  get: (path, options) => API._fetch("GET", path, null, 3, options),
+  post: (path, body, options) => API._fetch("POST", path, body, 3, options),
+  patch: (path, body, options) => API._fetch("PATCH", path, body, 3, options),
+  delete: (path, options) => API._fetch("DELETE", path, null, 3, options),
 
   // Legacy Named Methods (Restored for compatibility)
   getSummary: () => API._fetch("GET", "/api/metrics/summary"),

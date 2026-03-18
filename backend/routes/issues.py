@@ -322,7 +322,10 @@ def update_issue(
     if not existing:
         raise HTTPException(status_code=404, detail="Issue not found.")
 
-    role = current_user.get("role")
+    role = str(current_user.get("role", "citizen"))
+    if role not in ["admin", "authority"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Only Admin and Authority can update issues.")
+    
     fields = {}
     if payload.title is not None:             fields["title"] = payload.title
     if payload.description is not None:       fields["description"] = payload.description
@@ -340,7 +343,11 @@ def update_issue(
     if payload.sla_due_at is not None:        fields["sla_due_at"] = payload.sla_due_at
     if payload.is_fake is not None:           fields["is_fake"] = payload.is_fake
     if payload.is_archived is not None:       fields["is_archived"] = payload.is_archived
+    if payload.escalation_level is not None:  fields["escalation_level"] = payload.escalation_level
     if payload.status is not None:            fields["status"] = payload.status.value
+    if payload.priority_score is not None:
+        fields["priority_score"] = payload.priority_score
+        fields["priority_manual_override"] = True
 
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update.")

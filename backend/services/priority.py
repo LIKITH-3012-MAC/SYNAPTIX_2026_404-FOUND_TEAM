@@ -142,12 +142,12 @@ def recalculate_issue_priority(issue_id: str) -> float:
     with get_db() as cursor:
         cursor.execute(
             """SELECT impact_scale, urgency, created_at, safety_risk_probability,
-                      resolved_at, report_count, upvotes, escalation_level
+                      resolved_at, report_count, upvotes, escalation_level, priority_manual_override
                FROM issues WHERE id = %s""",
             (issue_id,)
         )
         row = cursor.fetchone()
-        if not row:
+        if not row or row.get("priority_manual_override"):
             return 0.0
 
         score = calculate_priority(
