@@ -23,12 +23,11 @@ const Auth0Integration = {
             host === '0.0.0.0' ||
             host.endsWith('.local');
 
-        // CRITICAL: redirectUri MUST exactly match what is in the Auth0 Dashboard
-        // "Allowed Callback URLs" field. Even a trailing slash or /index.html
-        // difference will cause "invalid_redirect_uri" → redirect loop.
+        // CRITICAL: redirectUri MUST exactly match what is in the Auth0 Dashboard.
+        // We favor root origin for production to keep it simple and consistent.
         const redirectUri = isLocal
-            ? window.location.origin + '/index.html'     // local dev: http://127.0.0.1:3000/index.html
-            : (gc.redirectUri || 'https://resolvit-app-2026.vercel.app');  // production: exact match
+            ? window.location.origin + '/index.html'
+            : (gc.redirectUri || window.location.origin.replace(/\/$/, ''));
 
         return {
             domain:        gc.domain    || 'resolvit-ai.us.auth0.com',
@@ -95,67 +94,58 @@ const Auth0Integration = {
         return this._initPromise;
     },
 
-    // ─── Callback Handler ── called on DOMContentLoaded ────────────
-    async _handleCallback() {
-        const qs = window.location.search;
-        const isCallback = qs.includes('code=') && qs.includes('state=');
+    // ─── Callback & Session Handler ──────────────────────────────
+    // Unified handler for both initial OAuth callback and silent persistence.
+    // Replaces previous separate _handleCallback and checkSession logic.
+    async restoreSession() {
+        if (this._bootPromise) return this._bootPromise;
 
-        // Only process callback if query params match
-        if (isCallback) {
-            if (window._auth0CallbackHandled) return;
-            window._auth0CallbackHandled = true;
+        this._bootPromise = (async () => {
+            await this.init();
 
-            console.log('[Auth0] OAuth callback detected — processing…');
+            const qs = window.location.search;
+            const isCallback = qs.includes('code=') && qs.includes('state=');
+
             try {
-                await this.init();
-                await this._client.handleRedirectCallback();
-                window.history.replaceState({}, document.title, window.location.pathname);
-
-                const auth0User = await this._client.getUser();
-                if (auth0User) {
-                    await this._syncWithBackend(auth0User); // Redirect sync
+                if (isCallback) {
+                    // 1. Process OAuth Handshake
+                    console.log('[Auth0] Processing OAuth callback…');
+                    await this._client.handleRedirectCallback();
+                    
+                    // Clean URL immediately to prevent re-processing on refresh
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    
+                    const user = await this._client.getUser();
+                    if (user) await this._executeSync(user, { silent: false });
+                } else {
+                    // 2. Silent Session Check (Silent Sync)
+                    const authenticated = await this._client.isAuthenticated();
+                    if (authenticated) {
+                        const user = await this._client.getUser();
+                        const localUser = localStorage.getItem('resolvit_user');
+                        
+                        // Sync if missing local session or mismatched
+                        if (user && !localUser) {
+                            console.log('[Auth0] Session found but local storage empty — restoring…');
+                            await this._executeSync(user, { silent: true });
+                        }
+                    }
                 }
             } catch (err) {
-                console.error('[Auth0] Callback error:', err);
-                window.history.replaceState({}, document.title, window.location.pathname);
-                if (typeof showToast === 'function') showToast('❌ Login failed: ' + err.message, 'error');
+                console.error('[Auth0] Restore session failed:', err);
+                if (isCallback) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    if (typeof showToast === 'function') showToast('❌ Login failed: ' + err.message, 'error');
+                }
             }
-        } else {
-            // Not a callback — just a regular page load or refresh.
-            // Silently check if we have a session to restore from cookie.
-            this.checkSession();
-        }
+        })();
+
+        return this._bootPromise;
     },
 
-    /**
-     * Silent check for active session (session restoration on refresh)
-     */
-    async checkSession() {
-        try {
-            await this.init();
-            
-            // Check if user is authenticated via cookie (silent check)
-            const authenticated = await this._client.isAuthenticated();
-            
-            if (authenticated) {
-                console.log('[Auth0] Active session detected.');
-                const auth0User = await this._client.getUser();
-                const localUser = localStorage.getItem('resolvit_user');
-                
-                // If we're authenticated but localStorage is empty or mismatched, restore it.
-                if (auth0User && !localUser) {
-                    console.log('[Auth0] Local session missing — restoring silently…');
-                    await this._executeSync(auth0User, { silent: true });
-                }
-            } else {
-                // If not authenticated via Auth0 but we have local data, it might be stale 
-                // email/password login or we might be logged out of SSO.
-                // We leave email/password local sessions alone.
-            }
-        } catch (e) {
-            console.warn('[Auth0] Session check failed:', e);
-        }
-    },
+    // Legacy naming match for index.html/dashboard.html listeners
+    async _handleCallback() { return this.restoreSession(); },
+    async checkSession() { return this.restoreSession(); },
 
     // ─── Backend Sync ──────────────────────────────────────────────
     async _syncWithBackend(auth0User) {
@@ -176,8 +166,10 @@ const Auth0Integration = {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email:       auth0User.email,
-                    name:        auth0User.name || auth0User.nickname || (auth0User.email || '').split('@')[0],
+                    // Surrogate email for providers (like GitHub) that may not expose a public email.
+                    // This prevents the backend from rejecting the login with a 422 Unprocessable Entity.
+                    email:       auth0User.email || `${auth0User.nickname || auth0User.sub.split('|').pop()}@oauth.resolvit.internal`,
+                    name:        auth0User.name || auth0User.nickname || (auth0User.email || 'Citizen').split('@')[0],
                     provider:    provider,
                     provider_id: auth0User.sub,
                     picture:     auth0User.picture || ''
@@ -230,36 +222,34 @@ const Auth0Integration = {
     },
 
     // ─── Google Login ──────────────────────────────────────────────
-    async loginWithGoogle() {
-        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithGoogle"]');
-        if (btn) { btn._orig = btn.innerHTML; btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
-        const restore = () => { if (btn) { btn.innerHTML = btn._orig || btn.innerHTML; btn.disabled = false; } };
+    async loginWithGoogle(e) {
+        const target = e?.currentTarget || (typeof event !== 'undefined' ? event.currentTarget : null) || document.querySelector('button[onclick*="loginWithGoogle"]');
+        if (target) { target._orig = target.innerHTML; target.innerHTML = '⏳ Connecting…'; target.disabled = true; }
+        const restore = () => { if (target) { target.innerHTML = target._orig || target.innerHTML; target.disabled = false; } };
 
         try {
-            if (!this._client) await this.init();
+            await this.init();
             await this._client.loginWithRedirect({
                 authorizationParams: {
                     connection:   'google-oauth2',
                     redirect_uri: this.config.redirectUri
                 }
             });
-            // Page redirects — no restore
         } catch (err) {
             console.error('[Auth0] Google login failed:', err);
             restore();
             if (typeof showToast === 'function') showToast('❌ Google login failed: ' + err.message, 'error');
-            else alert('Google login failed: ' + err.message);
         }
     },
 
     // ─── GitHub Login ──────────────────────────────────────────────
-    async loginWithGitHub() {
-        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithGitHub"]');
-        if (btn) { btn._orig = btn.innerHTML; btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
-        const restore = () => { if (btn) { btn.innerHTML = btn._orig || btn.innerHTML; btn.disabled = false; } };
+    async loginWithGitHub(e) {
+        const target = e?.currentTarget || (typeof event !== 'undefined' ? event.currentTarget : null) || document.querySelector('button[onclick*="loginWithGitHub"]');
+        if (target) { target._orig = target.innerHTML; target.innerHTML = '⏳ Connecting…'; target.disabled = true; }
+        const restore = () => { if (target) { target.innerHTML = target._orig || target.innerHTML; target.disabled = false; } };
 
         try {
-            if (!this._client) await this.init();
+            await this.init();
             await this._client.loginWithRedirect({
                 authorizationParams: {
                     connection:   'github',
@@ -274,14 +264,13 @@ const Auth0Integration = {
     },
 
     // ─── Twitter Login ─────────────────────────────────────────────
-    // Requires Twitter connection to be configured in Auth0 dashboard.
-    async loginWithTwitter() {
-        const btn = event?.currentTarget || document.querySelector('button[onclick*="loginWithTwitter"]');
-        if (btn) { btn._orig = btn.innerHTML; btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
-        const restore = () => { if (btn) { btn.innerHTML = btn._orig || btn.innerHTML; btn.disabled = false; } };
+    async loginWithTwitter(e) {
+        const target = e?.currentTarget || (typeof event !== 'undefined' ? event.currentTarget : null) || document.querySelector('button[onclick*="loginWithTwitter"]');
+        if (target) { target._orig = target.innerHTML; target.innerHTML = '⏳ Connecting…'; target.disabled = true; }
+        const restore = () => { if (target) { target.innerHTML = target._orig || target.innerHTML; target.disabled = false; } };
 
         try {
-            if (!this._client) await this.init();
+            await this.init();
             await this._client.loginWithRedirect({
                 authorizationParams: {
                     connection:   'twitter',
@@ -316,9 +305,9 @@ const Auth0Integration = {
 
 // ─── Global bindings for inline onclick handlers ────────────────
 // Using regular function (not arrow) so 'event' is the real DOM event
-window.loginWithGoogle  = function() { Auth0Integration.loginWithGoogle(); };
-window.loginWithGitHub  = function() { Auth0Integration.loginWithGitHub(); };
-window.loginWithTwitter = function() { Auth0Integration.loginWithTwitter(); };
+window.loginWithGoogle  = function(e) { Auth0Integration.loginWithGoogle(e); };
+window.loginWithGitHub  = function(e) { Auth0Integration.loginWithGitHub(e); };
+window.loginWithTwitter = function(e) { Auth0Integration.loginWithTwitter(e); };
 window.Auth0Integration = Auth0Integration;
 
 // ─── Fire callback handler AFTER DOM is ready ──────────────────
