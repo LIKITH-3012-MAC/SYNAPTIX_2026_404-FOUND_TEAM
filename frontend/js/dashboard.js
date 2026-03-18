@@ -211,24 +211,22 @@ async function initGamificationUI() {
     // Render Leaderboard
     const leaderboardList = document.getElementById('leaderboard-list');
     if (leaderboardList) {
-        // Mock data for hackathon
-        const mockLeaders = [
-            { name: "Likith Naidu", pts: 2450, icon: "🛡️" },
-            { name: "Srujan", pts: 1820, icon: "⚔️" },
-            { name: "Civic_Guardian", pts: 1200, icon: "🎖️" },
-            { name: user.username, pts: profile.points, icon: "👤", current: true }
-        ].sort((a, b) => b.pts - a.pts);
-
-        leaderboardList.innerHTML = mockLeaders.map((u, idx) => `
-            <div class="flex justify-between items-center" style="padding:8px; border-radius:8px; ${u.current ? 'background:rgba(99,102,241,0.2); border:1px solid var(--accent);' : ''}">
-                <div class="flex items-center gap-3">
-                    <span style="font-size:0.8rem; font-weight:800; color:var(--text-muted); width:20px;">#${idx + 1}</span>
-                    <span style="font-size:1.2rem;">${u.icon}</span>
-                    <span style="font-size:0.85rem; font-weight:700;">${u.name}</span>
+        try {
+            const board = await API.get("/api/credits/leaderboard");
+            leaderboardList.innerHTML = board.map((u, idx) => `
+                <div class="flex justify-between items-center" style="padding:8px; border-radius:8px; ${u.user_id === user.id ? 'background:rgba(99,102,241,0.2); border:1px solid var(--accent);' : ''}">
+                    <div class="flex items-center gap-3">
+                        <span style="font-size:0.8rem; font-weight:800; color:var(--text-muted); width:20px;">#${u.rank}</span>
+                        <span style="font-size:1.2rem;">${idx < 3 ? '🏆' : '👤'}</span>
+                        <span style="font-size:0.85rem; font-weight:700;">${u.full_name}</span>
+                    </div>
+                    <span style="font-size:0.85rem; font-weight:900; color:var(--accent);">${u.total_points}</span>
                 </div>
-                <span style="font-size:0.85rem; font-weight:900; color:var(--accent);">${u.pts}</span>
-            </div>
-        `).join('');
+            `).join('');
+        } catch (e) {
+            console.warn("Leaderboard fetch failed:", e);
+            leaderboardList.innerHTML = `<p style="font-size:0.75rem;color:var(--text-muted);text-align:center;">Failed to fetch reputation ledger.</p>`;
+        }
     }
 }
 

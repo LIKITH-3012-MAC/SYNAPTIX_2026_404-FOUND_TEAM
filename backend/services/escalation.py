@@ -20,15 +20,31 @@ ESCALATION_LEVEL_LABELS = {
 
 
 def award_credits(user_id: str, issue_id: str, action_type: str, points: int, description: str, cursor):
-    """Insert a civic_credits row. Cursor must be from an existing transaction."""
+    """
+    Standardized Civic Reward Logic.
+    1. Inserts into citizen_activity ledger.
+    2. Updates users.points_cache for immediate leaderboard response.
+    Cursor must be part of an ongoing database transaction.
+    """
     try:
+        # 1. Update User Cache (Atomic)
         cursor.execute(
-            """INSERT INTO civic_credits (user_id, issue_id, action_type, points, description, created_at)
+            "UPDATE users SET points_cache = points_cache + %s WHERE id = %s",
+            (points, user_id)
+        )
+        
+        # 2. Log Activity Ledger
+        cursor.execute(
+            """INSERT INTO citizen_activity (user_id, issue_id, action, credits_delta, note, created_at)
                VALUES (%s, %s, %s, %s, %s, NOW())""",
             (user_id, issue_id, action_type, points, description)
         )
+        logger.info(f"[Credits] Awarded {points} pts to {user_id} for {action_type}")
+        
     except Exception as e:
-        logger.warning(f"[Credits] Failed to award {points} pts to {user_id}: {e}")
+        logger.error(f"[Credits] Ledger insertion failed for user {user_id}: {e}")
+        # We don't raise here to prevent blocking the main issue transaction, 
+        # but in production we might want stricter consistency.
 
 
 def run_escalation_check():

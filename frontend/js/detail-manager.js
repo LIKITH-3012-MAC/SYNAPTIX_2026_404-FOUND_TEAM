@@ -176,7 +176,10 @@ const ResolutionHub = {
                             </div>
                             <div class="form-group full">
                                 <label>ASSIGNED AUTHORITY</label>
-                                <input type="text" id="h-update-assigned" placeholder="UUID of Dept/Authority" class="hub-input">
+                                <select id="h-update-assigned" class="hub-select">
+                                    <option value="">-- No Assignment --</option>
+                                    <!-- Populated dynamically -->
+                                </select>
                             </div>
                             <div class="form-group full">
                                 <label>RESOLUTION NOTE / AUDIT COMMENT</label>
@@ -244,13 +247,14 @@ const ResolutionHub = {
         this._setLoadingState(true);
 
         try {
-            const [issue, history] = await Promise.all([
+            const [issue, history, attachments] = await Promise.all([
                 API.get(`/api/issues/${issueId}`, { signal }),
-                API.get(`/api/issues/${issueId}/history`, { signal })
+                API.get(`/api/issues/${issueId}/history`, { signal }),
+                API.get(`/api/issues/${issueId}/attachments`, { signal }).catch(() => [])
             ]);
 
             // 3. RENDER MODULES
-            this._renderHub(issue, history, user);
+            this._renderHub(issue, history, attachments, user);
 
             // 4. ENABLE ACTIONS
             this._enableActions(user);
@@ -274,7 +278,7 @@ const ResolutionHub = {
         }
     },
 
-    _renderHub(issue, history, user) {
+    _renderHub(issue, history, attachments, user) {
         const icons = { Roads: "🛣️", Water: "💧", Electricity: "⚡", Sanitation: "🗑️", Safety: "🚨", Environment: "🌿", Other: "📌" };
         
         // Identity Layer
@@ -317,17 +321,38 @@ const ResolutionHub = {
         // Reporter
         document.getElementById('hub-reporter-name').textContent = issue.reporter_full_name || issue.reporter_name || 'Citizen';
 
-        // Evidence
+        // Evidence (Consolidated Pipeline)
         const gallery = document.getElementById('hub-evidence-gallery');
+        let evidenceHtml = '';
+        
+        // Include main image_url if present
         if (issue.image_url) {
-            gallery.innerHTML = `
+            evidenceHtml += `
                 <div class="evidence-item" onclick="ResolutionHub.zoomEvidence('${issue.image_url}')">
-                    <img src="${issue.image_url}" alt="Evidence" loading="lazy">
-                    <div class="evidence-overlay">🔎 VIEW FULL</div>
+                    <img src="${issue.image_url}" alt="Primary Evidence" onerror="this.src='https://placehold.co/400x300?text=Image+Load+Failed'">
+                    <div class="evidence-tag">MAIN</div>
                 </div>
             `;
+        }
+
+        // Include all attachments
+        if (attachments && attachments.length > 0) {
+            attachments.forEach((att, idx) => {
+                // Avoid duplicating main image if they have same URL
+                if (att.file_url === issue.image_url) return;
+                evidenceHtml += `
+                    <div class="evidence-item" onclick="ResolutionHub.zoomEvidence('${att.file_url}')">
+                        <img src="${att.file_url}" alt="Attachment ${idx+1}" onerror="this.src='https://placehold.co/400x300?text=Missing+File'">
+                        <div class="evidence-tag">EXTRA</div>
+                    </div>
+                `;
+            });
+        }
+
+        if (!evidenceHtml) {
+            gallery.innerHTML = `<div class="no-evidence">No visual artifacts found for this report.</div>`;
         } else {
-            gallery.innerHTML = `<div class="no-evidence">No visual evidence attached to this node.</div>`;
+            gallery.innerHTML = evidenceHtml;
         }
 
         // Timeline
@@ -355,10 +380,23 @@ const ResolutionHub = {
         }
     },
 
-    _enableActions(user) {
+    async _enableActions(user) {
         const engine = document.getElementById('hub-decision-engine');
         if (user.role === 'admin' || user.role === 'authority') {
             engine.classList.remove('hidden');
+            // Fetch authorities for the dropdown
+            try {
+                const authorities = await API.get('/api/admin/authorities');
+                const select = document.getElementById('h-update-assigned');
+                const currentVal = select.value;
+                
+                select.innerHTML = '<option value="">-- No Assignment --</option>' + 
+                    authorities.map(a => `<option value="${a.id}">${a.full_name || a.username} (${a.department})</option>`).join('');
+                
+                if (currentVal) select.value = currentVal;
+            } catch (err) {
+                console.warn('Could not load authorities list', err);
+            }
         } else {
             engine.classList.add('hidden');
         }
@@ -437,8 +475,8 @@ const ResolutionHub = {
         
         const payload = {
             status: document.getElementById('h-update-status').value,
-            urgency: parseInt(document.getElementById('h-update-urgency').value),
-            impact_scale: parseInt(document.getElementById('h-update-impact').value),
+            urgency: parseInt(document.getElementById('h-update-urgency').value) || 3,
+            impact_scale: parseInt(document.getElementById('h-update-impact').value) || 1,
             assigned_authority_id: document.getElementById('h-update-assigned').value || null,
             resolution_note: document.getElementById('h-update-note').value
         };
@@ -455,22 +493,28 @@ const ResolutionHub = {
             await API.patch(`/api/issues/${id}`, payload);
             showToast('Operational State Successfully Persisted', 'success');
             
-            // Re-fetch and sync
+            // Re-fetch and sync current view
             await this._loadIssuePipeline(id);
 
-            // Cross-component Sync
+            // Cross-component Sync: Refresh all relative dashboard parts
+            if (typeof fetchIssues === 'function') fetchIssues(); 
             if (typeof loadIssues === 'function') loadIssues();
-            if (typeof fetchIssues === 'function') fetchIssues();
+            if (typeof loadDashboard === 'function') loadDashboard();
             if (typeof loadEscalations === 'function') loadEscalations();
             
             if (window.MapManager) {
                 const issues = await API.getIssues();
                 window.MapManager.updateData(issues, typeof Auth !== 'undefined' ? Auth.getUser()?.role : 'citizen');
             }
-
         } catch (err) {
-            console.error(err);
-            showToast(`Transaction Failure: ${err.message}`, 'error');
+            console.error("Critical Transaction Error:", err);
+            const msg = err.message || "Failed to fetch";
+            showToast(`Transaction Failure: ${msg}`, 'error');
+            
+            // Helpful diagnostics for the user
+            if (msg.includes("Failed to fetch") || msg.includes("TIMEOUT")) {
+                console.warn("DIAGNOSTIC: Backend unreachable. Ensure the backend server is running and BASE_URL in api.js is correct. Current BASE_URL:", API.BASE_URL);
+            }
         } finally {
             btn.disabled = false;
             btn.textContent = originalText;

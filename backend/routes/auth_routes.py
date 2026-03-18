@@ -202,7 +202,9 @@ def get_me(current_user: dict = Depends(get_current_user)):
     """Return details of the currently authenticated user."""
     with get_db() as cursor:
         cursor.execute(
-            "SELECT id, username, email, role, full_name, department, created_at FROM users WHERE id = %s",
+            """SELECT id, username, email, role, full_name, department, profile_picture, 
+               points_cache, trust_score, rank, created_at, auth_provider 
+               FROM users WHERE id = %s""",
             (current_user["sub"],)
         )
         user = cursor.fetchone()
@@ -211,6 +213,76 @@ def get_me(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found.")
 
     return {**dict(user), "id": str(user["id"])}
+
+
+@router.get("/profile")
+def get_unified_profile(current_user: dict = Depends(get_current_user)):
+    """Unified endpoint for high-fidelity profile intelligence."""
+    user_id = current_user["sub"]
+    
+    with get_db() as cursor:
+        # 1. Basic Info
+        cursor.execute(
+            """SELECT id, username, email, role, full_name, department, profile_picture, 
+               points_cache, trust_score, rank, created_at FROM users WHERE id = %s""",
+            (user_id,)
+        )
+        user = cursor.fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="Identity not found")
+        
+        # 2. Issues Stats
+        cursor.execute("SELECT COUNT(*) as count FROM issues WHERE reporter_id = %s", (user_id,))
+        reported_count = cursor.fetchone()["count"]
+        
+        cursor.execute("SELECT COUNT(*) as count FROM issues WHERE reporter_id = %s AND status = 'resolved'", (user_id,))
+        resolved_count = cursor.fetchone()["count"]
+        
+        # 3. Global Stats (Heuristic for production feel)
+        cursor.execute("SELECT COUNT(*) + 1 as global_rank FROM users WHERE points_cache > %s AND role = 'citizen'", (user["points_cache"],))
+        global_rank = cursor.fetchone()["global_rank"]
+
+    return {
+        "user": {**dict(user), "id": str(user["id"])},
+        "stats": {
+            "total_points": user["points_cache"],
+            "global_rank": global_rank,
+            "issues_reported": reported_count,
+            "issues_resolved": resolved_count,
+            "trust_score": user["trust_score"]
+        },
+        "badges": ["Citizen", user["rank"] or "Beginner"]
+    }
+
+
+@router.get("/issues")
+def get_user_issues(current_user: dict = Depends(get_current_user)):
+    """Fetch all issues reported by the authenticated user."""
+    user_id = current_user["sub"]
+    with get_db() as cursor:
+        cursor.execute(
+            """SELECT id, tracking_id, title, status, category, urgency, created_at 
+               FROM issues WHERE reporter_id = %s ORDER BY created_at DESC""",
+            (user_id,)
+        )
+        rows = cursor.fetchall()
+    
+    return [ {**dict(r), "id": str(r["id"])} for r in rows ]
+
+
+@router.get("/activity")
+def get_user_activity(current_user: dict = Depends(get_current_user)):
+    """Fetch recent activity timeline for the user."""
+    user_id = current_user["sub"]
+    with get_db() as cursor:
+        cursor.execute(
+            """SELECT action, credits_delta, note, created_at 
+               FROM citizen_activity WHERE user_id = %s ORDER BY created_at DESC LIMIT 20""",
+            (user_id,)
+        )
+        rows = cursor.fetchall()
+    
+    return [ {**dict(r), "created_at": r["created_at"].isoformat()} for r in rows ]
 
 
 # ── PASSWORD RESET ROUTES ─────────────────────────────────────

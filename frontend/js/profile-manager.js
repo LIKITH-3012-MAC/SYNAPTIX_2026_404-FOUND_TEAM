@@ -33,34 +33,35 @@ const ProfileManager = {
 
     async fetchFreshData() {
         try {
-            // Attempt to get fresh user data from backend if possible
-            const freshUser = await API.get(`/api/auth/me`).catch(() => null);
-            if (freshUser) {
-                // Merge fresh data with existing session info
-                this.user = { ...this.user, ...freshUser };
-            }
+            // 1. Fetch Unified Profile Intelligence
+            const profileData = await API.get(`/api/auth/profile`);
+            
+            // 2. Update local state
+            this.user = { ...this.user, ...profileData.user, stats: profileData.stats, badges: profileData.badges };
 
-            // Fetch role-specific stats
+            // 3. Fetch Role-Specific Detailed Data
             if (this.user.role === 'admin') {
                 await this.loadAdminStats();
             } else if (this.user.role === 'authority') {
                 await this.loadAuthorityStats();
             } else {
-                await this.loadCitizenStats();
+                // Fetch personal issues list
+                this.user.myIssues = await API.get('/api/auth/issues').catch(() => []);
             }
 
-            // Final render with all data
+            // 4. Final render sequence
             this.renderIdentitySidebar(this.user);
             this.renderContentArea(this.user);
             this.renderSecuritySection(this.user);
 
-            // Init Personal Map if citizen and has issues
-            if (this.user.role === 'citizen' && this.user.myIssues?.length > 0) {
+            // 5. Init Personal Impact Map
+            if (this.user.myIssues?.length > 0) {
                 this.initPersonalMap(this.user.myIssues);
             }
 
         } catch (error) {
-            console.error("[Profile] Failed to fetch identity data:", error);
+            console.error("[Profile] Identity Sync Failure:", error);
+            showToast("Failed to synchronise identity dossier.", "error");
         }
     },
 
@@ -348,30 +349,27 @@ const ProfileManager = {
         if (!feed) return;
 
         try {
-            // Fetch credits if citizen
-            let items = [];
-            if (user.role === 'citizen') {
-                const credits = await API.get("/api/credits/me");
-                items = (credits.transactions || []).map(t => ({
-                    title: t.description || 'Civic Contribution',
-                    time: new Date(t.created_at).toLocaleDateString() + ' ' + new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                    icon: '💰',
-                    color: '#10b981'
-                }));
-            }
+            // Fetch live activity from unified ledger
+            const activity = await API.get("/api/auth/activity");
+            const items = activity.map(t => ({
+                title: t.note || t.action || 'Civic Contribution',
+                time: new Date(t.created_at).toLocaleDateString() + ' ' + new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                icon: t.credits_delta > 0 ? '💰' : '🔹',
+                color: t.credits_delta > 0 ? '#10b981' : '#6366f1',
+                delta: t.credits_delta
+            }));
 
-            // Fetch recent issues
-            const issues = await API.get("/api/issues?limit=5&sort_by=created_at&order=desc");
-            const myIssues = issues.filter(i => i.reporter_id === user.sub || i.reporter_name === user.username);
-            
-            myIssues.forEach(i => {
-                items.push({
-                    title: `Reported: ${i.title}`,
-                    time: new Date(i.created_at).toLocaleDateString(),
-                    icon: '📝',
-                    color: '#6366f1'
+            // Merge with local issues if any (heuristic)
+            if (this.user.myIssues) {
+                this.user.myIssues.slice(0, 5).forEach(i => {
+                    items.push({
+                        title: `Reported: ${i.title}`,
+                        time: new Date(i.created_at).toLocaleDateString(),
+                        icon: '📝',
+                        color: '#6366f1'
+                    });
                 });
-            });
+            }
 
             if (items.length === 0) {
                 feed.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">No recent logs discovered in the audit trail.</div>`;

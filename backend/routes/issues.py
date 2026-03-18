@@ -99,7 +99,9 @@ def upload_image(request: Request, file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
         
         base_url = str(request.base_url).rstrip("/")
-        # fallback for render or prod if request.base_url is wrong
+        if "render.com" in base_url or "vercel.app" in base_url:
+            base_url = base_url.replace("http://", "https://")
+            
         return {"url": f"{base_url}/uploads/{filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -161,6 +163,16 @@ def create_issue(
             )
         )
         issue = dict(cursor.fetchone())
+
+        # Step 3: Register primary evidence in attachments table
+        if payload.image_url:
+            cursor.execute(
+                """
+                INSERT INTO issue_attachments (issue_id, file_url, file_name, file_type, uploaded_by)
+                VALUES (%s, %s, %s, 'photo', %s)
+                """,
+                (issue_id, payload.image_url, "primary_evidence.jpg", reporter_id)
+            )
 
         # Step 4: Award +10 civic credits to reporter
         award_credits(
@@ -332,6 +344,7 @@ def update_issue(
     if payload.description is not None:       fields["description"] = payload.description
     if payload.category is not None:          fields["category"] = payload.category.value
     if payload.subcategory is not None:       fields["subcategory"] = payload.subcategory
+    if payload.status is not None:            fields["status"] = payload.status.value
     if payload.urgency is not None:           fields["urgency"] = payload.urgency
     if payload.severity is not None:          fields["severity"] = payload.severity
     if payload.impact_scale is not None:      fields["impact_scale"] = payload.impact_scale
@@ -341,6 +354,9 @@ def update_issue(
     if payload.resolution_proof_url is not None: fields["resolution_proof_url"] = payload.resolution_proof_url
     if payload.latitude is not None:          fields["latitude"] = payload.latitude
     if payload.longitude is not None:         fields["longitude"] = payload.longitude
+    if payload.escalation_level is not None:  fields["escalation_level"] = payload.escalation_level
+    if payload.is_fake is not None:           fields["is_fake"] = payload.is_fake
+    if payload.is_archived is not None:       fields["is_archived"] = payload.is_archived
     if payload.sla_due_at is not None:        fields["sla_due_at"] = payload.sla_due_at
     if payload.is_fake is not None:           fields["is_fake"] = payload.is_fake
     if payload.is_archived is not None:       fields["is_archived"] = payload.is_archived
@@ -350,10 +366,29 @@ def update_issue(
         fields["priority_score"] = payload.priority_score
         fields["priority_manual_override"] = True
 
+    # Resolution Logic & Rewards
+    if payload.status is not None and payload.status.value == "resolved":
+        if not existing.get("resolved_at"):
+            fields["resolved_at"] = datetime.now()
+            # AUTO-REWARD: 50 points to the reporter for successful civic resolution
+            try:
+                award_credits(
+                    user_id=str(existing["reporter_id"]),
+                    issue_id=issue_id,
+                    action_type="issue_resolved",
+                    points=50,
+                    description=f"Issue Resolved: {existing['title']}",
+                    cursor=cursor
+                )
+            except Exception as e:
+                print(f"[REWARD ERR] {e}")
+
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update.")
 
     is_resolving = fields.get("status") == "resolved" and existing["status"] != "resolved"
+    if is_resolving:
+        fields["resolved_at"] = datetime.now(timezone.utc)
 
     set_clauses = ", ".join(f"{k} = %s" for k in fields)
     values = list(fields.values()) + [issue_id]
@@ -371,10 +406,10 @@ def update_issue(
             if str(old_val) != str(new_val):
                 _add_issue_history(
                     cursor, issue_id, 
-                    action_type="field_update", 
+                    action_type="status_change" if field == "status" else "field_update", 
                     actor_id=current_user["sub"],
                     actor_role=role,
-                    note=f"Update {field}",
+                    note=f"Update {field.replace('_', ' ')}",
                     old_val={field: old_val},
                     new_val={field: new_val}
                 )

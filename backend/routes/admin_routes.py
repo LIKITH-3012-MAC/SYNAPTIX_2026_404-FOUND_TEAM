@@ -170,16 +170,46 @@ def get_admin_stats_full(current_admin: dict = Depends(require_roles("admin"))):
         total_credits = c_row["sum"] if c_row and c_row["sum"] else 0
 
     return {
-        "status": "online",
-        "issues": {
-            "total_issues": row["total"] or 0,
-            "escalated": row["escalated"] or 0,
-            "sla_breached": sla_breaches or 0
-        },
-        "users": {
-            "total": total_users or 0
-        },
         "credits": {
             "total_awarded": total_credits
         }
     }
+
+@router.get("/authorities", response_model=List[dict])
+def list_authorities():
+    """Directory of all active authorities/departments."""
+    with get_db() as cursor:
+        cursor.execute("SELECT id, username, full_name, department FROM users WHERE role = 'authority' AND is_active = TRUE")
+        rows = cursor.fetchall()
+    
+    results = []
+    for r in rows:
+        item = dict(r)
+        item["id"] = str(item["id"])
+        results.append(item)
+    return results
+
+@router.get("/leaderboard", response_model=list)
+def get_admin_leaderboard():
+    """Ranked leaderboard of all citizens based on civic credits."""
+    with get_db() as cursor:
+        cursor.execute(
+            """
+            SELECT id, full_name, username, points_cache 
+            FROM users 
+            WHERE role = 'citizen' 
+            ORDER BY points_cache DESC 
+            LIMIT 20
+            """
+        )
+        rows = cursor.fetchall()
+    
+    results = []
+    for i, r in enumerate(rows):
+        results.append({
+            "rank": i + 1,
+            "user_id": str(r["id"]),
+            "name": r["full_name"] or r["username"],
+            "credits": int(r["points_cache"] or 0)
+        })
+    return results

@@ -14,15 +14,10 @@ const PRODUCTION_URL = "https://synaptix-2026-404-found-team.onrender.com";
 
 const BASE_URL = (() => {
   const host = window.location.hostname;
-  const isLocal = !host ||
-    host === "localhost" ||
-    host === "127.0.0.1" ||
-    host === "0.0.0.0" ||
-    host.startsWith("192.168.") ||
-    host.startsWith("10.") ||
-    host.endsWith(".local");
+  const isLocal = !host || host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.");
 
   if (isLocal) {
+    if (window.location.port === "8000") return ""; // Origin-relative
     return "http://127.0.0.1:8000";
   }
   return PRODUCTION_URL;
@@ -48,7 +43,7 @@ const API = {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("TIMEOUT")), 10000);
+          setTimeout(() => reject(new Error("TIMEOUT")), 60000);
         });
 
         const fetchPromise = fetch(`${BASE_URL}${path}`, fetchOptions);
