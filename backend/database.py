@@ -40,6 +40,7 @@ def init_pool():
     """Initialize PostgreSQL connection pool."""
     global _pool
     if _pool is None:
+        print(f"[DB DEBUG] Initializing pool with DSN: {DATABASE_URL}")
         _pool = pool.ThreadedConnectionPool(
             minconn=2,
             maxconn=20,
@@ -80,7 +81,7 @@ def get_db():
 # ─────────────────────────────────────────────
 def execute_schema():
     """
-    Initialize database schema from schema.sql on startup.
+    Initialize database schema and perform migrations (add missing columns).
     """
     schema_path = os.path.join(
         os.path.dirname(__file__),
@@ -89,10 +90,28 @@ def execute_schema():
         'schema.sql'
     )
 
-    if os.path.exists(schema_path):
-        with get_db() as cursor:
+    with get_db() as cursor:
+        # 1. Run base schema if exists
+        if os.path.exists(schema_path):
             with open(schema_path, 'r') as f:
                 cursor.execute(f.read())
-        print("[DB] Schema initialized successfully.")
-    else:
-        print("[DB] No schema.sql file found. Skipping schema initialization.")
+            print("[DB] Base schema applied.")
+
+        # 2. Manual Migrations (Ensure new columns exist in existing tables)
+        print("[DB] Running migrations...")
+        
+        # User Table Migrations
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(32) DEFAULT 'database';")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture TEXT;")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS points_cache INTEGER DEFAULT 0;")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;")
+        
+        # Issues Table Migrations
+        cursor.execute("ALTER TABLE issues ADD COLUMN IF NOT EXISTS sla_hours INTEGER DEFAULT 48;")
+        cursor.execute("ALTER TABLE issues ADD COLUMN IF NOT EXISTS sla_expires_at TIMESTAMPTZ;")
+        cursor.execute("ALTER TABLE issues ADD COLUMN IF NOT EXISTS safety_risk_probability FLOAT DEFAULT 0.1;")
+        cursor.execute("ALTER TABLE issues ADD COLUMN IF NOT EXISTS cluster_id UUID;")
+        cursor.execute("ALTER TABLE issues ADD COLUMN IF NOT EXISTS resolution_note TEXT;")
+        cursor.execute("ALTER TABLE issues ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;")
+        
+        print("[DB] Migrations complete.")

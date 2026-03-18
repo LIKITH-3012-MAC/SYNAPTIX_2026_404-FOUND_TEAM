@@ -31,6 +31,7 @@ from routes.credits_routes import router as credits_router
 from routes.simulation import router as simulation_router
 from routes.export_routes import router as export_router
 from routes.feedback_routes import router as feedback_router
+from database import execute_schema
 
 # -----------------------------
 # FastAPI App
@@ -109,6 +110,15 @@ def health():
 # Background Scheduler
 # -----------------------------
 scheduler = BackgroundScheduler()
+
+@app.on_event("startup")
+def start_up():
+    # Sync Schema
+    try:
+        execute_schema()
+        print("[DB] Schema sync complete.")
+    except Exception as e:
+        print(f"[DB] Schema sync failed: {e}")
 
 @app.on_event("startup")
 def start_scheduler():
