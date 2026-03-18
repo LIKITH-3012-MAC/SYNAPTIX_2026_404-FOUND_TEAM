@@ -219,7 +219,6 @@
   </style>
 
   
-  <!-- Auth0 Runtime Configuration -->
   <script>
     window.AUTH0_CONFIG = {
       domain: "resolvit-ai.us.auth0.com",
@@ -491,15 +490,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-  <!-- ── Core Scripts (ORDER MATTERS) ────────────────────── -->
-  <!-- 1. API must load first — defines BASE_URL, API, showToast -->
   <script src="js/api.js"></script>
-  <!-- 2. Auth0 SDK (UMD bundle) -->
-  <script src="js/libs/auth0-spa-js.production.min.js"></script>
-  <!-- 3. Auth0 Integration (depends on BASE_URL from api.js) -->
-  <script src="js/auth0-integration.js"></script>
-  <!-- 4. Auth module (depends on API and Auth0Integration) -->
   <script src="js/auth.js"></script>
+  <script src="js/libs/auth0-spa-js.production.min.js"></script>
+  <script src="js/auth0-integration.js"></script>
   <!-- 5. Theme, i18n, UI -->
   <script src="js/theme-manager.js"></script>
   <script src="js/i18n.js"></script>
@@ -574,12 +568,7 @@
 
     // ── Init ──────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
-      // 1. Restore Session (Async)
-      if (typeof Auth0Integration !== 'undefined') {
-        await Auth0Integration.checkSession();
-      }
-
-      // 2. Update UI
+      // 1. Update UI (session restoration is handled automatically by auth0-integration.js)
       if (typeof Auth !== 'undefined' && Auth.updateNavbar) {
         Auth.updateNavbar();
       }

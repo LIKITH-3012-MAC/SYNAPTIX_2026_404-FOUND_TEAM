@@ -10,7 +10,6 @@
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
     <link rel="shortcut icon" href="https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/resolvit.png">
 
-    <!-- Auth0 Runtime Config -->
     <script>
         window.AUTH0_CONFIG = {
             domain:      "resolvit-ai.us.auth0.com",
@@ -433,15 +432,10 @@
 
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- ── Scripts — CORRECT ORDER ──────────────────────── -->
-    <!-- 1. API first — defines BASE_URL, API, showToast -->
     <script src="js/api.js"></script>
-    <!-- 2. Auth0 SDK -->
-    <script src="js/libs/auth0-spa-js.production.min.js"></script>
-    <!-- 3. Auth0 integration (needs BASE_URL) -->
-    <script src="js/auth0-integration.js"></script>
-    <!-- 4. Auth (needs API + Auth0Integration) -->
     <script src="js/auth.js"></script>
+    <script src="js/libs/auth0-spa-js.production.min.js"></script>
+    <script src="js/auth0-integration.js"></script>
     <!-- 5. UI helpers -->
     <script src="js/theme-manager.js"></script>
     <script src="js/animations.js"></script>
@@ -827,12 +821,7 @@
 
     // ─── Boot ──────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
-        // 1. Restore/Wait for Session
-        if (typeof Auth0Integration !== 'undefined') {
-            await Auth0Integration.checkSession();
-        }
-        
-        // 2. Update UI
+        // 1. Update UI
         if (typeof Auth !== 'undefined' && Auth.updateNavbar) {
              Auth.updateNavbar();
         }

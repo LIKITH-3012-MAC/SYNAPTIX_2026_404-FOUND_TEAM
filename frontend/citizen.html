@@ -28,7 +28,6 @@
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/profile-premium.css" />
     
-  <!-- Auth0 Runtime Configuration -->
   <script>
     window.AUTH0_CONFIG = {
       domain: "resolvit-ai.us.auth0.com",
@@ -161,15 +160,10 @@
 
     <div class="toast-container" id="toast-container"></div>
       
-    <!-- Core Infrastructure -->  <!-- Core scripts: ORDER IS CRITICAL -->
-  <!-- 1. API first — defines BASE_URL, showToast, API -->
   <script src="js/api.js"></script>
-  <!-- 2. Auth0 SDK -->
-  <script src="js/libs/auth0-spa-js.production.min.js"></script>
-  <!-- 3. Auth0 integration (needs BASE_URL) -->
-  <script src="js/auth0-integration.js"></script>
-  <!-- 4. Auth module (needs API + Auth0Integration) -->
   <script src="js/auth.js"></script>
+  <script src="js/libs/auth0-spa-js.production.min.js"></script>
+  <script src="js/auth0-integration.js"></script>
     <script src="js/theme-manager.js"></script>
     <script src="js/animations.js"></script>
     <script src="js/ui-enhancements.js"></script>

@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
-    <!-- Auth0 Runtime Configuration -->
     <script>
         window.AUTH0_CONFIG = {
             domain: "resolvit-ai.us.auth0.com",
@@ -613,12 +612,7 @@
                 let adminMap = null;
 
                 document.addEventListener("DOMContentLoaded", async () => {
-                    // 1. Restore/Wait for Session
-                    if (typeof Auth0Integration !== 'undefined') {
-                        await Auth0Integration.checkSession();
-                    }
-
-                    // 2. Auth/RBAC Check
+                    // 1. Auth/RBAC Check
                     if (!Auth.getUser()) { Auth.showModal("login"); return; }
                     if (!Auth.requireRole("admin", "index.html")) return;
                     
