@@ -9,6 +9,7 @@ DELETE /api/issues/{id}      - Delete issue (admin only)
 """
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, Query, Request, UploadFile, File
+from pydantic import BaseModel
 import os
 import uuid
 import shutil
@@ -47,31 +48,31 @@ def _serialize_issue(row: dict) -> dict:
             delta = (resolved - created).total_seconds()
         else:
             delta = (datetime.now(timezone.utc) - created).total_seconds()
-        r["days_unresolved"] = round(float(delta / 86400), 1)
+        r["days_unresolved"] = round(delta / 86400, 1)
 
-    # SLA countdown in seconds (None if no sla_expires_at)
-    sla_expires = r.get("sla_expires_at")
-    if sla_expires:
-        if sla_expires.tzinfo is None:
-            sla_expires = sla_expires.replace(tzinfo=timezone.utc)
-        r["sla_expires_at"] = sla_expires.isoformat()
-        sla_seconds_remaining = (sla_expires - datetime.now(timezone.utc)).total_seconds()
-        r["sla_seconds_remaining"] = max(sla_seconds_remaining, 0)
-        r["sla_breached"] = sla_seconds_remaining <= 0
-    else:
-        r["sla_seconds_remaining"] = None
-        r["sla_breached"] = False
+    # SLA countdown in seconds
+    for f in ["sla_expires_at", "sla_due_at"]:
+        val = r.get(f)
+        if val:
+            if val.tzinfo is None:
+                val = val.replace(tzinfo=timezone.utc)
+            r[f] = val.isoformat()
+            if f == "sla_due_at":
+                sla_rem = (val - datetime.now(timezone.utc)).total_seconds()
+                r["sla_seconds_remaining"] = max(sla_rem, 0)
+                r["sla_breached"] = sla_rem <= 0
 
-    # Datetime serializtion
+    # Datetime serialization for other fields
     for field in ("created_at", "updated_at", "resolved_at"):
         if r.get(field) and hasattr(r[field], "isoformat"):
             r[field] = r[field].isoformat()
 
     # Predictive breach risk (0.0–1.0)
     try:
+        sla_exp_str = r.get("sla_expires_at") or r.get("sla_due_at")
         sla_exp = None
-        if r.get("sla_expires_at") and isinstance(r["sla_expires_at"], str):
-            sla_exp = datetime.fromisoformat(r["sla_expires_at"])
+        if sla_exp_str:
+            sla_exp = datetime.fromisoformat(sla_exp_str)
         r["breach_risk"] = predict_sla_breach_risk(
             category=r.get("category", "Other"),
             urgency=r.get("urgency", 3),
@@ -255,7 +256,7 @@ def list_issues(
         ORDER BY {order_clause}
         LIMIT %s OFFSET %s
     """
-    params.extend([int(limit), int(offset)])
+    params.extend([limit, offset])
 
     with get_db() as cursor:
         cursor.execute(query, params)
@@ -419,16 +420,148 @@ def update_issue(
     return _serialize_issue(updated)
 
 
-# ── DELETE ────────────────────────────────────────────────────
-@router.delete("/{issue_id}", response_model=MessageResponse)
-def delete_issue(
-    issue_id: str,
-    current_user: dict = Depends(require_roles("admin"))
-):
-    """Delete an issue. Admin only."""
-    with get_db() as cursor:
-        cursor.execute("DELETE FROM issues WHERE id = %s RETURNING id", (issue_id,))
-        if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Issue not found.")
+# ── OPERATIONAL ACTIONS ───────────────────────────────────────
 
-    return {"message": f"Issue {issue_id} deleted successfully."}
+def _add_issue_history(cursor, issue_id: str, action_type: str, actor_id: str, actor_role: str, note: Optional[str] = None, old_val = None, new_val = None):
+    """Internal helper to record issue transitions."""
+    import json
+    cursor.execute(
+        """
+        INSERT INTO issue_history (issue_id, action_type, actor_id, actor_role, note, old_value, new_value)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """,
+        (
+            issue_id, 
+            action_type, 
+            actor_id, 
+            actor_role, 
+            note, 
+            json.dumps(old_val) if old_val else None, 
+            json.dumps(new_val) if new_val else None
+        )
+    )
+
+@router.get("/{issue_id}/history", response_model=list)
+def get_issue_history(issue_id: str, current_user: dict = Depends(get_current_user)):
+    """Retrieve full audit trail of an issue."""
+    with get_db() as cursor:
+        cursor.execute(
+            """
+            SELECT h.*, u.username as actor_name, u.role as actor_role
+            FROM issue_history h
+            LEFT JOIN users u ON h.actor_id = u.id
+            WHERE h.issue_id = %s
+            ORDER BY h.created_at DESC
+            """,
+            (issue_id,)
+        )
+        rows = cursor.fetchall()
+    
+    # Simple serialization
+    results = []
+    for r in rows:
+        item = dict(r)
+        item["id"] = str(item["id"])
+        item["issue_id"] = str(item["issue_id"])
+        if item.get("actor_id"): item["actor_id"] = str(item["actor_id"])
+        if item.get("created_at") and hasattr(item["created_at"], "isoformat"):
+            item["created_at"] = item["created_at"].isoformat()
+        results.append(item)
+    return results
+
+@router.get("/{issue_id}/attachments", response_model=list)
+def get_issue_attachments(issue_id: str, current_user: dict = Depends(get_current_user)):
+    """Retrieve all evidence/attachments for an issue."""
+    with get_db() as cursor:
+        cursor.execute(
+            "SELECT * FROM issue_attachments WHERE issue_id = %s ORDER BY created_at DESC",
+            (issue_id,)
+        )
+        rows = cursor.fetchall()
+    
+    results = []
+    for r in rows:
+        item = dict(r)
+        item["id"] = str(item["id"])
+        item["issue_id"] = str(item["issue_id"])
+        if item.get("uploaded_by"): item["uploaded_by"] = str(item["uploaded_by"])
+        if item.get("created_at") and hasattr(item["created_at"], "isoformat"):
+            item["created_at"] = item["created_at"].isoformat()
+        results.append(item)
+    return results
+
+class AssignPayload(BaseModel):
+    authority_id: str
+    note: Optional[str] = None
+
+@router.post("/{issue_id}/assign", response_model=MessageResponse)
+def assign_issue(issue_id: str, payload: AssignPayload, current_user: dict = Depends(require_roles("admin", "authority"))):
+    """Assign issue to a specific authority."""
+    with get_db() as cursor:
+        cursor.execute("SELECT status, assigned_authority_id FROM issues WHERE id = %s", (issue_id,))
+        existing = cursor.fetchone()
+        if not existing: raise HTTPException(status_code=404, detail="Issue not found")
+        
+        cursor.execute(
+            "UPDATE issues SET assigned_authority_id = %s, status = 'assigned', updated_at = NOW() WHERE id = %s",
+            (payload.authority_id, issue_id)
+        )
+        _add_issue_history(
+            cursor, issue_id, "assigned", current_user["sub"], current_user["role"],
+            note=payload.note,
+            old_val={"authority_id": str(existing["assigned_authority_id"]) if existing["assigned_authority_id"] else None},
+            new_val={"authority_id": payload.authority_id}
+        )
+    return {"message": "Issue assigned successfully"}
+
+@router.post("/{issue_id}/escalate", response_model=MessageResponse)
+def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
+    """Escalate an issue."""
+    with get_db() as cursor:
+        cursor.execute("SELECT status, escalation_level FROM issues WHERE id = %s", (issue_id,))
+        existing = cursor.fetchone()
+        new_level = (existing["escalation_level"] or 0) + 1
+        cursor.execute(
+            "UPDATE issues SET status = 'escalated', escalation_level = %s, updated_at = NOW() WHERE id = %s",
+            (new_level, issue_id)
+        )
+        _add_issue_history(
+            cursor, issue_id, "escalated", current_user["sub"], current_user["role"],
+            note=note,
+            old_val={"status": existing["status"], "level": existing["escalation_level"]},
+            new_val={"status": "escalated", "level": new_level}
+        )
+    return {"message": "Issue escalated successfully"}
+
+@router.post("/{issue_id}/resolve", response_model=MessageResponse)
+def resolve_issue(issue_id: str, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
+    """Resolve an issue."""
+    with get_db() as cursor:
+        cursor.execute("SELECT status, reporter_id FROM issues WHERE id = %s", (issue_id,))
+        existing = cursor.fetchone()
+        cursor.execute(
+            "UPDATE issues SET status = 'resolved', resolution_note = %s, resolved_at = NOW(), updated_at = NOW() WHERE id = %s",
+            (note, issue_id)
+        )
+        _add_issue_history(
+            cursor, issue_id, "resolved", current_user["sub"], current_user["role"],
+            note=note
+        )
+        # Award credits
+        award_credits(
+            user_id=str(existing["reporter_id"]),
+            issue_id=issue_id,
+            action_type="issue_resolved",
+            points=50,
+            description=f"Issue resolved: {issue_id}",
+            cursor=cursor
+        )
+    return {"message": "Issue resolved successfully"}
+
+@router.post("/{issue_id}/archive", response_model=MessageResponse)
+def archive_issue(issue_id: str, current_user: dict = Depends(require_roles("admin"))):
+    """Archive an issue. Admin only."""
+    with get_db() as cursor:
+        cursor.execute("UPDATE issues SET status = 'archived', is_archived = TRUE, updated_at = NOW() WHERE id = %s", (issue_id,))
+        _add_issue_history(cursor, issue_id, "archived", current_user["sub"], current_user["role"])
+    return {"message": "Issue archived successfully"}

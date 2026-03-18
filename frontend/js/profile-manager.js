@@ -54,6 +54,11 @@ const ProfileManager = {
             this.renderContentArea(this.user);
             this.renderSecuritySection(this.user);
 
+            // Init Personal Map if citizen and has issues
+            if (this.user.role === 'citizen' && this.user.myIssues?.length > 0) {
+                this.initPersonalMap(this.user.myIssues);
+            }
+
         } catch (error) {
             console.error("[Profile] Failed to fetch identity data:", error);
         }
@@ -424,12 +429,26 @@ const ProfileManager = {
     async loadCitizenStats() {
         const credits = await API.get("/api/credits/me").catch(() => ({}));
         const issues = await API.get("/api/issues").catch(() => []);
-        const myIssues = issues.filter(i => i.reporter_id === this.user.id);
+        const myIssues = issues.filter(i => i.reporter_id === this.user.id || i.reporter_name === this.user.username);
+        this.user.myIssues = myIssues;
         this.user.stats = {
             total_points: credits.total_points || 0,
             rank: credits.rank || '?',
             issues_count: myIssues.length
         };
+    },
+
+    initPersonalMap(myIssues) {
+        const container = document.getElementById('personal-impact-map-container');
+        if (!container) return;
+        container.style.display = 'block';
+
+        setTimeout(() => {
+            if (typeof MapManager !== 'undefined') {
+                MapManager.init("personal-map", [12.9716, 77.5946]);
+                MapManager.updateData(myIssues, "citizen");
+            }
+        }, 300);
     },
 
     async loadAdminStats() {

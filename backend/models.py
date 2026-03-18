@@ -25,13 +25,14 @@ class IssueCategory(str, Enum):
     Other       = "Other"
 
 class IssueStatus(str, Enum):
-    reported   = "reported"
-    verified   = "verified"
-    clustered  = "clustered"
-    assigned   = "assigned"
+    reported    = "reported"
+    verified    = "verified"
+    clustered   = "clustered"
+    assigned    = "assigned"
     in_progress = "in_progress"
-    escalated  = "escalated"
-    resolved   = "resolved"
+    escalated   = "escalated"
+    resolved    = "resolved"
+    archived    = "archived"
 
 
 # ── Auth Schemas ──────────────────────────────────────────────
@@ -76,15 +77,19 @@ class TokenResponse(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id:         str
-    username:   str
-    email:      str
-    role:       str
-    full_name:  Optional[str]
-    department: Optional[str]
-    auth_provider: Optional[str] = 'database'
+    id:              str
+    username:        str
+    email:           str
+    role:            str
+    full_name:       Optional[str]
+    department:      Optional[str]
+    auth_provider:   Optional[str] = 'database'
     profile_picture: Optional[str] = None
-    created_at: Optional[datetime]
+    trust_score:     Optional[int] = 100
+    points_cache:    Optional[int] = 0
+    rank:            Optional[str] = "New Citizen"
+    is_suspended:    Optional[bool] = False
+    created_at:      Optional[datetime]
 
 
 # ── Issue Schemas ─────────────────────────────────────────────
@@ -92,9 +97,12 @@ class IssueCreate(BaseModel):
     title:       str = Field(..., min_length=10, max_length=256)
     description: str = Field(..., min_length=20)
     category:    IssueCategory
+    subcategory: Optional[str] = None
     latitude:    float = Field(..., ge=-90, le=90)
     longitude:   float = Field(..., ge=-180, le=180)
+    address:     Optional[str] = None
     urgency:     int = Field(3, ge=1, le=5)
+    severity:    int = Field(3, ge=1, le=5)
     impact_scale: int = Field(1, ge=1)
     image_url:   Optional[str] = None
     safety_risk_probability: float = Field(0.1, ge=0.0, le=1.0)
@@ -105,37 +113,62 @@ class IssueUpdate(BaseModel):
     description:            Optional[str] = None
     status:                 Optional[IssueStatus] = None
     urgency:                Optional[int] = Field(None, ge=1, le=5)
+    severity:               Optional[int] = Field(None, ge=1, le=5)
     impact_scale:           Optional[int] = Field(None, ge=1)
+    category:               Optional[IssueCategory] = None
+    subcategory:            Optional[str] = None
     assigned_authority_id:  Optional[str] = None
     resolution_note:        Optional[str] = None
     resolution_proof_url:   Optional[str] = None
     safety_risk_probability: Optional[float] = Field(None, ge=0.0, le=1.0)
+    is_fake:                Optional[bool] = None
+    is_archived:            Optional[bool] = None
 
 
 class IssueResponse(BaseModel):
     id:                     str
+    tracking_id:            Optional[str] = None
     title:                  str
     description:            str
     category:               str
+    subcategory:            Optional[str] = None
     latitude:               Optional[float]
     longitude:              Optional[float]
+    address:                Optional[str] = None
+    ward:                   Optional[str] = None
+    district:               Optional[str] = None
+    state:                  Optional[str] = None
+    pincode:                Optional[str] = None
     urgency:                int
+    severity:               Optional[int] = 3
     impact_scale:           int
     image_url:              Optional[str]
     status:                 str
     priority_score:         float
+    ai_risk:                Optional[float] = 0.0
+    civic_impact_score:     Optional[float] = 0.0
     safety_risk_probability: float
     cluster_id:             Optional[str]
     reporter_id:            str
+    reporter_name:          Optional[str] = None
     assigned_authority_id:  Optional[str]
+    authority_name:         Optional[str] = None
     resolution_note:        Optional[str]
     resolution_proof_url:   Optional[str]
     created_at:             datetime
     updated_at:             datetime
     resolved_at:            Optional[datetime]
+    sla_hours:              Optional[int] = 48
+    sla_expires_at:         Optional[str] = None
+    sla_due_at:             Optional[str] = None
+    sla_seconds_remaining:  Optional[float] = None
+    sla_breached:           Optional[bool] = False
     days_unresolved:        Optional[float] = None
-    reporter_name:          Optional[str] = None
-    authority_name:         Optional[str] = None
+    support_count:          Optional[int] = 0
+    source:                 Optional[str] = "web"
+    visibility:             Optional[str] = "public"
+    is_fake:                Optional[bool] = False
+    is_archived:            Optional[bool] = False
 
 
 # ── Metrics Schemas ───────────────────────────────────────────

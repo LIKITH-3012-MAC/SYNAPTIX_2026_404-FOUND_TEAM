@@ -1,309 +1,185 @@
 """
-RESOLVIT - Admin Routes v2
-GET  /api/admin/users               - List all users (admin only)
-GET  /api/admin/users/{id}          - Get user detail (admin only)
-PATCH /api/admin/users/{id}/toggle  - Toggle user active/inactive (admin only)
-GET  /api/admin/stats               - Platform stats
-GET  /api/admin/dashboard           - Full control tower data (heatmap + escalations + dept perf)
-GET  /api/admin/escalations         - Escalation monitor table
+RESOLVIT - Admin Routes
+Specialized operations for managing citizens and authorities.
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional, Any
+from models import UserResponse, MessageResponse
 from database import get_db
 from auth import require_roles
-from models import MessageResponse
-from typing import Optional
-from datetime import datetime, timezone
+from pydantic import BaseModel
+from datetime import datetime
 
-router = APIRouter(tags=["Admin"])
+router = APIRouter()
 
-
-# ── List All Users ────────────────────────────────────────────
-@router.get("/users")
-def list_users(
-    role: Optional[str] = None,
-    is_active: Optional[bool] = None,
-    current_user: dict = Depends(require_roles("admin"))
+@router.get("/citizens", response_model=List[UserResponse])
+def list_citizens(
+    search: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    current_admin: dict = Depends(require_roles("admin"))
 ):
-    conditions, params = [], []
-    if role:
-        conditions.append("role = %s"); params.append(role)
-    if is_active is not None:
-        conditions.append("is_active = %s")
-        params.append(bool(is_active))
-    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    """Retrieve all citizens with search and pagination."""
+    params: List[Any] = []
+    where_clause = "WHERE role = 'citizen'"
+    
+    if search:
+        where_clause += " AND (username ILIKE %s OR email ILIKE %s OR full_name ILIKE %s)"
+        search_term = f"%{search}%"
+        params.extend([search_term, search_term, search_term])
+        
+    query = f"""
+        SELECT id, username, email, role, full_name, department, 
+               auth_provider, profile_picture, trust_score, points_cache, 
+               rank, is_suspended, created_at
+        FROM users 
+        {where_clause}
+        ORDER BY created_at DESC
+        LIMIT %s OFFSET %s
+    """
+    params.append(limit)
+    params.append(offset)
+    
     with get_db() as cursor:
-        cursor.execute(
-            f"SELECT id, username, email, role, full_name, department, is_active, created_at FROM users {where} ORDER BY created_at DESC",
-            params
-        )
+        cursor.execute(query, params)
         rows = cursor.fetchall()
-    return [{**dict(r), "id": str(r["id"])} for r in rows]
+        
+    results = []
+    for r in rows:
+        item = dict(r)
+        item["id"] = str(item["id"])
+        results.append(item)
+    return results
 
-
-# ── Get Single User ───────────────────────────────────────────
-@router.get("/users/{user_id}")
-def get_user(user_id: str, current_user: dict = Depends(require_roles("admin"))):
+@router.get("/citizens/{user_id}", response_model=UserResponse)
+def get_citizen_detail(user_id: str, current_admin: dict = Depends(require_roles("admin"))):
+    """Get detailed profile for a specific citizen."""
     with get_db() as cursor:
         cursor.execute(
-            "SELECT id, username, email, role, full_name, department, is_active, created_at FROM users WHERE id = %s",
+            """
+            SELECT id, username, email, role, full_name, department, 
+                   auth_provider, profile_picture, trust_score, points_cache, 
+                   rank, is_suspended, created_at
+            FROM users WHERE id = %s
+            """,
             (user_id,)
         )
-        user = cursor.fetchone()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    return {**dict(user), "id": str(user["id"])}
+        row = cursor.fetchone()
+        
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    item = dict(row)
+    item["id"] = str(item["id"])
+    return item
 
+class CreditPayload(BaseModel):
+    delta: int
+    note: str
 
-# ── Toggle User Active ────────────────────────────────────────
-@router.patch("/users/{user_id}/toggle")
-def toggle_user_active(user_id: str, current_user: dict = Depends(require_roles("admin"))):
+@router.post("/citizens/{user_id}/credits", response_model=MessageResponse)
+def adjust_credits(user_id: str, payload: CreditPayload, current_admin: dict = Depends(require_roles("admin"))):
+    """Grant or deduct civic credits."""
     with get_db() as cursor:
+        # Update user
         cursor.execute(
-            "UPDATE users SET is_active = NOT is_active WHERE id = %s RETURNING id, username, is_active",
-            (user_id,)
+            "UPDATE users SET points_cache = points_cache + %s WHERE id = %s",
+            (payload.delta, user_id)
         )
-        updated = cursor.fetchone()
-    if not updated:
-        raise HTTPException(status_code=404, detail="User not found.")
-    return {
-        "message": f"User {updated['username']} is now {'active' if updated['is_active'] else 'disabled'}.",
-        "user_id": str(updated["id"]),
-        "is_active": updated["is_active"]
-    }
+        # Record activity
+        cursor.execute(
+            """
+            INSERT INTO citizen_activity (user_id, action, credits_delta, note)
+            VALUES (%s, 'admin_adjustment', %s, %s)
+            """,
+            (user_id, payload.delta, payload.note)
+        )
+    return {"message": f"Successfully adjusted credits by {payload.delta}"}
 
-
-# ── Admin Stats (quick summary) ───────────────────────────────
-@router.get("/stats")
-def get_admin_stats(current_user: dict = Depends(require_roles("admin"))):
+@router.post("/citizens/{user_id}/suspend", response_model=MessageResponse)
+def suspend_user(user_id: str, suspend: bool = True, current_admin: dict = Depends(require_roles("admin"))):
+    """Suspend or unsuspend a user account."""
     with get_db() as cursor:
-        cursor.execute("""
-            SELECT COUNT(*) AS total_users,
-                   COUNT(*) FILTER (WHERE role='citizen')   AS citizens,
-                   COUNT(*) FILTER (WHERE role='authority') AS authorities,
-                   COUNT(*) FILTER (WHERE role='admin')     AS admins
-            FROM users
-        """)
-        user_stats = dict(cursor.fetchone())
+        cursor.execute("UPDATE users SET is_suspended = %s, is_active = %s WHERE id = %s", (suspend, not suspend, user_id))
+        # Log action
+        cursor.execute(
+            "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, new_value) VALUES (%s, 'user', %s, %s, %s)",
+            (current_admin["sub"], user_id, "suspension_toggle", suspend)
+        )
+    return {"message": f"User {'suspended' if suspend else 'unsuspended'} successfully"}
 
-        cursor.execute("""
-            SELECT COUNT(*) AS total_issues,
-                   COUNT(*) FILTER (WHERE status='resolved')   AS resolved,
-                   COUNT(*) FILTER (WHERE status='escalated')  AS escalated,
-                   COUNT(*) FILTER (WHERE status='in_progress') AS in_progress,
-                   COUNT(*) FILTER (WHERE sla_expires_at < NOW() AND status != 'resolved') AS sla_breached
-            FROM issues
-        """)
-        issue_stats = dict(cursor.fetchone())
-
-        cursor.execute("SELECT COUNT(*) AS total_clusters FROM issue_clusters")
-        cluster_stats = dict(cursor.fetchone())
-
-        cursor.execute("SELECT COUNT(*) AS total_audit_logs FROM audit_logs")
-        audit_stats = dict(cursor.fetchone())
-
-        cursor.execute("SELECT COALESCE(SUM(points), 0) AS total_credits_awarded FROM civic_credits")
-        credit_stats = dict(cursor.fetchone())
-
-    return {
-        "users": user_stats,
-        "issues": issue_stats,
-        "clusters": cluster_stats,
-        "audit_logs": audit_stats,
-        "credits": {"total_awarded": int(credit_stats["total_credits_awarded"])}
-    }
-
-
-# ── Admin Dashboard (full control tower data) ─────────────────
-@router.get("/dashboard")
-def get_admin_dashboard(current_user: dict = Depends(require_roles("admin"))):
-    """Full control tower: heatmap markers, category distribution, civic stats."""
+@router.get("/audit_logs", response_model=list)
+def get_audit_logs(
+    entity_type: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    current_admin: dict = Depends(require_roles("admin"))
+):
+    """Retrieve system-wide admin audit logs."""
+    params: List[Any] = []
+    where_clause = ""
+    if entity_type:
+        where_clause = "WHERE l.entity_type = %s"
+        params.append(entity_type)
+        
+    query = f"""
+        SELECT l.*, u.username as admin_username
+        FROM admin_audit_logs l
+        LEFT JOIN users u ON l.admin_id = u.id
+        {where_clause}
+        ORDER BY l.created_at DESC
+        LIMIT %s OFFSET %s
+    """
+    params.append(limit)
+    params.append(offset)
+    
     with get_db() as cursor:
-        # Heatmap markers: all unresolved issues with coordinates
-        cursor.execute("""
-            SELECT i.id, i.title, i.category, i.status, i.priority_score,
-                   i.latitude, i.longitude, i.urgency, i.escalation_level,
-                   i.sla_expires_at, i.upvotes, i.report_count,
-                   u.username AS reporter_name
-            FROM issues i
-            LEFT JOIN users u ON i.reporter_id = u.id
-            WHERE i.latitude IS NOT NULL AND i.longitude IS NOT NULL
-            ORDER BY i.priority_score DESC
-            LIMIT 200
-        """)
-        issues = cursor.fetchall()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        
+    results = []
+    for r in rows:
+        item = dict(r)
+        item["id"] = str(item["id"])
+        if item.get("admin_id"): item["admin_id"] = str(item["admin_id"])
+        if item.get("entity_id"): item["entity_id"] = str(item["entity_id"])
+        if item.get("created_at") and isinstance(item["created_at"], datetime):
+            item["created_at"] = item["created_at"].isoformat()
+        results.append(item)
+    return results
 
-        # Category distribution
-        cursor.execute("""
-            SELECT category, COUNT(*) AS count,
-                   COUNT(*) FILTER (WHERE status='resolved') AS resolved
-            FROM issues
-            GROUP BY category
-            ORDER BY count DESC
-        """)
-        categories = cursor.fetchall()
-
-        # Department performance
-        cursor.execute("""
-            SELECT u.id, u.username, u.full_name, u.department,
-                   am.total_assigned, am.total_resolved, am.total_escalated,
-                   am.resolution_rate, am.avg_resolution_time, am.performance_score,
-                   am.avg_response_time
-            FROM authority_metrics am
-            JOIN users u ON am.authority_id = u.id
-            ORDER BY am.performance_score DESC
-        """)
-        dept_perf = cursor.fetchall()
-
-        # Civic engagement
-        cursor.execute("""
-            SELECT COUNT(DISTINCT user_id) AS active_citizens,
-                   COALESCE(SUM(points), 0) AS total_points_awarded,
-                   COUNT(*) FILTER (WHERE action_type='report_issue') AS total_reports
-            FROM civic_credits
-        """)
-        engagement = dict(cursor.fetchone())
-
-    now_ts = datetime.now(timezone.utc)
-
-    def _fmt_issue(r):
-        d = dict(r)
-        d["id"] = str(d["id"])
-        sla = d.get("sla_expires_at")
-        if sla and hasattr(sla, "tzinfo"):
-            if sla.tzinfo is None:
-                sla = sla.replace(tzinfo=timezone.utc)
-            d["sla_expires_at"] = sla.isoformat()
-            d["sla_breached"] = bool(sla < now_ts)
-        else:
-            d["sla_expires_at"] = str(sla) if sla else None
-            d["sla_breached"] = False
-        return d
+@router.get("/stats", response_model=dict)
+def get_admin_stats_full(current_admin: dict = Depends(require_roles("admin"))):
+    """Core operational metrics for the Control Tower."""
+    with get_db() as cursor:
+        # 1. Issue Counts
+        cursor.execute("SELECT COUNT(*) as total, SUM(CASE WHEN status='escalated' THEN 1 ELSE 0 END) as escalated FROM issues")
+        row = cursor.fetchone()
+        
+        # 2. SLA Breaches
+        cursor.execute("SELECT COUNT(*) FROM issues WHERE sla_expires_at < NOW() AND status != 'resolved'")
+        sla_breaches = cursor.fetchone()[0]
+        
+        # 3. User Counts
+        cursor.execute("SELECT COUNT(*) FROM users")
+        total_users = cursor.fetchone()[0]
+        
+        # 4. Credits Awarded
+        cursor.execute("SELECT SUM(credits_delta) FROM citizen_activity")
+        c_row = cursor.fetchone()
+        total_credits = c_row[0] if c_row and c_row[0] else 0
 
     return {
-        "heatmap_issues": [_fmt_issue(r) for r in issues],
-        "category_distribution": [dict(r) for r in categories],
-        "department_performance": [
-            {**dict(r), "id": str(r["id"])} for r in dept_perf
-        ],
-        "civic_engagement": {
-            "active_citizens": int(engagement["active_citizens"] or 0),
-            "total_points_awarded": int(engagement["total_points_awarded"] or 0),
-            "total_reports": int(engagement["total_reports"] or 0),
+        "status": "online",
+        "issues": {
+            "total_issues": row["total"] or 0,
+            "escalated": row["escalated"] or 0,
+            "sla_breached": sla_breaches or 0
+        },
+        "users": {
+            "total": total_users or 0
+        },
+        "credits": {
+            "total_awarded": total_credits
         }
     }
-
-
-# ── Escalation Monitor ────────────────────────────────────────
-@router.get("/escalations")
-def get_escalation_monitor(current_user: dict = Depends(require_roles("admin"))):
-    """Escalation monitor table for admin control tower."""
-    with get_db() as cursor:
-        cursor.execute("""
-            SELECT i.id, i.title, i.category, i.status, i.priority_score,
-                   i.escalation_level, i.sla_expires_at,
-                   EXTRACT(EPOCH FROM (NOW() - i.sla_expires_at))/3600 AS hours_overdue,
-                   u_auth.username AS authority_name,
-                   u_auth.department AS department,
-                   u_rep.username AS reporter_name,
-                   e.reason AS last_escalation_reason,
-                   e.escalated_at AS last_escalated_at
-            FROM issues i
-            LEFT JOIN users u_auth ON i.assigned_authority_id = u_auth.id
-            LEFT JOIN users u_rep  ON i.reporter_id = u_rep.id
-            LEFT JOIN LATERAL (
-                SELECT reason, escalated_at FROM escalations
-                WHERE issue_id = i.id
-                ORDER BY escalated_at DESC LIMIT 1
-            ) e ON TRUE
-            WHERE i.status NOT IN ('resolved')
-              AND (i.status = 'escalated' OR (i.sla_expires_at IS NOT NULL AND i.sla_expires_at < NOW()))
-            ORDER BY i.escalation_level DESC, i.priority_score DESC
-        """)
-        rows = cursor.fetchall()
-
-    result = []
-    for r in rows:
-        d = dict(r)
-        d["id"] = str(d["id"])
-        sla = d.get("sla_expires_at")
-        if sla:
-            if hasattr(sla, "isoformat"):
-                d["sla_expires_at"] = sla.isoformat()
-        last_esc = d.get("last_escalated_at")
-        if last_esc and hasattr(last_esc, "isoformat"):
-            d["last_escalated_at"] = last_esc.isoformat()
-        d["hours_overdue"] = round(float(d.get("hours_overdue") or 0.0), 1)
-        result.append(d)
-    return result
-
-
-# ── Governance Health Index ───────────────────────────────────
-@router.get("/governance_health")
-def get_governance_health(current_user: dict = Depends(require_roles("admin"))):
-    """Compute and return real-time Governance Health Index (0–100)."""
-    from services.pressure import compute_governance_health
-    return compute_governance_health()
-
-
-# ── Anomaly Board ─────────────────────────────────────────────
-@router.get("/anomalies")
-def get_anomalies(current_user: dict = Depends(require_roles("admin"))):
-    """Return detected performance anomalies for admin oversight."""
-    with get_db() as cursor:
-        cursor.execute("""
-            SELECT a.id, a.anomaly_type, a.description, a.severity,
-                   a.detected_at, a.resolved,
-                   u.username AS officer_username, u.full_name AS officer_name,
-                   u.department AS department
-            FROM anomalies a
-            LEFT JOIN users u ON a.authority_id = u.id
-            ORDER BY a.detected_at DESC
-            LIMIT 50
-        """)
-        rows = cursor.fetchall()
-    result = []
-    for r in rows:
-        d = dict(r)
-        d["id"] = str(d["id"])
-        det = d.get("detected_at")
-        if det and hasattr(det, "isoformat"):
-            d["detected_at"] = det.isoformat()
-        result.append(d)
-    return result
-
-
-# ── Top Pressure Issues ───────────────────────────────────────
-@router.get("/pressure_data")
-def get_pressure_data(current_user: dict = Depends(require_roles("admin"))):
-    """Return top issues by governance pressure score with trend indicators."""
-    with get_db() as cursor:
-        cursor.execute("""
-            SELECT i.id, i.title, i.category, i.status, i.priority_score,
-                   i.pressure_score, i.escalation_level, i.report_count, i.upvotes,
-                   i.sla_expires_at, i.latitude, i.longitude,
-                   u.department, u.username AS authority_name
-            FROM issues i
-            LEFT JOIN users u ON i.assigned_authority_id = u.id
-            WHERE i.is_simulated = FALSE
-              AND i.status != 'resolved'
-            ORDER BY i.pressure_score DESC NULLS LAST
-            LIMIT 20
-        """)
-        rows = cursor.fetchall()
-    result = []
-    for r in rows:
-        d = dict(r)
-        d["id"] = str(d["id"])
-        sla = d.get("sla_expires_at")
-        if sla and hasattr(sla, "isoformat"):
-            d["sla_expires_at"] = sla.isoformat()
-        ps = float(d.get("pressure_score") or 0)
-        d["pressure_label"] = (
-            "🔴 Public Attention Risk" if ps >= 200 else
-            "🟠 Elevated Pressure" if ps >= 100 else
-            "🟡 Monitoring" if ps >= 50 else
-            "🟢 Stable"
-        )
-        result.append(d)
-    return result
-

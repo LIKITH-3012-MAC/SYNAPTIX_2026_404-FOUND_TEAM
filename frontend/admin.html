@@ -411,7 +411,8 @@
             <a class="sidebar-link" onclick="showPanel('analytics-panel');closeSidebar()">📡 Civic Analytics</a>
             <a class="sidebar-link" onclick="showPanel('anomaly-panel');closeSidebar()">🔍 Anomaly Board</a>
             <a class="sidebar-link" href="intelligence.html">🛰️ Elite Urban Intelligence</a>
-            <a class="sidebar-link" onclick="showPanel('users-panel');closeSidebar()">👥 User Management</a>
+            <a class="sidebar-link" onclick="showPanel('users-panel');closeSidebar()">👥 Citizen Management</a>
+            <a class="sidebar-link" onclick="showPanel('audit-panel');closeSidebar()">📜 System Audit Log</a>
             <div class="sidebar-sep"></div>
             <a class="sidebar-link" onclick="enterRadarMode()">🌌 Civic Radar Mode</a>
             <div class="sidebar-sep"></div>
@@ -501,24 +502,46 @@
                 <div id="category-chart"></div>
             </div>
 
-            <!-- Users Panel -->
+            <!-- Citizens Panel -->
             <div class="panel hidden" id="users-panel">
-                <h3>👥 User Management</h3>
-                <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">Enable or disable citizen and authority accounts.</p>
+                <h3>👥 Citizen Management</h3>
+                <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">Manage citizen reputation, trust scores, and account status.</p>
                 <div style="overflow-x:auto;">
                     <table class="esc-table">
                         <thead>
                             <tr>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Department</th>
-                                <th>Active</th>
+                                <th>Citizen</th>
+                                <th>Trust</th>
+                                <th>Credits</th>
+                                <th>Rank</th>
+                                <th>Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="users-tbody">
                             <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Audit Panel -->
+            <div class="panel hidden" id="audit-panel">
+                <h3>📜 System Audit Log</h3>
+                <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">Immutable record of all administrative actions and system transitions.</p>
+                <div style="overflow-x:auto;">
+                    <table class="esc-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Admin</th>
+                                <th>Action</th>
+                                <th>Entity</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-tbody">
+                            <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">Loading audit history...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -625,10 +648,20 @@
                 });
 
                 async function initAdmin() {
-                    await Promise.all([loadStats(), loadDashboard(), loadEscalations(), loadUsers(), loadGovernanceHealth(), loadPressureBoard(), loadAnomalies()]);
+                    await Promise.all([
+                        loadStats(), 
+                        loadDashboard(), 
+                        loadEscalations(), 
+                        loadUsers(), 
+                        loadAuditLogs(),
+                        loadGovernanceHealth(), 
+                        loadPressureBoard(), 
+                        loadAnomalies()
+                    ]);
+                    
                     setInterval(async () => {
                         if (document.getElementById("radar-overlay").style.display === "block") return;
-                        await Promise.all([loadStats(), loadDashboard(), loadEscalations(), loadUsers(), loadGovernanceHealth(), loadPressureBoard(), loadAnomalies()]);
+                        await Promise.all([loadStats(), loadEscalations()]);
                     }, 15000);
                 }
 
@@ -675,18 +708,44 @@
 
                 async function loadUsers() {
                     try {
-                        const users = await API.get("/api/admin/users");
+                        const users = await API.get("/api/admin/citizens");
                         const tbody = document.getElementById("users-tbody");
                         tbody.innerHTML = users.map(u => `
                         <tr>
-                          <td data-label="Username"><strong>${u.username}</strong></td>
-                          <td data-label="Email" style="color:#64748b;word-break:break-all;">${u.email}</td>
-                          <td data-label="Role"><span style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;background:${u.role==='admin'?'#ede9fe':u.role==='authority'?'#e0f2fe':'#f0fdf4'};color:${u.role==='admin'?'#7c3aed':u.role==='authority'?'#0369a1':'#15803d'};">${u.role}</span></td>
-                          <td data-label="Department" style="color:#64748b;">${u.department || "—"}</td>
-                          <td data-label="Status">${u.is_active ? "✅ Active" : "🔴 Disabled"}</td>
-                          <td data-label="Action"><button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}',this)">${u.is_active ? "Disable" : "Enable"}</button></td>
+                          <td data-label="Citizen"><strong>${u.full_name || u.username}</strong><br/><small style="color:#64748b;">${u.email}</small></td>
+                          <td data-label="Trust"><span style="color:${u.trust_score >= 80 ? '#16a34a' : u.trust_score >= 50 ? '#ca8a04' : '#dc2626'};font-weight:700;">${u.trust_score}</span></td>
+                          <td data-label="Credits" style="font-family:'JetBrains Mono';">${u.points_cache?.toLocaleString() || 0}</td>
+                          <td data-label="Rank"><span class="badge" style="background:rgba(255,255,255,0.05);">${u.rank || "Patrolman"}</span></td>
+                          <td data-label="Status">${u.is_suspended ? "🔴 Suspended" : "✅ Active"}</td>
+                          <td data-label="Action">
+                             <button class="btn btn-outline btn-sm" onclick="toggleSus('${u.id}', ${!u.is_suspended})">${u.is_suspended ? "Reinstate" : "Suspend"}</button>
+                          </td>
                         </tr>`).join("");
                     } catch (e) { console.warn("Users:", e); }
+                }
+
+                async function loadAuditLogs() {
+                    try {
+                        const logs = await API.get("/api/admin/audit_logs?limit=20");
+                        const tbody = document.getElementById("audit-tbody");
+                        tbody.innerHTML = logs.map(l => `
+                        <tr>
+                          <td data-label="Time" style="font-size:0.75rem;color:#64748b;">${new Date(l.created_at).toLocaleString()}</td>
+                          <td data-label="Admin"><strong>${l.admin_username || "System"}</strong></td>
+                          <td data-label="Action" style="text-transform:uppercase;font-weight:800;font-size:0.75rem;color:#6366f1;">${l.action.replace(/_/g, ' ')}</td>
+                          <td data-label="Entity"><small>${l.entity_type}:${l.entity_id ? l.entity_id.slice(-6) : '—'}</small></td>
+                          <td data-label="Details" style="font-size:0.8rem;color:#94a3b8;">${JSON.stringify(l.new_value || "")}</td>
+                        </tr>`).join("");
+                    } catch (e) { console.warn("Audit:", e); }
+                }
+
+                async function toggleSus(userId, state) {
+                    try {
+                        const res = await API.post(`/api/admin/citizens/${userId}/suspend?suspend=${state}`);
+                        showToast(res.message, state ? "warning" : "success");
+                        await loadUsers();
+                        await loadAuditLogs();
+                    } catch (e) { showToast(e.message, "error"); }
                 }
 
                 function initHeatmap(issues) {
@@ -887,7 +946,7 @@
                     } catch (e) { showToast(e.message, "error"); }
                 }
 
-                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel"];
+                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel", "audit-panel"];
                 const panelTitles = {
                     "heatmap-panel":     ["🗺️ City Heatmap",                "Urban nodes pulse with severity. Hover for full intelligence."],
                     "governance-panel":  ["📊 Governance Health Index",      "Real-time city governance score across 5 dimensions."],
@@ -896,7 +955,8 @@
                     "performance-panel": ["🏛️ Department Performance",       "Live rankings by resolution rate, speed, and SLA compliance."],
                     "analytics-panel":   ["📡 Civic Engagement Analytics",   "Participation metrics and issue category distribution."],
                     "anomaly-panel":     ["🔍 Anomaly Board",                 "Detected performance anomalies and suspicious officer patterns."],
-                    "users-panel":       ["👥 User Management",               "Enable or disable citizen and authority accounts."],
+                    "users-panel":       ["👥 Citizen Management",           "Review citizen reputation, trust scores, and access rights."],
+                    "audit-panel":       ["📜 System Audit Log",             "Immutable record of system state changes and admin actions."]
                 };
 
                 function showPanel(id) {
