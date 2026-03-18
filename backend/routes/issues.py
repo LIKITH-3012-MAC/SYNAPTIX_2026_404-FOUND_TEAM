@@ -366,10 +366,12 @@ def update_issue(
         fields["priority_score"] = payload.priority_score
         fields["priority_manual_override"] = True
 
-    # Resolution Logic & Rewards
+    # ⚠️ CRITICAL: Resolution Status Shift Verification
+    is_resolving = payload.status is not None and payload.status.value == "resolved" and existing["status"] != "resolved"
+
     if payload.status is not None and payload.status.value == "resolved":
         if not existing.get("resolved_at"):
-            fields["resolved_at"] = datetime.now()
+            fields["resolved_at"] = datetime.now(timezone.utc)
             # AUTO-REWARD: 50 points to the reporter for successful civic resolution
             try:
                 award_credits(
@@ -385,10 +387,6 @@ def update_issue(
 
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update.")
-
-    is_resolving = fields.get("status") == "resolved" and existing["status"] != "resolved"
-    if is_resolving:
-        fields["resolved_at"] = datetime.now(timezone.utc)
 
     set_clauses = ", ".join(f"{k} = %s" for k in fields)
     values = list(fields.values()) + [issue_id]
@@ -432,6 +430,20 @@ def update_issue(
                 description=f"Issue resolved: {existing['title'][:60]}",
                 cursor=cursor
             )
+        
+        # 🔗 SYNC: Push update to citizen activity ledger
+        cursor.execute(
+            """
+            INSERT INTO citizen_activity (user_id, action, credits_delta, note, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            """,
+            (
+                str(existing["reporter_id"]), 
+                f"Issue {payload.status.value if payload.status else 'updated'}", 
+                0, 
+                f"Status: {payload.status.value if payload.status else 'Modified'} | Note: {payload.resolution_note or 'Admin update'}"
+            )
+        )
 
     # Recalculate priority after update
     from services.priority import recalculate_issue_priority

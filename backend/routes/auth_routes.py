@@ -246,8 +246,8 @@ def get_unified_profile(current_user: dict = Depends(get_current_user)):
         "user": {**dict(user), "id": str(user["id"])},
         "stats": {
             "total_points": user["points_cache"],
-            "global_rank": global_rank,
-            "issues_reported": reported_count,
+            "rank": global_rank,
+            "issues_count": reported_count,
             "issues_resolved": resolved_count,
             "trust_score": user["trust_score"]
         },

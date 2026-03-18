@@ -49,13 +49,8 @@ const ProfileManager = {
                 this.user.myIssues = await API.get('/api/user/issues').catch(() => []);
             }
             
-            // 3.5 Clear 'Decrypting Identity' placeholder
-            const placeholder = document.getElementById('identity-sidebar')?.querySelector('div[style*="Decrypting Identity"]');
-            if (placeholder) placeholder.remove();
-            else {
-                // Secondary check for any text-based placeholder
-                [...document.querySelectorAll('div')].find(el => el.textContent.includes('Decrypting Identity'))?.remove();
-            }
+            // 3.5 Clear 'Decrypting Identity' placeholder (Failsafe)
+            this.clearLoadingPlaceholders();
 
             // 4. Final render sequence
             this.renderIdentitySidebar(this.user);
@@ -69,8 +64,20 @@ const ProfileManager = {
 
         } catch (error) {
             console.error("[Profile] Identity Sync Failure:", error);
+            this.clearLoadingPlaceholders();
             showToast("Failed to synchronise identity dossier.", "error");
         }
+    },
+
+    clearLoadingPlaceholders() {
+        const placeholder = document.getElementById('identity-sidebar')?.querySelector('div[style*="Decrypting Identity"]');
+        if (placeholder) placeholder.remove();
+        
+        // Secondary check for ANY text-based placeholder in the sidebar or content area
+        [...document.querySelectorAll('div, span')].filter(el => 
+            el.textContent.includes('Decrypting Identity') || 
+            el.textContent.includes('Processing identity history')
+        ).forEach(el => el.remove());
     },
 
     /**
