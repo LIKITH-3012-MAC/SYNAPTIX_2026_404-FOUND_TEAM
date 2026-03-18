@@ -242,43 +242,12 @@ function startSlaCountdowns(issues) {
 }
 
 async function updateIssue(id) {
-  const user = Auth.getUser();
-  if (!user || (user.role !== 'authority' && user.role !== 'admin')) {
-    showToast('🚫 Only authorities can update issue status.');
-    return;
-  }
-
-  const status = prompt("Update Status (verified, assigned, in_progress, escalated, resolved):");
-  if (!status) return;
-
-  const valid = ['reported', 'verified', 'clustered', 'assigned', 'in_progress', 'escalated', 'resolved'];
-  if (!valid.includes(status)) {
-    showToast('❌ Invalid status level.');
-    return;
-  }
-
-  const note = prompt("Resolution/Update Note (Required for 'resolved'):");
-  if (status === 'resolved' && !note) {
-    showToast('❌ Resolution note is required.');
-    return;
-  }
-
-  try {
-    await API.patch(`/api/issues/${id}`, { status, resolution_note: note });
-    showToast('✅ Issue updated successfully!');
-
-    // Refresh if in dashboard or authority view
-    if (typeof fetchIssues === 'function') fetchIssues();
-    if (typeof loadIssues === 'function') loadIssues();
-
-    // Refresh Global Map
-    const map = MapManager.getMap();
-    if (map) {
-      const issues = await API.getIssues();
-      MapManager.updateData(issues, user.role);
-    }
-  } catch (err) {
-    showToast('❌ ' + err.message);
+  if (typeof ResolutionHub !== 'undefined') {
+    ResolutionHub.open(id);
+  } else if (typeof DetailManager !== 'undefined') {
+    DetailManager.open(id);
+  } else {
+    window.location.href = `issue.html?id=${id}`;
   }
 }
 

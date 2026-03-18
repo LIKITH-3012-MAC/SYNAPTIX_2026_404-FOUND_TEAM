@@ -255,6 +255,7 @@
             if (currentUser && document.getElementById('logged-in-user')) {
                 document.getElementById('logged-in-user').textContent = `Logged in as ${currentUser.username} (${currentUser.role})`;
             }
+            if (window.ResolutionHub) ResolutionHub.init();
             await Promise.all([loadMetrics(), loadLeaderboard(), loadIssues()]);
 
             // Init Global Map

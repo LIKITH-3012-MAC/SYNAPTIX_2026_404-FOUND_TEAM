@@ -643,7 +643,9 @@
                     if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
                     document.getElementById('sidebar-user-name').textContent = `👤 ${user.username}`;
                     
-                    // 3. Init Dashboard
+                    // 3. Init Development Hub
+                    if (window.ResolutionHub) ResolutionHub.init();
+                    
                     initAdmin();
                     if (typeof initDemoPanel === "function") initDemoPanel();
                 });

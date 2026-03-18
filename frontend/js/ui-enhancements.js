@@ -87,13 +87,32 @@ const UIEnhancements = {
 
     setupScrollEffects() {
         const navbar = document.getElementById('navbar');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
+        if (!navbar) return;
+        
+        const updateNavbar = (y) => {
+            if (y > 50) {
                 navbar.classList.add('scrolled');
             } else {
                 navbar.classList.remove('scrolled');
             }
-        });
+        };
+
+        const initScroll = () => {
+            // If Lenis is active, sync with it
+            if (window.lenis) {
+                window.lenis.on('scroll', (e) => updateNavbar(e.animatedScroll));
+            } else {
+                // Fallback for native scroll
+                const scroller = document.querySelector('.admin-main') || window;
+                scroller.addEventListener('scroll', () => {
+                    const y = scroller === window ? window.scrollY : scroller.scrollTop;
+                    updateNavbar(y);
+                });
+            }
+        };
+
+        // Delay slightly to ensure Lenis is ready if it's running on same DOMContentLoaded
+        setTimeout(initScroll, 100);
     }
 };
 

@@ -218,6 +218,9 @@
              initDashboard();
              updateNavAuth();
              
+             // 2. Init Hub
+             if (window.ResolutionHub) ResolutionHub.init();
+             
              // 3. Demo Panel
              if (typeof initDemoPanel === "function") initDemoPanel();
         });

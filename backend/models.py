@@ -156,8 +156,11 @@ class IssueResponse(BaseModel):
     cluster_id:             Optional[str]
     reporter_id:            str
     reporter_name:          Optional[str] = None
+    reporter_full_name:     Optional[str] = None
     assigned_authority_id:  Optional[str]
     authority_name:         Optional[str] = None
+    authority_full_name:    Optional[str] = None
+    authority_department:   Optional[str] = None
     resolution_note:        Optional[str]
     resolution_proof_url:   Optional[str]
     created_at:             datetime
@@ -170,6 +173,9 @@ class IssueResponse(BaseModel):
     sla_breached:           Optional[bool] = False
     days_unresolved:        Optional[float] = None
     support_count:          Optional[int] = 0
+    upvotes:                Optional[int] = 0
+    report_count:           Optional[int] = 1
+    escalation_level:       Optional[int] = 0
     source:                 Optional[str] = "web"
     visibility:             Optional[str] = "public"
     is_fake:                Optional[bool] = False

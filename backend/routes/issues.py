@@ -246,6 +246,7 @@ def list_issues(
     query = f"""
         SELECT i.*,
                u.username   AS reporter_name,
+               u.full_name  AS reporter_full_name,
                a.username   AS authority_name,
                a.full_name  AS authority_full_name,
                a.department AS authority_department
