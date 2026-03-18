@@ -157,17 +157,17 @@ def get_admin_stats_full(current_admin: dict = Depends(require_roles("admin"))):
         row = cursor.fetchone()
         
         # 2. SLA Breaches
-        cursor.execute("SELECT COUNT(*) FROM issues WHERE sla_expires_at < NOW() AND status != 'resolved'")
-        sla_breaches = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) as count FROM issues WHERE sla_expires_at < NOW() AND status != 'resolved'")
+        sla_breaches = cursor.fetchone()["count"]
         
         # 3. User Counts
-        cursor.execute("SELECT COUNT(*) FROM users")
-        total_users = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) as count FROM users")
+        total_users = cursor.fetchone()["count"]
         
         # 4. Credits Awarded
-        cursor.execute("SELECT SUM(credits_delta) FROM citizen_activity")
+        cursor.execute("SELECT SUM(credits_delta) as sum FROM citizen_activity")
         c_row = cursor.fetchone()
-        total_credits = c_row[0] if c_row and c_row[0] else 0
+        total_credits = c_row["sum"] if c_row and c_row["sum"] else 0
 
     return {
         "status": "online",
