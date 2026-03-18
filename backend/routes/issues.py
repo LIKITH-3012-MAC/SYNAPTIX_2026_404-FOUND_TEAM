@@ -539,7 +539,7 @@ class AssignPayload(BaseModel):
 def assign_issue(issue_id: str, payload: AssignPayload, current_user: dict = Depends(require_roles("admin", "authority"))):
     """Assign issue to a specific authority."""
     with get_db() as cursor:
-        cursor.execute("SELECT status, assigned_authority_id FROM issues WHERE id = %s", (issue_id,))
+        cursor.execute("SELECT status, assigned_authority_id, reporter_id FROM issues WHERE id = %s", (issue_id,))
         existing = cursor.fetchone()
         if not existing: raise HTTPException(status_code=404, detail="Issue not found")
         
@@ -553,14 +553,28 @@ def assign_issue(issue_id: str, payload: AssignPayload, current_user: dict = Dep
             old_val={"authority_id": str(existing["assigned_authority_id"]) if existing["assigned_authority_id"] else None},
             new_val={"authority_id": payload.authority_id}
         )
+        # 🔗 SYNC: Push update to citizen activity ledger
+        cursor.execute(
+            """
+            INSERT INTO citizen_activity (user_id, action, credits_delta, note, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            """,
+            (
+                str(existing["reporter_id"]), 
+                "Issue assigned", 
+                0, 
+                f"Status: Assigned | Note: {payload.note or 'Assigned to an official'}"
+            )
+        )
     return {"message": "Issue assigned successfully"}
 
 @router.post("/{issue_id}/escalate", response_model=MessageResponse)
 def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
     """Escalate an issue."""
     with get_db() as cursor:
-        cursor.execute("SELECT status, escalation_level FROM issues WHERE id = %s", (issue_id,))
+        cursor.execute("SELECT status, escalation_level, reporter_id FROM issues WHERE id = %s", (issue_id,))
         existing = cursor.fetchone()
+        if not existing: raise HTTPException(status_code=404, detail="Issue not found")
         new_level = (existing["escalation_level"] or 0) + 1
         cursor.execute(
             "UPDATE issues SET status = 'escalated', escalation_level = %s, updated_at = NOW() WHERE id = %s",
@@ -571,6 +585,19 @@ def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_use
             note=note,
             old_val={"status": existing["status"], "level": existing["escalation_level"]},
             new_val={"status": "escalated", "level": new_level}
+        )
+        # 🔗 SYNC: Push update to citizen activity ledger
+        cursor.execute(
+            """
+            INSERT INTO citizen_activity (user_id, action, credits_delta, note, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            """,
+            (
+                str(existing["reporter_id"]), 
+                "Issue escalated", 
+                0, 
+                f"Status: Escalated to Level {new_level} | Note: {note or 'Escalated by Admin'}"
+            )
         )
     return {"message": "Issue escalated successfully"}
 
@@ -603,6 +630,24 @@ def resolve_issue(issue_id: str, note: Optional[str] = Query(None), current_user
 def archive_issue(issue_id: str, current_user: dict = Depends(require_roles("admin"))):
     """Archive an issue. Admin only."""
     with get_db() as cursor:
+        cursor.execute("SELECT reporter_id FROM issues WHERE id = %s", (issue_id,))
+        existing = cursor.fetchone()
+        if not existing: raise HTTPException(status_code=404, detail="Issue not found")
+        
         cursor.execute("UPDATE issues SET status = 'archived', is_archived = TRUE, updated_at = NOW() WHERE id = %s", (issue_id,))
         _add_issue_history(cursor, issue_id, "archived", current_user["sub"], current_user["role"])
+        
+        # 🔗 SYNC: Push update to citizen activity ledger
+        cursor.execute(
+            """
+            INSERT INTO citizen_activity (user_id, action, credits_delta, note, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            """,
+            (
+                str(existing["reporter_id"]), 
+                "Issue archived", 
+                0, 
+                "Status: Archived | Note: Moved to archives"
+            )
+        )
     return {"message": "Issue archived successfully"}

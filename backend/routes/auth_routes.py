@@ -239,13 +239,14 @@ def get_unified_profile(current_user: dict = Depends(get_current_user)):
         resolved_count = cursor.fetchone()["count"]
         
         # 3. Global Stats (Heuristic for production feel)
-        cursor.execute("SELECT COUNT(*) + 1 as global_rank FROM users WHERE points_cache > %s AND role = 'citizen'", (user["points_cache"],))
+        user_points = user["points_cache"] or 0
+        cursor.execute("SELECT COUNT(*) + 1 as global_rank FROM users WHERE points_cache > %s AND role = 'citizen'", (user_points,))
         global_rank = cursor.fetchone()["global_rank"]
 
     return {
         "user": {**dict(user), "id": str(user["id"])},
         "stats": {
-            "total_points": user["points_cache"],
+            "total_points": user_points,
             "rank": global_rank,
             "issues_count": reported_count,
             "issues_resolved": resolved_count,
