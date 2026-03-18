@@ -34,7 +34,7 @@ const ProfileManager = {
     async fetchFreshData() {
         try {
             // 1. Fetch Unified Profile Intelligence
-            const profileData = await API.get(`/api/auth/profile`);
+            const profileData = await API.get(`/api/user/profile`);
             
             // 2. Update local state
             this.user = { ...this.user, ...profileData.user, stats: profileData.stats, badges: profileData.badges };
@@ -46,7 +46,15 @@ const ProfileManager = {
                 await this.loadAuthorityStats();
             } else {
                 // Fetch personal issues list
-                this.user.myIssues = await API.get('/api/auth/issues').catch(() => []);
+                this.user.myIssues = await API.get('/api/user/issues').catch(() => []);
+            }
+            
+            // 3.5 Clear 'Decrypting Identity' placeholder
+            const placeholder = document.getElementById('identity-sidebar')?.querySelector('div[style*="Decrypting Identity"]');
+            if (placeholder) placeholder.remove();
+            else {
+                // Secondary check for any text-based placeholder
+                [...document.querySelectorAll('div')].find(el => el.textContent.includes('Decrypting Identity'))?.remove();
             }
 
             // 4. Final render sequence
@@ -350,7 +358,7 @@ const ProfileManager = {
 
         try {
             // Fetch live activity from unified ledger
-            const activity = await API.get("/api/auth/activity");
+            const activity = await API.get("/api/user/activity");
             const items = activity.map(t => ({
                 title: t.note || t.action || 'Civic Contribution',
                 time: new Date(t.created_at).toLocaleDateString() + ' ' + new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),

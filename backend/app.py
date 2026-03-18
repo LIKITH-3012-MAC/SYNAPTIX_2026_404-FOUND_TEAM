@@ -81,7 +81,11 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # Routers
 # -----------------------------
 app.include_router(auth_router,       prefix="/api/auth",       tags=["Auth"])
+app.include_router(auth_router,       prefix="/api/user",       tags=["User Profile Aliases"]) # ALIAS for /api/user/profile
+
 app.include_router(issues_router,     prefix="/api/issues",     tags=["Issues"])
+app.include_router(issues_router,     prefix="/api/admin/issues", tags=["Admin Issue Aliases"]) # ALIAS for /api/admin/issues/:id
+
 app.include_router(export_router,     prefix="/api/export",     tags=["Exports"])
 app.include_router(audit_router,      prefix="/api/audit",      tags=["Audit"])
 app.include_router(metrics_router,    prefix="/api/metrics",    tags=["Metrics"])

@@ -335,16 +335,32 @@ body {
 
 @media (max-width: 768px) {
   .glass, .glass-premium, .glass-card-premium, .navbar, footer {
-    backdrop-filter: blur(6px) saturate(140%) !important;
-    -webkit-backdrop-filter: blur(6px) saturate(140%) !important;
+    backdrop-filter: blur(4px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(4px) saturate(120%) !important;
+    background: rgba(15, 23, 42, 0.9) !important; /* Higher opacity, less blur for mobile perf */
+  }
+
+  /* One-finger scroll fix: ensure map doesn't swallow body touch if not targeted */
+  #map-container, #personal-map, #simulation-map {
+    touch-action: pan-x pan-y !important;
   }
 
   .glass, .glass-premium, .glass-card-premium {
-    padding: 1.5rem !important;
+    padding: 1.25rem !important;
   }
   
   .section {
-    padding: 3rem 0;
+    padding: 2.5rem 0;
+  }
+  
+  /* Remove 2-finger scroll requirement */
+  * {
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  body {
+    overflow-y: auto !important;
+    overscroll-behavior: auto !important;
   }
 }
 
