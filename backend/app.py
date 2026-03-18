@@ -57,9 +57,17 @@ app.add_exception_handler(ValueError, value_error_handler)
 # -----------------------------
 # CORS Middleware
 # -----------------------------
+origins = [
+    "http://localhost:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:8000",
+    "https://resolvit-app-2026.vercel.app",
+    "https://resolvit-app-2026.vercel.app/",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
