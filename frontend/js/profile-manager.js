@@ -11,7 +11,7 @@ const ProfileManager = {
         
         // 1. Wait for Auth0 session check if available
         if (typeof Auth0Integration !== 'undefined') {
-            await Auth0Integration.checkSession();
+            await Auth0Integration.boot();
         }
 
         this.user = Auth.getUser();

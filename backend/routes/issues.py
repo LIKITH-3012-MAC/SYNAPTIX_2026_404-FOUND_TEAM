@@ -239,9 +239,11 @@ def list_issues(
         # Full visibility for officials
         pass
     else:
-        # Citizens (default) see only their own issues
-        conditions.append("i.reporter_id = %s")
-        params.append(current_user["sub"])
+        # Citizens see all public issues (reach to user request)
+        # To restore strict privacy, uncomment:
+        # conditions.append("i.reporter_id = %s")
+        # params.append(current_user["sub"])
+        pass
 
     # Additional filters (Category/Status)
     if category:
@@ -310,12 +312,12 @@ def get_issue(
     role = current_user.get("role")
     user_dept = current_user.get("department")
 
-    # Access Control: Citizens only see their own issues
-    if role not in ("admin", "authority") and str(issue_data.get("reporter_id")) != current_user["sub"]:
-        raise HTTPException(
-            status_code=403, 
-            detail="Access denied. You can only view details of issues you reported."
-        )
+    # Access Control: Citizens can view all public issues (reach to user request)
+    # if role not in ("admin", "authority") and str(issue_data.get("reporter_id")) != current_user["sub"]:
+    #     raise HTTPException(
+    #         status_code=403, 
+    #         detail="Access denied. You can only view details of issues you reported."
+    #     )
 
     return _serialize_issue(issue_data)
 
