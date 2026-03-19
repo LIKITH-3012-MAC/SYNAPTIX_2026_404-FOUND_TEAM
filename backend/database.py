@@ -201,13 +201,28 @@ def execute_schema():
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;",
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS resolution_note TEXT;",
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;",
+        "ALTER TABLE issues ADD COLUMN IF NOT EXISTS pressure_score FLOAT DEFAULT 0.0;",
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS priority_manual_override BOOLEAN DEFAULT FALSE;",
         
+        # New Tables
+        """
+        CREATE TABLE IF NOT EXISTS anomalies (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            authority_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+            anomaly_type    VARCHAR(64) NOT NULL,
+            description     TEXT,
+            severity        VARCHAR(32) DEFAULT 'warning',
+            is_resolved     BOOLEAN DEFAULT FALSE,
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+
         # User Indexes
         "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);",
         "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);",
         "CREATE INDEX IF NOT EXISTS idx_users_points ON users(points_cache DESC);",
         "CREATE INDEX IF NOT EXISTS idx_users_status ON users(is_suspended, is_active);",
+        "CREATE INDEX IF NOT EXISTS idx_issues_pressure_score ON issues(pressure_score DESC);",
         
         # Image BLOB Store (persistent storage for Render)
         """

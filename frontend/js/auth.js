@@ -22,9 +22,30 @@ const Auth = {
 
     /**
      * Register a new user account.
+     * Enforces allowed personal email domains for manual database accounts.
      */
     async register(payload) {
-        return API.post('/api/auth/register', payload);
+        const ALLOWED_EMAIL_DOMAINS = [
+            // Global personal providers
+            "gmail.com", "yahoo.com", "yahoo.co.in", "outlook.com", "hotmail.com",
+            "live.com", "msn.com", "icloud.com", "me.com", "mac.com", "aol.com",
+            "proton.me", "protonmail.com", "pm.me", "zoho.com", "mail.com",
+            "gmx.com", "gmx.net", "yandex.com", "yandex.ru",
+            // Yahoo regional variants
+            "yahoo.in", "yahoo.co.uk", "yahoo.ca", "yahoo.com.au"
+        ];
+
+        const email = (payload.email || "").trim().toLowerCase();
+        const domain = email.split("@").pop();
+
+        if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
+            throw new Error(
+                "For now, new account creation is supported only for approved personal email providers " +
+                "such as Gmail, Yahoo, Outlook, Hotmail, iCloud, ProtonMail, Zoho, Mail.com, GMX, and similar services."
+            );
+        }
+
+        return API.post('/api/auth/register', { ...payload, email });
     },
 
     /**

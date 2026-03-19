@@ -115,7 +115,7 @@ def recalculate_all_pressure_scores():
     with get_db() as cursor:
         cursor.execute("""
             SELECT id, priority_score, report_count, escalation_level, upvotes
-            FROM issues WHERE status != 'resolved' AND (is_simulated = FALSE OR is_simulated IS NULL)
+            FROM issues WHERE status != 'resolved'
         """)
         issues = cursor.fetchall()
 

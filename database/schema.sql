@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS issues (
                               CHECK (status IN ('reported','verified','clustered','assigned',
                                                 'in_progress','escalated','resolved','archived')),
     priority_score          FLOAT DEFAULT 0.0,
+    pressure_score          FLOAT DEFAULT 0.0,
     ai_risk                 FLOAT DEFAULT 0.0,
     civic_impact_score      FLOAT DEFAULT 0.0,
     safety_risk_probability FLOAT DEFAULT 0.1,
@@ -218,6 +219,19 @@ CREATE TABLE IF NOT EXISTS authority_metrics (
     performance_score   FLOAT DEFAULT 100.0,
     last_calculated_at  TIMESTAMPTZ DEFAULT NOW(),
     updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- ANOMALIES TABLE (Governance Oversight)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS anomalies (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    authority_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+    anomaly_type    VARCHAR(64) NOT NULL, -- FAST_CLOSURE, HIGH_REJECTION, etc.
+    description     TEXT,
+    severity        VARCHAR(32) DEFAULT 'warning',
+    is_resolved     BOOLEAN DEFAULT FALSE,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================

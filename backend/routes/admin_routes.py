@@ -206,6 +206,8 @@ def list_authorities():
         results.append(item)
     return results
 
+from services.pressure import compute_governance_health
+
 @router.get("/leaderboard", response_model=list)
 def get_admin_leaderboard():
     """Ranked leaderboard of all citizens based on civic credits."""
@@ -230,3 +232,95 @@ def get_admin_leaderboard():
             "credits": int(r["points_cache"] or 0)
         })
     return results
+
+@router.get("/dashboard", response_model=dict)
+def get_admin_dashboard(current_admin: dict = Depends(require_roles("admin"))):
+    """Aggregate data for the Control Tower main view."""
+    with get_db() as cursor:
+        # 1. Heatmap Issues
+        cursor.execute("""
+            SELECT id, title, category, latitude, longitude, priority_score, status, is_simulated
+            FROM issues WHERE status != 'resolved' AND status != 'archived'
+        """)
+        heatmap = [dict(r) for r in cursor.fetchall()]
+        for h in heatmap: h["id"] = str(h["id"])
+
+        # 2. Dept Performance
+        cursor.execute("""
+            SELECT u.department, AVG(am.performance_score) as avg_score, 
+                   COUNT(am.id) as officer_count, SUM(am.total_resolved) as resolved
+            FROM authority_metrics am
+            JOIN users u ON am.authority_id = u.id
+            GROUP BY u.department
+        """)
+        dept_perf = [dict(r) for r in cursor.fetchall()]
+
+        # 3. Category distribution
+        cursor.execute("SELECT category, COUNT(*) as count FROM issues GROUP BY category")
+        cat_dist = [dict(r) for r in cursor.fetchall()]
+
+    return {
+        "heatmap_issues": heatmap,
+        "department_performance": dept_perf,
+        "category_distribution": cat_dist,
+        "civic_engagement": {
+            "total_reports": len(heatmap),
+            "participation_index": 85.4 # Heuristic for now
+        }
+    }
+
+@router.get("/escalations", response_model=list)
+def get_admin_escalations(current_admin: dict = Depends(require_roles("admin"))):
+    """Fetch all escalated issues requiring oversight."""
+    with get_db() as cursor:
+        cursor.execute("""
+            SELECT i.id, i.title, i.category, i.escalation_level, i.priority_score, 
+                   u.username as authority_name, u.department,
+                   EXTRACT(EPOCH FROM (NOW() - i.sla_expires_at))/3600 as hours_overdue
+            FROM issues i
+            LEFT JOIN users u ON i.assigned_authority_id = u.id
+            WHERE i.status = 'escalated'
+            ORDER BY i.priority_score DESC
+        """)
+        rows = cursor.fetchall()
+    
+    results = []
+    for r in rows:
+        item = dict(r)
+        item["id"] = str(item["id"])
+        item["hours_overdue"] = max(0, round(float(item["hours_overdue"] or 0), 1))
+        results.append(item)
+    return results
+
+@router.get("/governance_health")
+def get_admin_gov_health(current_admin: dict = Depends(require_roles("admin"))):
+    """Compute and return the system-wide health index."""
+    return compute_governance_health()
+
+@router.get("/pressure_board", response_model=list)
+def get_pressure_board(current_admin: dict = Depends(require_roles("admin"))):
+    """Top issues ranked by Governance Pressure Score."""
+    with get_db() as cursor:
+        cursor.execute("""
+            SELECT id, title, category, pressure_score, report_count, urgency, status
+            FROM issues 
+            WHERE status != 'resolved'
+            ORDER BY pressure_score DESC
+            LIMIT 10
+        """)
+        rows = cursor.fetchall()
+    return [{**dict(r), "id": str(r["id"])} for r in rows]
+
+@router.get("/anomalies", response_model=list)
+def get_admin_anomalies(current_admin: dict = Depends(require_roles("admin"))):
+    """List detected system/officer anomalies."""
+    with get_db() as cursor:
+        cursor.execute("""
+            SELECT a.*, u.username as authority_name, u.department
+            FROM anomalies a
+            JOIN users u ON a.authority_id = u.id
+            WHERE a.is_resolved = FALSE
+            ORDER BY a.created_at DESC
+        """)
+        rows = cursor.fetchall()
+    return [{**dict(r), "id": str(r["id"]), "authority_id": str(r["authority_id"])} for r in rows]

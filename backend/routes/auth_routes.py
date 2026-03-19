@@ -12,6 +12,7 @@ from pydantic import BaseModel, EmailStr, Field
 from models import UserRegister, UserLogin, OAuthLogin, TokenResponse, UserResponse, MessageResponse
 from database import get_db
 from auth import hash_password, verify_password, create_access_token, get_current_user, create_password_reset_token, verify_password_reset_token
+from core.config import settings
 from services.email_service import send_password_reset_email
 from core.security import limiter
 import uuid
@@ -20,15 +21,26 @@ from fastapi import Request
 
 router = APIRouter()
 
-
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(payload: UserRegister):
     """Register a new citizen, authority, or admin account."""
+    # 1. Normalize and extract domain
+    email = payload.email.strip().lower()
+    domain = email.split("@")[-1]
+
+    # 2. Enforce Personal Email Allowlist
+    if domain not in settings.ALLOWED_EMAIL_DOMAINS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="For now, new account creation is supported only for approved personal email providers "
+                   "such as Gmail, Yahoo, Outlook, Hotmail, iCloud, ProtonMail, Zoho, Mail.com, GMX, and similar services."
+        )
+
     with get_db() as cursor:
-        # Check for duplicates
+        # Check for duplicates using normalized email
         cursor.execute(
             "SELECT id FROM users WHERE email = %s OR username = %s",
-            (payload.email, payload.username)
+            (email, payload.username)
         )
         if cursor.fetchone():
             raise HTTPException(
@@ -46,7 +58,7 @@ def register(payload: UserRegister):
             (
                 user_id,
                 payload.username,
-                payload.email,
+                email,
                 hash_password(payload.password),
                 payload.role.value,
                 payload.full_name,
