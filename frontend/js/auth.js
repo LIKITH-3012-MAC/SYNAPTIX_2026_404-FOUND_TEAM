@@ -293,6 +293,9 @@ const Auth = {
             `;
         }
 
+        // ── Role-Based Nav Link Visibility ──────────────────────
+        this.enforceNavVisibility(user);
+
         // Apply translations immediately to the new elements
         if (window.i18n) i18n.apply();
 
@@ -314,6 +317,41 @@ const Auth = {
 
 
         if (typeof API !== 'undefined') API.checkHealth();
+    },
+    /**
+     * Enforce role-based visibility of nav links.
+     * Hides authority/admin pages from citizens.
+     */
+    enforceNavVisibility(user) {
+        const navLinks = document.querySelectorAll('.nav-links .nav-link, .nav-links a');
+        navLinks.forEach(link => {
+            const href = (link.getAttribute('href') || '').toLowerCase();
+            
+            if (!user) {
+                // Not logged in: hide authority.html, admin.html, citizen.html
+                if (href.includes('authority.html') || href.includes('admin.html') || href.includes('citizen.html')) {
+                    link.style.display = 'none';
+                } else {
+                    link.style.display = '';
+                }
+                return;
+            }
+
+            const role = (user.role || '').toLowerCase();
+
+            if (href.includes('admin.html')) {
+                // Only admin can see admin links
+                link.style.display = role === 'admin' ? '' : 'none';
+            } else if (href.includes('authority.html')) {
+                // Only admin + authority can see authority links
+                link.style.display = (role === 'admin' || role === 'authority') ? '' : 'none';
+            } else if (href.includes('citizen.html')) {
+                // Profile page visible to all logged-in users
+                link.style.display = '';
+            } else {
+                link.style.display = '';
+            }
+        });
     }
 };
 

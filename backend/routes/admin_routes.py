@@ -153,23 +153,40 @@ def get_admin_stats_full(current_admin: dict = Depends(require_roles("admin"))):
     """Core operational metrics for the Control Tower."""
     with get_db() as cursor:
         # 1. Issue Counts
-        cursor.execute("SELECT COUNT(*) as total, SUM(CASE WHEN status='escalated' THEN 1 ELSE 0 END) as escalated FROM issues")
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status='escalated' THEN 1 ELSE 0 END) as escalated,
+                SUM(CASE WHEN status='resolved' THEN 1 ELSE 0 END) as resolved
+            FROM issues
+        """)
         row = cursor.fetchone()
+        total_issues = row["total"] or 0
+        escalated_count = row["escalated"] or 0
+        resolved_count = row["resolved"] or 0
         
         # 2. SLA Breaches
         cursor.execute("SELECT COUNT(*) as count FROM issues WHERE sla_expires_at < NOW() AND status != 'resolved'")
-        sla_breaches = cursor.fetchone()["count"]
+        sla_breaches = cursor.fetchone()["count"] or 0
         
         # 3. User Counts
         cursor.execute("SELECT COUNT(*) as count FROM users")
-        total_users = cursor.fetchone()["count"]
+        total_users = cursor.fetchone()["count"] or 0
         
         # 4. Credits Awarded
-        cursor.execute("SELECT SUM(credits_delta) as sum FROM citizen_activity")
-        c_row = cursor.fetchone()
-        total_credits = c_row["sum"] if c_row and c_row["sum"] else 0
+        cursor.execute("SELECT COALESCE(SUM(credits_delta), 0) as sum FROM citizen_activity")
+        total_credits = cursor.fetchone()["sum"] or 0
 
     return {
+        "issues": {
+            "total_issues": total_issues,
+            "escalated": escalated_count,
+            "resolved": resolved_count,
+            "sla_breached": sla_breaches
+        },
+        "users": {
+            "total": total_users
+        },
         "credits": {
             "total_awarded": total_credits
         }

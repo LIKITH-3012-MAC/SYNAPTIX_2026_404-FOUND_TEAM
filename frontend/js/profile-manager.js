@@ -36,8 +36,30 @@ const ProfileManager = {
             // 1. Fetch Unified Profile Intelligence
             const profileData = await API.get(`/api/user/profile`);
             
-            // 2. Update local state
-            this.user = { ...this.user, ...profileData.user, stats: profileData.stats, badges: profileData.badges };
+            // 2. Update local state — merge profile data correctly
+            const serverUser = profileData.user || {};
+            this.user = { 
+                ...this.user, 
+                ...serverUser, 
+                // Normalize: ensure picture is available under both keys
+                picture: serverUser.profile_picture || serverUser.picture || this.user.picture,
+                profile_picture: serverUser.profile_picture || serverUser.picture || this.user.profile_picture,
+                stats: profileData.stats, 
+                badges: profileData.badges 
+            };
+            
+            // Sync to localStorage so other pages have fresh data
+            localStorage.setItem('resolvit_user', JSON.stringify({
+                id: this.user.id,
+                username: this.user.username,
+                email: this.user.email,
+                role: this.user.role,
+                department: this.user.department || null,
+                auth_provider: this.user.auth_provider || 'database',
+                full_name: this.user.full_name,
+                picture: this.user.profile_picture || this.user.picture,
+                profile_picture: this.user.profile_picture || this.user.picture
+            }));
 
             // 3. Fetch Role-Specific Detailed Data
             if (this.user.role === 'admin') {
@@ -100,13 +122,14 @@ const ProfileManager = {
             providerIcon = 'https://abs.twimg.com/favicons/twitter.3.ico';
         }
 
-        // Avatar logic
+        // Avatar logic — check both field names
+        const profilePic = user.profile_picture || user.picture;
         const initials = user.full_name 
             ? user.full_name.split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2)
             : (user.username || 'U').substring(0,2).toUpperCase();
         
-        const avatarHtml = user.picture 
-            ? `<img src="${user.picture}" class="profile-avatar" alt="${user.username}">`
+        const avatarHtml = profilePic 
+            ? `<img src="${profilePic}" class="profile-avatar" alt="${user.username}">`
             : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--accent-gradient);color:white;font-size:3rem;font-weight:900;">${initials}</div>`;
 
         sidebar.innerHTML = `
@@ -144,6 +167,11 @@ const ProfileManager = {
                         <span class="meta-label">Account Status</span>
                         <span class="meta-value">✅ Active / Verified</span>
                     </div>
+                    ${user.created_at ? `
+                    <div class="meta-item">
+                        <span class="meta-label">Member Since</span>
+                        <span class="meta-value">${new Date(user.created_at).toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'})}</span>
+                    </div>` : ''}
                     ${user.department ? `
                     <div class="meta-item">
                         <span class="meta-label">Department</span>

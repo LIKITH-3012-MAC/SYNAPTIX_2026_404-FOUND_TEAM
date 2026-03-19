@@ -224,7 +224,7 @@ def get_unified_profile(current_user: dict = Depends(get_current_user)):
         # 1. Basic Info
         cursor.execute(
             """SELECT id, username, email, role, full_name, department, profile_picture, 
-               points_cache, trust_score, rank, created_at FROM users WHERE id = %s""",
+               points_cache, trust_score, rank, created_at, auth_provider FROM users WHERE id = %s""",
             (user_id,)
         )
         user = cursor.fetchone()

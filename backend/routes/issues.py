@@ -327,18 +327,15 @@ def update_issue(
     payload: IssueUpdate,
     current_user: dict = Depends(get_current_user)
 ):
-    """Update issue fields. Awards +50 credits to reporter on resolution."""
-    with get_db() as cursor:
-        cursor.execute("SELECT * FROM issues WHERE id = %s", (issue_id,))
-        existing = cursor.fetchone()
-
-    if not existing:
-        raise HTTPException(status_code=404, detail="Issue not found.")
-
+    """Update issue fields. Awards +50 credits to reporter on resolution.
+    
+    CRITICAL: All DB operations happen in a SINGLE atomic transaction.
+    """
     role = str(current_user.get("role", "citizen"))
     if role not in ["admin", "authority"]:
         raise HTTPException(status_code=403, detail="Forbidden: Only Admin and Authority can update issues.")
     
+    # Build field update map from payload
     fields = {}
     if payload.title is not None:             fields["title"] = payload.title
     if payload.description is not None:       fields["description"] = payload.description
@@ -358,47 +355,46 @@ def update_issue(
     if payload.is_fake is not None:           fields["is_fake"] = payload.is_fake
     if payload.is_archived is not None:       fields["is_archived"] = payload.is_archived
     if payload.sla_due_at is not None:        fields["sla_due_at"] = payload.sla_due_at
-    if payload.is_fake is not None:           fields["is_fake"] = payload.is_fake
-    if payload.is_archived is not None:       fields["is_archived"] = payload.is_archived
-    if payload.escalation_level is not None:  fields["escalation_level"] = payload.escalation_level
-    if payload.status is not None:            fields["status"] = payload.status.value
     if payload.priority_score is not None:
         fields["priority_score"] = payload.priority_score
         fields["priority_manual_override"] = True
 
-    # ⚠️ CRITICAL: Resolution Status Shift Verification
-    is_resolving = payload.status is not None and payload.status.value == "resolved" and existing["status"] != "resolved"
-
-    if payload.status is not None and payload.status.value == "resolved":
-        if not existing.get("resolved_at"):
-            fields["resolved_at"] = datetime.now(timezone.utc)
-            # AUTO-REWARD: 50 points to the reporter for successful civic resolution
-            try:
-                award_credits(
-                    user_id=str(existing["reporter_id"]),
-                    issue_id=issue_id,
-                    action_type="issue_resolved",
-                    points=50,
-                    description=f"Issue Resolved: {existing['title']}",
-                    cursor=cursor
-                )
-            except Exception as e:
-                print(f"[REWARD ERR] {e}")
-
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update.")
 
-    set_clauses = ", ".join(f"{k} = %s" for k in fields)
-    values = list(fields.values()) + [issue_id]
-
+    # ═══════════════════════════════════════════════════════════
+    # SINGLE ATOMIC TRANSACTION — All reads + writes in one block
+    # ═══════════════════════════════════════════════════════════
     with get_db() as cursor:
+        # 1. FETCH existing issue (same cursor/transaction)
+        cursor.execute("SELECT * FROM issues WHERE id = %s", (issue_id,))
+        existing = cursor.fetchone()
+
+        if not existing:
+            raise HTTPException(status_code=404, detail="Issue not found.")
+
+        # 2. Detect resolution transition
+        is_resolving = (
+            payload.status is not None 
+            and payload.status.value == "resolved" 
+            and existing["status"] != "resolved"
+        )
+
+        # 3. Set resolved_at timestamp on first resolution
+        if is_resolving and not existing.get("resolved_at"):
+            fields["resolved_at"] = datetime.now(timezone.utc)
+
+        # 4. EXECUTE the UPDATE
+        set_clauses = ", ".join(f"{k} = %s" for k in fields)
+        values = list(fields.values()) + [issue_id]
+
         cursor.execute(
             f"UPDATE issues SET {set_clauses}, updated_at = NOW() WHERE id = %s RETURNING *",
             values
         )
         updated = dict(cursor.fetchone())
 
-        # Record History for each changed field
+        # 5. Record history for each changed field
         for field, new_val in fields.items():
             old_val = existing.get(field)
             if str(old_val) != str(new_val):
@@ -408,48 +404,56 @@ def update_issue(
                     actor_id=current_user["sub"],
                     actor_role=role,
                     note=f"Update {field.replace('_', ' ')}",
-                    old_val={field: old_val},
-                    new_val={field: new_val}
+                    old_val={field: str(old_val) if old_val is not None else None},
+                    new_val={field: str(new_val) if new_val is not None else None}
                 )
 
-        # Audit log for admins
+        # 6. Admin audit log
         if role == "admin":
             cursor.execute(
                 "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, old_value, new_value) VALUES (%s, 'issue', %s, %s, %s, %s)",
-                (current_user["sub"], issue_id, "issue_update", json.dumps({k:str(existing.get(k)) for k in fields}), json.dumps({k:str(v) for k,v in fields.items()}))
+                (
+                    current_user["sub"], issue_id, "issue_update", 
+                    json.dumps({k: str(existing.get(k)) for k in fields}), 
+                    json.dumps({k: str(v) for k, v in fields.items()})
+                )
             )
 
-        # Special action: Resolution credits
+        # 7. Resolution credits — awarded ONCE on first resolution
         if is_resolving:
             reporter_id = str(existing["reporter_id"])
-            award_credits(
-                user_id=reporter_id,
-                issue_id=issue_id,
-                action_type="issue_resolved",
-                points=50,
-                description=f"Issue resolved: {existing['title'][:60]}",
-                cursor=cursor
-            )
+            try:
+                award_credits(
+                    user_id=reporter_id,
+                    issue_id=issue_id,
+                    action_type="issue_resolved",
+                    points=50,
+                    description=f"Issue resolved: {existing['title'][:60]}",
+                    cursor=cursor
+                )
+            except Exception as e:
+                print(f"[REWARD ERR] {e}")
         
-        # 🔗 SYNC: Push update to citizen activity ledger
+        # 8. SYNC: Push update to citizen activity ledger (with issue_id)
         cursor.execute(
             """
-            INSERT INTO citizen_activity (user_id, action, credits_delta, note, created_at)
-            VALUES (%s, %s, %s, %s, NOW())
+            INSERT INTO citizen_activity (user_id, issue_id, action, credits_delta, note, created_at)
+            VALUES (%s, %s, %s, %s, %s, NOW())
             """,
             (
-                str(existing["reporter_id"]), 
+                str(existing["reporter_id"]),
+                issue_id,
                 f"Issue {payload.status.value if payload.status else 'updated'}", 
-                0, 
+                50 if is_resolving else 0, 
                 f"Status: {payload.status.value if payload.status else 'Modified'} | Note: {payload.resolution_note or 'Admin update'}"
             )
         )
 
-    # Recalculate priority after update
+    # Post-transaction: Recalculate priority (separate transaction is fine)
     from services.priority import recalculate_issue_priority
     recalculate_issue_priority(issue_id)
 
-    # Audit log
+    # Post-transaction: Blockchain audit log
     log_event(
         issue_id=issue_id,
         event_type="updated",

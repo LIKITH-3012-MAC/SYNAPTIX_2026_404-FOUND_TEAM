@@ -490,7 +490,7 @@ const ResolutionHub = {
         btn.textContent = 'EXECUTING TRANSACTION...';
 
         try {
-            await API.patch(`/api/issues/${id}`, payload);
+            const result = await API.patch(`/api/issues/${id}`, payload);
             showToast('Operational State Successfully Persisted', 'success');
             
             // Re-fetch and sync current view
@@ -501,10 +501,23 @@ const ResolutionHub = {
             if (typeof loadIssues === 'function') loadIssues();
             if (typeof loadDashboard === 'function') loadDashboard();
             if (typeof loadEscalations === 'function') loadEscalations();
+            if (typeof loadAuditLogs === 'function') loadAuditLogs();
             
+            // Dispatch global event so citizen-facing components can react
+            window.dispatchEvent(new CustomEvent('issueUpdated', { 
+                detail: { issueId: id, status: payload.status, result } 
+            }));
+
             if (window.MapManager) {
-                const issues = await API.getIssues();
-                window.MapManager.updateData(issues, typeof Auth !== 'undefined' ? Auth.getUser()?.role : 'citizen');
+                try {
+                    const issues = await API.getIssues();
+                    window.MapManager.updateData(issues, typeof Auth !== 'undefined' ? Auth.getUser()?.role : 'citizen');
+                } catch(e) { console.warn('[MapSync]', e); }
+            }
+            
+            // Refresh profile data if profile manager is loaded
+            if (window.ProfileManager && typeof ProfileManager.fetchFreshData === 'function') {
+                ProfileManager.fetchFreshData().catch(e => console.warn('[ProfileSync]', e));
             }
         } catch (err) {
             console.error("Critical Transaction Error:", err);
@@ -514,6 +527,8 @@ const ResolutionHub = {
             // Helpful diagnostics for the user
             if (msg.includes("Failed to fetch") || msg.includes("TIMEOUT")) {
                 console.warn("DIAGNOSTIC: Backend unreachable. Ensure the backend server is running and BASE_URL in api.js is correct. Current BASE_URL:", API.BASE_URL);
+            } else if (msg.includes("403") || msg.includes("Forbidden")) {
+                console.warn("DIAGNOSTIC: Authorization failed. Your role may not permit this action. Current user:", typeof Auth !== 'undefined' ? Auth.getUser() : 'unknown');
             }
         } finally {
             btn.disabled = false;
