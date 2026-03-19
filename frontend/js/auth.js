@@ -165,7 +165,9 @@ const Auth = {
                 const btn = e.target.querySelector('button');
                 btn.disabled = true; btn.textContent = '⏳ Verifying...';
                 try {
-                    const u = await this.login(document.getElementById('u-email').value, document.getElementById('u-pass').value);
+                    const email = document.getElementById('u-email').value.trim().toLowerCase();
+                    const pass  = document.getElementById('u-pass').value;
+                    const u = await this.login(email, pass);
                     this.hideModal();
                     showToast(`✅ Welcome back, ${u.username}!`, 'success');
 
@@ -204,7 +206,7 @@ const Auth = {
                 const btn = e.target.querySelector('button');
                 btn.disabled = true; btn.textContent = '⏳ Processing...';
                 try {
-                    const email    = document.getElementById('u-email').value.trim();
+                    const email    = document.getElementById('u-email').value.trim().toLowerCase();
                     const pass     = document.getElementById('u-pass').value;
                     const fullName = document.getElementById('u-name').value.trim();
                     // Global space→underscore replace (split/join, not single .replace)

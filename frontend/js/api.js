@@ -49,7 +49,7 @@ const API = {
         const fetchPromise = fetch(`${BASE_URL}${path}`, fetchOptions);
         const response = await Promise.race([fetchPromise, timeoutPromise]);
 
-        if (response.status === 401) {
+        if (response.status === 401 && !path.includes("/api/auth/login")) {
           localStorage.removeItem("resolvit_token");
           localStorage.removeItem("resolvit_user");
           showToast("⚠️ Session expired. Please login again.", "error");
