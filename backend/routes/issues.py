@@ -88,21 +88,37 @@ def _serialize_issue(row: dict) -> dict:
 
 # ── UPLOAD ────────────────────────────────────────────────────
 @router.post("/upload", response_model=dict)
-def upload_image(request: Request, file: UploadFile = File(...)):
-    """Upload image to local server and return URL."""
+async def upload_image(request: Request, file: UploadFile = File(...)):
+    """Upload image to PostgreSQL BLOB store and return a permanent URL."""
+    MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
     try:
-        os.makedirs("uploads", exist_ok=True)
-        ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-        filename = f"{uuid.uuid4()}.{ext}"
-        path = os.path.join("uploads", filename)
-        with open(path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        content_type = file.content_type or "image/jpeg"
+        data = await file.read()
+        
+        if len(data) > MAX_IMAGE_SIZE:
+            raise HTTPException(status_code=400, detail="Image too large. Maximum 5MB.")
+        if len(data) == 0:
+            raise HTTPException(status_code=400, detail="Empty file.")
+        
+        image_id = str(uuid.uuid4())
+        original_name = file.filename or "upload.jpg"
+        
+        with get_db() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO image_store (id, data, mime_type, original_name, size_bytes)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (image_id, data, content_type, original_name, len(data))
+            )
         
         base_url = str(request.base_url).rstrip("/")
         if "render.com" in base_url or "vercel.app" in base_url:
             base_url = base_url.replace("http://", "https://")
             
-        return {"url": f"{base_url}/uploads/{filename}"}
+        return {"url": f"{base_url}/api/images/{image_id}"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

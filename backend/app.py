@@ -31,6 +31,7 @@ from routes.credits_routes import router as credits_router
 from routes.simulation import router as simulation_router
 from routes.export_routes import router as export_router
 from routes.feedback_routes import router as feedback_router
+from routes.image_routes import router as image_router
 from database import execute_schema
 
 # -----------------------------
@@ -93,6 +94,7 @@ app.include_router(admin_router,      prefix="/api/admin",      tags=["Admin"])
 app.include_router(credits_router,    prefix="/api/credits",    tags=["Credits"])
 app.include_router(simulation_router, prefix="/api/simulation", tags=["Demo/Simulation"])
 app.include_router(feedback_router,   prefix="/api/feedback",   tags=["Feedback"])
+app.include_router(image_router,      prefix="/api/images",     tags=["Images"])
 
 # -----------------------------
 # Basic Routes

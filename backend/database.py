@@ -209,6 +209,18 @@ def execute_schema():
         "CREATE INDEX IF NOT EXISTS idx_users_points ON users(points_cache DESC);",
         "CREATE INDEX IF NOT EXISTS idx_users_status ON users(is_suspended, is_active);",
         
+        # Image BLOB Store (persistent storage for Render)
+        """
+        CREATE TABLE IF NOT EXISTS image_store (
+            id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            data          BYTEA NOT NULL,
+            mime_type     VARCHAR(64) NOT NULL DEFAULT 'image/jpeg',
+            original_name VARCHAR(255),
+            size_bytes    INTEGER,
+            created_at    TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+
         # Adjusting Constraints
         "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_issues_cluster') THEN ALTER TABLE issues ADD CONSTRAINT fk_issues_cluster FOREIGN KEY (cluster_id) REFERENCES issue_clusters(id) ON DELETE SET NULL; END IF; END $$;",
     ]

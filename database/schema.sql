@@ -135,6 +135,18 @@ CREATE TABLE IF NOT EXISTS issue_attachments (
 );
 
 -- ============================================================
+-- IMAGE BLOB STORE (Persistent storage for Render)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS image_store (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    data          BYTEA NOT NULL,
+    mime_type     VARCHAR(64) NOT NULL DEFAULT 'image/jpeg',
+    original_name VARCHAR(255),
+    size_bytes    INTEGER,
+    created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
 -- ISSUE HISTORY TABLE (Lifecycle Tracking)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS issue_history (
