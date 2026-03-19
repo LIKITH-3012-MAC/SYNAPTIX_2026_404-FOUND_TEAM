@@ -833,10 +833,14 @@
           issues = generateDemoIssues();
           usedDemoData = true;
         } else {
-          // Demo mode is OFF and backend is unreachable -> show "Connect your backend"
+          // Demo mode is OFF and backend is unreachable
           console.warn('[Homepage] Backend unreachable and demo mode is OFF');
           const container = document.getElementById('preview-issues');
-          if (container) {
+          if (!container) return;
+
+          const user = typeof Auth !== 'undefined' ? Auth.getUser() : null;
+          if (user && user.role === 'admin') {
+            // Diagnostic message for Admins
             container.innerHTML = `
               <div style="grid-column:1/-1; text-align:center; padding:60px 20px; background:rgba(255,255,255,0.02); border-radius:24px; border:1px solid rgba(255,255,255,0.05);">
                 <div style="font-size:3rem; margin-bottom:16px; opacity:0.5;">🔌</div>
@@ -846,15 +850,25 @@
                 </p>
                 <div style="display:flex; gap:12px; justify-content:center;">
                    <a href="https://github.com/LIKITH-3012-MAC/SYNAPTIX_2026_404-FOUND_TEAM" target="_blank" class="btn btn-sm btn-outline">View Docs</a>
-                   ${typeof Auth !== 'undefined' && Auth.getUser()?.role === 'admin' ? 
-                     `<button class="btn btn-sm btn-primary" onclick="initDemoPanel(); toggleDemoPanel()">Enable Demo Mode</button>` : ''}
+                   <button class="btn btn-sm btn-primary" onclick="initDemoPanel(); toggleDemoPanel()">Enable Demo Mode</button>
+                </div>
+              </div>`;
+          } else {
+            // Polished Neutral state for Citizens/Authorities/Guests
+            container.innerHTML = `
+              <div class="empty-state" style="grid-column:1/-1; padding:60px 20px;">
+                <div class="empty-state-icon">🛡️</div>
+                <h3>No active issues detected</h3>
+                <p>All civic nodes in your area are currently within operational parameters.</p>
+                <div style="margin-top:24px;">
+                   <a href="submit.html" class="btn btn-outline btn-sm">Report a Concern</a>
                 </div>
               </div>`;
           }
+
           // Also handle map empty state
           try {
             MapManager.init('map');
-            // If empty, it'll just show the tile layer
           } catch {}
           return;
         }
