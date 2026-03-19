@@ -251,19 +251,22 @@ const Auth = {
             </button>
         `;
 
-        // Language Selector HTML
-        const langOptions = Object.entries(i18n.languages).map(([code, meta]) => 
-            `<option value="${code}" ${i18n.currentLang === code ? 'selected' : ''}>${meta.flag} ${meta.name}</option>`
-        ).join('');
+        // Language Selector HTML (guarded — i18n.js may not be loaded on all pages)
+        let langSelector = '';
+        if (typeof i18n !== 'undefined' && i18n.languages) {
+            const langOptions = Object.entries(i18n.languages).map(([code, meta]) => 
+                `<option value="${code}" ${i18n.currentLang === code ? 'selected' : ''}>${meta.flag} ${meta.name}</option>`
+            ).join('');
 
-        const langSelector = `
-            <div class="lang-selector-wrap" style="position:relative;display:flex;align-items:center;">
-                <select class="lang-select" onchange="i18n.setLanguage(this.value)" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:12px;padding:4px 8px;font-size:0.8rem;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;">
-                    ${langOptions}
-                </select>
-                <div style="position:absolute;right:8px;pointer-events:none;font-size:0.6rem;opacity:0.5;">▼</div>
-            </div>
-        `;
+            langSelector = `
+                <div class="lang-selector-wrap" style="position:relative;display:flex;align-items:center;">
+                    <select class="lang-select" onchange="i18n.setLanguage(this.value)" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:12px;padding:4px 8px;font-size:0.8rem;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;">
+                        ${langOptions}
+                    </select>
+                    <div style="position:absolute;right:8px;pointer-events:none;font-size:0.6rem;opacity:0.5;">▼</div>
+                </div>
+            `;
+        }
 
 
 
