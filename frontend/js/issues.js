@@ -167,9 +167,52 @@ function renderIssueCard(issue, opts = {}) {
 }
 
 /**
+ * Trigger issue upvote (Civic Credit earned)
+ */
+async function upvoteIssue(id, btn) {
+    const user = typeof Auth !== 'undefined' ? Auth.getUser() : null;
+    if (!user) {
+        if (typeof showToast === 'function') showToast('🔐 Identity required for upvoting. Please log in.', 'info');
+        if (typeof Auth !== 'undefined') Auth.showModal('login');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    }
+
+    try {
+        const result = await Issues.upvote(id);
+        if (typeof showToast === 'function') showToast(`👍 Civic momentum added! +5 credits.`, 'success');
+        if (typeof Gamification !== 'undefined') Gamification.awardPoints('HELPFUL_VOTE');
+        
+        // Update vote count visually
+        if (btn) {
+            const count = parseInt(btn.textContent.match(/\d+/)) || 0;
+            btn.innerHTML = `👍 ${count + 1}`;
+        }
+    } catch (e) {
+        if (typeof showToast === 'function') showToast(`❌ Voting failed: ${e.message}`, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+    }
+}
+
+/**
  * Trigger single issue PDF export (Certificate of Submission)
  */
 async function exportSingleIssue(id) {
+    const user = typeof Auth !== 'undefined' ? Auth.getUser() : null;
+    if (!user) {
+        if (typeof showToast === 'function') showToast('🔐 Login required to download official records.', 'info');
+        if (typeof Auth !== 'undefined') Auth.showModal('login');
+        return;
+    }
+
     if (typeof showToast === 'function') showToast(`⏳ Generating submission certificate...`, 'info');
     const token = localStorage.getItem('resolvit_token');
     try {
@@ -184,12 +227,15 @@ async function exportSingleIssue(id) {
         a.download = `resolvit_report_${id.slice(0,8)}.pdf`;
         document.body.appendChild(a);
         a.click();
+        a.remove();
         window.URL.revokeObjectURL(url);
         if (typeof showToast === 'function') showToast(`✅ Certificate Generated!`, 'success');
     } catch (e) {
         if (typeof showToast === 'function') showToast(`❌ Export failed: ${e.message}`, 'error');
     }
 }
+
+window.upvoteIssue = upvoteIssue;
 window.exportSingleIssue = exportSingleIssue;
 
 // ── SLA Live Ticker ─────────────────────────────────────────────

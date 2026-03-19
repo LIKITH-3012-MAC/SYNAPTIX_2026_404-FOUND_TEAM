@@ -160,7 +160,6 @@
 
     .hero-tagline {
       color: #818cf8 !important;
-      /* Lighter indigo for visibility */
     }
 
     .hero-subtitle {
@@ -193,10 +192,159 @@
       border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
-    /* ── Mobile UI Optimizations ──────────────────────────── */
+    /* ── Guest Login Banner ───────────────────────────────── */
+    .guest-login-banner {
+      position: relative;
+      overflow: hidden;
+    }
+    .guest-login-banner .guest-banner-inner {
+      position: relative;
+      background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.10) 50%, rgba(99,102,241,0.08) 100%);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 24px;
+      padding: 48px 40px;
+      text-align: center;
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      box-shadow: 0 8px 40px rgba(99,102,241,0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .guest-banner-inner::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; right: -1px; bottom: -1px;
+      border-radius: 25px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.4), rgba(168,85,247,0.2), rgba(99,102,241,0.1));
+      z-index: -1;
+      opacity: 0.5;
+    }
+    .guest-banner-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      display: inline-block;
+      animation: guestIconFloat 3s ease-in-out infinite;
+    }
+    @keyframes guestIconFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+    .guest-banner-title {
+      font-size: 1.6rem !important;
+      font-weight: 800 !important;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #a5b4fc, #c084fc) !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      text-shadow: none !important;
+    }
+    .guest-banner-desc {
+      color: rgba(255,255,255,0.75) !important;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto 24px;
+      line-height: 1.7;
+    }
+    .guest-feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      max-width: 700px;
+      margin: 0 auto 28px;
+    }
+    .guest-feature-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.7) !important;
+      text-shadow: none !important;
+      transition: all 0.3s ease;
+    }
+    .guest-feature-item:hover {
+      background: rgba(99,102,241,0.1);
+      border-color: rgba(99,102,241,0.3);
+      transform: translateY(-2px);
+    }
+    .guest-feature-item .feat-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .guest-banner-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-guest-login {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white !important;
+      text-shadow: none !important;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-guest-login:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 8px 30px rgba(99,102,241,0.5);
+      filter: brightness(1.1);
+    }
+    .btn-guest-signup {
+      padding: 14px 32px;
+      background: rgba(255,255,255,0.06);
+      color: white !important;
+      text-shadow: none !important;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-guest-signup:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+    }
+
+    /* ── Demo Mode Badge ──────────────────────────────────── */
+    .demo-mode-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.12));
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #a5b4fc !important;
+      text-shadow: none !important;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      animation: demoPulse 2s ease-in-out infinite;
+    }
+    @keyframes demoPulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.2); }
+      50% { box-shadow: 0 0 16px rgba(99,102,241,0.4); }
+    }
+
     /* ── Mobile UI Optimizations ──────────────────────────── */
     @media (max-width: 768px) {
-
       .glass-premium,
       .glass-card-premium,
       #navbar,
@@ -230,6 +378,20 @@
 
       .stat-item {
         padding: 16px 12px !important;
+      }
+
+      .guest-login-banner .guest-banner-inner {
+        padding: 32px 20px;
+      }
+      .guest-banner-title {
+        font-size: 1.3rem !important;
+      }
+      .guest-feature-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .btn-guest-login, .btn-guest-signup {
+        padding: 12px 24px;
+        font-size: 0.9rem;
       }
     }
   </style>
@@ -331,6 +493,37 @@
         <div class="stat-item glass-card-premium">
           <div class="stat-number" id="stat-impacted">0</div>
           <div class="stat-label" data-i18n="stat_impacted">Citizens Impacted</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Guest Login Banner (shown for non-authenticated users) ─── -->
+  <section class="section guest-login-banner" id="guest-login-banner" style="display:none;">
+    <div class="container">
+      <div class="guest-banner-inner">
+        <div class="guest-banner-icon">🔐</div>
+        <h2 class="guest-banner-title">Login Required to Access RESOLVIT Intelligent Operations</h2>
+        <p class="guest-banner-desc">
+          The full RESOLVIT experience — including live civic issue data, real-time tracking, 
+          operational dashboards, and advanced geo-intelligence — is restricted to authenticated users.
+          Please sign in to continue.
+        </p>
+        <div class="guest-feature-grid">
+          <div class="guest-feature-item"><span class="feat-icon">📊</span> Live Dashboards</div>
+          <div class="guest-feature-item"><span class="feat-icon">🗺️</span> Advanced Maps</div>
+          <div class="guest-feature-item"><span class="feat-icon">📍</span> Issue Tracking</div>
+          <div class="guest-feature-item"><span class="feat-icon">👤</span> Profile & History</div>
+          <div class="guest-feature-item"><span class="feat-icon">🔔</span> Notifications</div>
+          <div class="guest-feature-item"><span class="feat-icon">⚡</span> Resolution Flow</div>
+        </div>
+        <div class="guest-banner-actions">
+          <button class="btn-guest-login" onclick="Auth.showModal('login')">
+            🚀 Sign In to RESOLVIT
+          </button>
+          <button class="btn-guest-signup" onclick="Auth.showModal('register')">
+            ✨ Create Free Account
+          </button>
         </div>
       </div>
     </div>
@@ -445,16 +638,18 @@
   </section>
 
   <!-- ── CTA Banner ─────────────────────────────────────────── -->
-  <section class="section" style="text-align: center;">
+  <section class="section" style="text-align: center;" id="cta-section">
     <div class="container" style="max-width: 700px;">
       <h2 style="margin-bottom: 16px;" data-i18n="cta_title">See a problem?<br />Take action now.</h2>
       <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 40px;" data-i18n="cta_desc">
         Every report you submit contributes to a better, more accountable city.
         Your voice directly moves government resources.
       </p>
-      <a href="submit.html" class="btn btn-primary btn-xl" data-i18n="btn_report_free">
-        🚨 Report an Issue — It's Free
-      </a>
+      <div id="cta-buttons">
+        <a href="submit.html" class="btn btn-primary btn-xl" data-i18n="btn_report_free">
+          🚨 Report an Issue — It's Free
+        </a>
+      </div>
     </div>
   </section>
 
@@ -528,8 +723,61 @@
   <script src="js/intro.js"></script>
 
   <script>
-    // ── Navbar scroll effect ──────────────
+    // ═══════════════════════════════════════════════════════════════
+    // RESOLVIT Homepage — Demo Mode + Guest Experience Engine
+    // ═══════════════════════════════════════════════════════════════
+
+    // ── Synthetic Demo Data Generator ─────────────────────────────
+    function generateDemoIssues() {
+      const categories = ['Roads', 'Water', 'Electricity', 'Sanitation', 'Safety', 'Environment'];
+      const statuses = ['reported', 'verified', 'assigned', 'in_progress', 'escalated', 'resolved'];
+      const titles = [
+        'Major pothole cluster on NH-16 near Bus Stand',
+        'Sewage overflow affecting 200+ residents in Ward 12',
+        'Broken streetlights near Railway Station — safety hazard',
+        'Water supply disruption in Mallepalli for 3 days',
+        'Illegal waste dumping near school premises',
+        'Traffic signal malfunction at Clock Tower junction'
+      ];
+      // Coordinates around Kavali, Andhra Pradesh
+      const coords = [
+        [14.9165, 79.9942], [14.9220, 79.9870], [14.9305, 79.9815],
+        [14.9130, 79.9960], [14.9270, 79.9755], [14.9195, 79.9900]
+      ];
+      const priorities = [92, 78, 85, 64, 71, 88];
+      const slaHours = [24, 48, 12, 72, 36, 6];
+      const escalationLevels = [2, 0, 1, 0, 1, 3];
+
+      return titles.map((title, i) => ({
+        id: `demo-${String(i + 1).padStart(4, '0')}-${Date.now().toString(36)}`,
+        title,
+        category: categories[i],
+        status: statuses[i],
+        priority_score: priorities[i],
+        latitude: coords[i][0],
+        longitude: coords[i][1],
+        report_count: Math.floor(Math.random() * 20) + 3,
+        upvotes: Math.floor(Math.random() * 50) + 5,
+        sla_hours: slaHours[i],
+        sla_seconds_remaining: slaHours[i] * 3600 * (0.3 + Math.random() * 0.7),
+        sla_breached: i === 5, // Last one is breached for demo drama
+        escalation_level: escalationLevels[i],
+        breach_risk: priorities[i] >= 80 ? 0.75 + Math.random() * 0.2 : 0.15 + Math.random() * 0.3,
+        severity_level: priorities[i] >= 80 ? 4 : priorities[i] >= 55 ? 3 : 2,
+        days_unresolved: Math.floor(Math.random() * 14) + 1,
+        is_demo: true,
+        is_simulated: true,
+        created_at: new Date(Date.now() - Math.random() * 7 * 86400000).toISOString()
+      }));
+    }
+
+    // Track whether we're in demo mode on homepage
+    let _homepageDemoMode = false;
+
+    // ── Load Homepage Data (with full demo fallback) ──────────────
     async function loadHomeData() {
+      // ── 1. Stats/Metrics ────────────────────────────────────────
+      let statsLoaded = false;
       try {
         const summary = await API.get('/api/metrics/summary');
         const stats = {
@@ -538,15 +786,13 @@
           'stat-authorities': summary.active_authorities || 24,
           'stat-impacted': summary.total_people_impacted || 12400
         };
-
-        // If UIEnhancements.animateCounter is available, it will handle it via intersection
-        // Otherwise fallback 
         Object.entries(stats).forEach(([id, val]) => {
           const el = document.getElementById(id);
           if (el) el.innerText = val + (id === 'stat-response' ? 'h' : '');
         });
+        statsLoaded = true;
       } catch (err) {
-        console.warn("Metrics load failed, using fallback values", err);
+        console.warn('Metrics load failed, using demo fallback values', err);
         const fallbacks = {
           'stat-resolved': 847,
           'stat-response': 18,
@@ -559,48 +805,174 @@
         });
       }
 
-      try {
-        const issues = await API.get('/api/issues?limit=3&sort_by=priority_score&order=desc');
-        renderPreviewIssues(issues);
+      // ── 2. Issues + Map ─────────────────────────────────────────
+      let issues = [];
+      let usedDemoData = false;
+      let demoModeActive = false;
 
-        // Use Global MapManager for Teaser
+      // Check if AI Simulation is explicitly enabled in the system
+      try {
+        const simStatus = await API.get('/api/simulation/status');
+        demoModeActive = !!(simStatus && simStatus.active);
+      } catch (e) {
+        console.warn('[Homepage] Could not verify simulation status', e);
+      }
+
+      try {
+        issues = await API.get('/api/issues?limit=6&sort_by=priority_score&order=desc');
+        
+        // If the API works but returns nothing, and we are in demo mode, generate synthetic data
+        if ((!issues || issues.length === 0) && demoModeActive) {
+          issues = generateDemoIssues();
+          usedDemoData = true;
+        }
+      } catch (err) {
+        // API failed. If demo mode was active, use synthetic fallback.
+        if (demoModeActive) {
+          console.warn('[Homepage] API failed during active simulation — using synthetic fallback');
+          issues = generateDemoIssues();
+          usedDemoData = true;
+        } else {
+          // Demo mode is OFF and backend is unreachable -> show "Connect your backend"
+          console.warn('[Homepage] Backend unreachable and demo mode is OFF');
+          const container = document.getElementById('preview-issues');
+          if (container) {
+            container.innerHTML = `
+              <div style="grid-column:1/-1; text-align:center; padding:60px 20px; background:rgba(255,255,255,0.02); border-radius:24px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:3rem; margin-bottom:16px; opacity:0.5;">🔌</div>
+                <h3 style="color:var(--text-primary); margin-bottom:8px;">Backend Connection Required</h3>
+                <p style="color:var(--text-secondary); max-width:400px; margin:0 auto 24px;">
+                  Connect your RESOLVIT backend to see live civic issues and real-time intelligence.
+                </p>
+                <div style="display:flex; gap:12px; justify-content:center;">
+                   <a href="https://github.com/LIKITH-3012-MAC/SYNAPTIX_2026_404-FOUND_TEAM" target="_blank" class="btn btn-sm btn-outline">View Docs</a>
+                   ${typeof Auth !== 'undefined' && Auth.getUser()?.role === 'admin' ? 
+                     `<button class="btn btn-sm btn-primary" onclick="initDemoPanel(); toggleDemoPanel()">Enable Demo Mode</button>` : ''}
+                </div>
+              </div>`;
+          }
+          // Also handle map empty state
+          try {
+            MapManager.init('map');
+            // If empty, it'll just show the tile layer
+          } catch {}
+          return;
+        }
+      }
+
+      _homepageDemoMode = usedDemoData || demoModeActive;
+
+      // Render Top Priority Issues (top 3)
+      const topIssues = issues.slice(0, 3);
+      renderPreviewIssues(topIssues, usedDemoData);
+
+      // Initialize and populate the map
+      try {
         MapManager.init('map');
         MapManager.updateData(issues);
-      } catch {
-        document.getElementById('preview-issues').innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px;">Connect your backend to see live issues.</p>';
+      } catch (mapErr) {
+        console.warn('[Homepage] Map init error:', mapErr);
+      }
+
+      // Show demo mode indicator if using synthetic data
+      if (usedDemoData) {
+        injectDemoModeIndicators();
       }
     }
 
-    function renderPreviewIssues(issues) {
+    // ── Render Preview Issues (with demo awareness) ───────────────
+    function renderPreviewIssues(issues, isDemoMode = false) {
       const container = document.getElementById('preview-issues');
-      if (!issues.length) {
-        container.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📭</div><h3>No issues yet</h3><p>Be the first to report a civic issue.</p></div>';
+      if (!container) return;
+
+      if (!issues || !issues.length) {
+        container.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <div class="empty-state-icon">📭</div>
+            <h3>No issues yet</h3>
+            <p>Be the first to report a civic issue.</p>
+          </div>`;
         return;
       }
+
       container.innerHTML = issues.map(issue => renderIssueCard(issue)).join('');
     }
 
-    // ── Map Integration (Using Global MapManager) ─────────────────
-    // Map is now initialized within loadHomeData()
+    // ── Demo Mode Visual Indicators ───────────────────────────────
+    function injectDemoModeIndicators() {
+      // Add demo badge next to "LIVE" indicator in Top Priority Issues section
+      const liveIndicator = document.querySelector('.live-indicator');
+      if (liveIndicator && !document.getElementById('demo-mode-badge')) {
+        const demoBadge = document.createElement('span');
+        demoBadge.id = 'demo-mode-badge';
+        demoBadge.className = 'demo-mode-indicator';
+        demoBadge.innerHTML = '🧠 DEMO MODE';
+        liveIndicator.parentElement.insertBefore(demoBadge, liveIndicator);
+      }
 
+      // Add demo badge near heatmap title
+      const heatmapTitle = document.querySelector('[data-i18n="heatmap_title"]');
+      if (heatmapTitle && !document.getElementById('demo-heatmap-badge')) {
+        const badge = document.createElement('span');
+        badge.id = 'demo-heatmap-badge';
+        badge.className = 'demo-mode-indicator';
+        badge.style.marginLeft = '12px';
+        badge.style.verticalAlign = 'middle';
+        badge.innerHTML = '🧠 DEMO DATA';
+        heatmapTitle.appendChild(document.createTextNode(' '));
+        heatmapTitle.appendChild(badge);
+      }
+    }
+
+    // ── Guest Banner Visibility ───────────────────────────────────
+    function updateGuestBanner() {
+      const user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
+      const banner = document.getElementById('guest-login-banner');
+      if (!banner) return;
+
+      if (!user) {
+        banner.style.display = '';
+        // Update CTA to encourage login for guests
+        const ctaButtons = document.getElementById('cta-buttons');
+        if (ctaButtons) {
+          ctaButtons.innerHTML = `
+            <button class="btn btn-primary btn-xl" onclick="Auth.showModal('login')" style="margin-bottom:12px;">
+              🔐 Sign In to Report Issues
+            </button>
+            <div style="margin-top:8px;">
+              <button class="btn btn-outline" onclick="Auth.showModal('register')" style="font-size:0.9rem;">
+                ✨ Create Free Account
+              </button>
+            </div>
+          `;
+        }
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
+    // ── Auth Navigation Update ────────────────────────────────────
     function updateNavAuth() {
       if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
     }
 
-    // ── Init ──────────────────────────────────
+    // ── Init ──────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
-      // 1. Update UI (session restoration is handled automatically by auth0-integration.js)
+      // 1. Update navbar based on auth state
       if (typeof Auth !== 'undefined' && Auth.updateNavbar) {
         Auth.updateNavbar();
       }
 
-      // 2. Map initialized within loadHomeData()
+      // 2. Show/hide guest login banner
+      updateGuestBanner();
 
-      // 3. Stats and Demo
+      // 3. Load data (with demo fallback)
       loadHomeData();
+
+      // 4. Demo panel for admins
       if (typeof initDemoPanel === 'function') initDemoPanel();
 
-      // 4. Hero Entrance Animation
+      // 5. Hero Entrance Animation
       const heroContent = document.querySelector('.hero-content');
       if (heroContent) {
         heroContent.style.opacity = '0';
@@ -615,7 +987,8 @@
 
     // Handle back button / session changes
     window.addEventListener('pageshow', () => {
-      if (typeof Auth.updateNavbar === 'function') Auth.updateNavbar();
+      if (typeof Auth !== 'undefined' && Auth.updateNavbar === 'function') Auth.updateNavbar();
+      updateGuestBanner();
     });
   </script>
 

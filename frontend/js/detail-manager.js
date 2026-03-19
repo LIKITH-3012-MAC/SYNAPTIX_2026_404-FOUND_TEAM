@@ -227,7 +227,8 @@ const ResolutionHub = {
         this.init();
         const user = typeof Auth !== 'undefined' ? Auth.getUser() : null;
         if (!user) {
-            showToast('Authentication required for Command Engine', 'error');
+            if (typeof showToast === 'function') showToast('🔐 Identity required for Hub access. Please sign in.', 'info');
+            if (typeof Auth !== 'undefined') Auth.showModal('login');
             return;
         }
 
