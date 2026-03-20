@@ -30,12 +30,18 @@ const Auth0Integration = {
       location.hostname === "0.0.0.0" ||
       location.hostname.endsWith(".local");
 
+    const cand = isLocal
+      ? `${location.origin}/index.html`
+      : (c.redirectUri || location.origin).replace(/\/$/, "");
+
+    // Auth0 Callback Mismatch Debugging
+    console.log("[Auth0] Config Origin:", location.origin);
+    console.log("[Auth0] Config RedirectURI:", cand);
+
     return {
       domain: c.domain || "resolvit-ai.us.auth0.com",
       clientId: c.clientId || "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
-      redirectUri: isLocal
-        ? `${location.origin}/index.html`
-        : (c.redirectUri || location.origin).replace(/\/$/, ""),
+      redirectUri: cand,
       cacheLocation: "localstorage"
     };
   },
