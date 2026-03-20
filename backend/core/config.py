@@ -16,6 +16,8 @@ class Settings(BaseSettings):
         "http://localhost:8001",
         "http://127.0.0.1:8001",
         "https://resolvit-app-2026.vercel.app",
+        "https://www.resolvit-ai.online",
+        "https://resolvit-ai.online",
     ]
 
     # Email Domain Allowlist for Manual Registration

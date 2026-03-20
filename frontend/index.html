@@ -22,7 +22,7 @@
   <meta name="tech_stack" content="Next.js, React, Lexical, Vercel">
   <meta name="project_status" content="Deployment Build 2026">
 
-  <link rel="canonical" href="https://likith-portfolio.online">
+  <link rel="canonical" href="https://www.resolvit-ai.online/">
 
   <!-- Geo Tags -->
   <meta name="geo.region" content="IN-AP">
@@ -33,7 +33,7 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Likith Naidu Portfolio">
-  <meta property="og:url" content="https://www.resolvit-ai.online">
+  <meta property="og:url" content="https://www.resolvit-ai.online/">
   <meta property="og:title" content="Resolvit - One Topic, One Thread">
   <meta property="og:description"
     content="A modern productivity platform by Likith Naidu that replaces messy chat channels with structured, task-oriented discussions. Built with Next.js and Lexical.">
@@ -43,7 +43,7 @@
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="https://resolvit-app-2026.vercel.app/">
+  <meta name="twitter:url" content="https://www.resolvit-ai.online/">
   <meta name="twitter:title" content="Resolvit | Transform Chats into Tasks">
   <meta name="twitter:description"
     content="Offline AI classroom infrastructure & Civic Intelligence platforms. Built by Likith Naidu Anumakonda under SAKRA Group.">
@@ -77,7 +77,7 @@
       "@type": "SoftwareApplication",
       "name": "Resolvit 2026",
       "applicationCategory": "CivicIntelligence",
-      "url": "https://resolvit-app-2026.vercel.app/",
+      "url": "https://www.resolvit-ai.online/",
       "author": {
           "@type": "Person",
           "name": "Likith Naidu Anumakonda"
@@ -321,6 +321,137 @@
       transform: translateY(-2px);
     }
 
+    /* ── Video Demo Showcase ────────────────────────────────── */
+    .demo-showcase-section {
+      position: relative;
+      padding: 100px 0;
+      background: radial-gradient(circle at center, rgba(99, 102, 241, 0.08) 0%, transparent 70%) !important;
+      overflow: hidden;
+    }
+
+    .demo-showcase-section .section-label {
+      margin: 0 auto 16px;
+      display: table;
+    }
+
+    .video-container-wrapper {
+      position: relative;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      max-width: 1000px;
+      margin: 0 auto;
+      transform: perspective(1200px) rotateX(2deg);
+      transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+    }
+
+    .video-container-wrapper:hover {
+      transform: perspective(1200px) rotateX(0deg) scale(1.02);
+      box-shadow: 0 50px 120px -30px rgba(99, 102, 241, 0.3);
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+      height: 0;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #000;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .video-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .video-glow {
+      position: absolute;
+      top: -20px;
+      left: -20px;
+      right: -20px;
+      bottom: -20px;
+      z-index: -1;
+      background: radial-gradient(circle at center, var(--accent), #8b5cf6);
+      filter: blur(60px);
+      opacity: 0.1;
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .video-container-wrapper:hover .video-glow {
+      opacity: 0.25;
+      transform: scale(1.1);
+    }
+
+    .demo-features-hint {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 48px;
+      flex-wrap: wrap;
+    }
+
+    .hint-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.4s ease;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 100px;
+    }
+
+    .hint-item:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .hint-icon {
+      color: var(--accent);
+      font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+      .demo-showcase-section {
+        padding: 80px 0;
+      }
+      .video-container-wrapper {
+        padding: 8px;
+        border-radius: 18px;
+        transform: none !important;
+        width: calc(100% - 32px);
+      }
+      .demo-features-hint {
+        gap: 12px;
+        margin-top: 32px;
+      }
+      .hint-item {
+        font-size: 0.85rem;
+        padding: 6px 14px;
+      }
+      .demo-showcase-section h2 {
+        font-size: 1.8rem !important;
+      }
+    }
+
+
     /* ── Demo Mode Badge ──────────────────────────────────── */
     .demo-mode-indicator {
       display: inline-flex;
@@ -401,7 +532,7 @@
     window.AUTH0_CONFIG = {
       domain: "resolvit-ai.us.auth0.com",
       clientId: "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
-      redirectUri: "https://resolvit-app-2026.vercel.app"
+      redirectUri: "https://www.resolvit-ai.online"
     };
   </script>
   <!-- RESOLVIT Official Favicon -->
@@ -577,6 +708,53 @@
       </div>
     </div>
   </section>
+
+  <!-- ── Product Demo Showcase ────────────────────────────────── -->
+  <section class="section demo-showcase-section" id="demo-video">
+    <div class="container">
+      <div class="section-header" style="text-align: center; margin-bottom: 56px;">
+        <div class="section-label animate-in" style="animation-delay: 0.1s;">PRODUCT SHOWCASE</div>
+        <h2 class="animate-in" style="animation-delay: 0.2s;">Watch RESOLVIT in Action</h2>
+        <p class="animate-in" style="color: rgba(255,255,255,0.7); max-width: 680px; margin: 20px auto 0; line-height: 1.7; font-size: 1.1rem; animation-delay: 0.3s;">
+          Explore the official product demonstration showcasing how our AI-driven civic platform handles
+          real-world report clustering, geo-spatial intelligence, and authority escalation.
+        </p>
+      </div>
+
+      <div class="video-container-wrapper card gpu-accelerate animate-in" style="max-width: 1000px; animation-delay: 0.4s;">
+        <div class="video-container">
+          <iframe 
+            src="https://www.youtube.com/embed/EwFCDK1ann8?autoplay=0&rel=0&modestbranding=1&hd=1" 
+            title="RESOLVIT Product Demonstration" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            allowfullscreen>
+          </iframe>
+        </div>
+        <div class="video-glow"></div>
+      </div>
+
+      <p class="animate-in" style="text-align: center; color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-top: 32px; animation-delay: 0.5s;">
+        Official RESOLVIT Platform Walkthrough — Working Demonstration of Civic Resolution Infrastructure
+      </p>
+
+      <div class="demo-features-hint">
+        <div class="hint-item animate-in" style="animation-delay: 0.6s;">
+          <span class="hint-icon">⚡</span>
+          <span>Fast Resolution Flow</span>
+        </div>
+        <div class="hint-item animate-in" style="animation-delay: 0.7s;">
+          <span class="hint-icon">📊</span>
+          <span>Live Geo-Intelligence</span>
+        </div>
+        <div class="hint-item animate-in" style="animation-delay: 0.8s;">
+          <span class="hint-icon">🛡️</span>
+          <span>SLA Breach Escalation</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
 
   <!-- ── Live Issues Preview ─────────────────────────────────── -->
   <section class="section">

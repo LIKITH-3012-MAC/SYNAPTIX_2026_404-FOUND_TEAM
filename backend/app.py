@@ -68,6 +68,8 @@ origins = [
     "http://127.0.0.1:5173",
     "https://resolvit-app-2026.vercel.app",
     "https://resolvit-app-2026.vercel.app/",
+    "https://www.resolvit-ai.online",
+    "https://resolvit-ai.online",
 ]
 
 app.add_middleware(
