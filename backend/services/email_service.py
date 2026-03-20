@@ -7,6 +7,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -211,4 +212,119 @@ def send_welcome_email(to_email: str, username: str, role: str) -> bool:
     """
     
     return send_email(to_email, subject, html_body)
+
+
+def send_issue_update_email(to_email: str, username: str, issue_data: dict) -> bool:
+    """
+    Send an update email to the citizen about their reported issue.
+    """
+    issue_id = issue_data.get("tracking_id") or issue_data.get("id", "N/A")
+    title = issue_data.get("title", "Civic Issue")
+    status = issue_data.get("status", "updated").replace("_", " ").title()
+    category = issue_data.get("category", "General")
+    note = issue_data.get("resolution_note") or "No additional notes provided."
+    location = issue_data.get("address") or "Indexed Location"
+    reported_date = issue_data.get("created_at", "N/A")
+    updated_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Format tracking link if possible
+    tracking_link = f"https://resolvit-ai.online/issue.html?id={issue_data.get('id')}"
+    
+    subject = f"Update on your RESOLVIT complaint - {issue_id}"
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Issue Update - RESOLVIT</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⚖️</div>
+                <h1 style="color: #6366f1; margin: 0 0 8px 0; font-size: 26px; font-weight: 800;">RESOLVIT Update</h1>
+                <p style="color: #64748b; margin: 0; font-size: 16px;">Hi {username}, there is an update on your complaint.</p>
+            </div>
+            
+            <div style="background: #f1f5f9; border-radius: 12px; padding: 24px; margin-bottom: 32px; border-left: 4px solid #6366f1;">
+                <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #1e293b;">Issue Summary</h2>
+                <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 6px 0; color: #64748b; width: 140px;"><strong>Tracking ID:</strong></td>
+                        <td style="padding: 6px 0; color: #1e293b;">{issue_id}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #64748b;"><strong>Current Status:</strong></td>
+                        <td style="padding: 6px 0;"><span style="background: #6366f1; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px;">{status}</span></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #64748b;"><strong>Title:</strong></td>
+                        <td style="padding: 6px 0; color: #1e293b;">{title}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #64748b;"><strong>Category:</strong></td>
+                        <td style="padding: 6px 0; color: #1e293b;">{category}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #64748b;"><strong>Location:</strong></td>
+                        <td style="padding: 6px 0; color: #1e293b;">{location}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="margin-bottom: 32px;">
+                <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1e293b;">Official Authority Note:</h3>
+                <div style="background: #fdf2f2; border: 1px solid #fee2e2; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; color: #475569;">
+                    {note}
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 32px;">
+                <a href="{tracking_link}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 10px 15px -3px rgba(99,102,241,0.3);">Track Current Status</a>
+            </div>
+
+            <div style="border-top: 1px solid #f1f5f9; padding-top: 24px; text-align: center;">
+                <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px 0;">
+                    Reported on: {reported_date} | Updated at: {updated_date}
+                </p>
+                <p style="color: #64748b; font-size: 13px; font-weight: 600; margin: 0;">
+                    RESOLVIT Admin Control Tower
+                </p>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top: 24px; color: #94a3b8; font-size: 11px;">
+            This is an automated governance alert. Please do not reply directly to this email.
+        </div>
+    </body>
+    </html>
+    """
+    
+    text_body = f"""
+    RESOLVIT UPDATE: Complaint {issue_id}
+    
+    Hi {username},
+    
+    There is an update on your civic complaint.
+    
+    Summary:
+    - ID: {issue_id}
+    - Status: {status}
+    - Title: {title}
+    - Category: {category}
+    - Location: {location}
+    
+    Official Note:
+    {note}
+    
+    Track status here: {tracking_link}
+    
+    Reported on: {reported_date}
+    Updated at: {updated_date}
+    
+    RESOLVIT Admin Control Tower
+    """
+    
+    return send_email(to_email, subject, html_body, text_body)
 

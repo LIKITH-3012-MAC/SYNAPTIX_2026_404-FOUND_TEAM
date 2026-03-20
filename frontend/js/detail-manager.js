@@ -186,6 +186,7 @@ const ResolutionHub = {
                                 <textarea id="h-update-note" placeholder="Provide full context for this transition..." class="hub-textarea"></textarea>
                             </div>
                             <button id="hub-btn-save" class="hub-btn-primary" onclick="ResolutionHub.commitUpdate()">EXECUTE TRANSACTION</button>
+                            <button id="hub-btn-email" class="hub-btn-secondary" onclick="ResolutionHub.emailCitizen()">📧 EMAIL CITIZEN</button>
                         </div>
                     </div>
                 </div>
@@ -537,6 +538,64 @@ const ResolutionHub = {
         }
     },
 
+    async emailCitizen() {
+        const id = this.selectedIssueId;
+        if (!id) return;
+
+        const btn = document.getElementById('hub-btn-email');
+        const originalText = btn.textContent;
+        
+        // 1. Get current issue data from our state or fetch it
+        let issue;
+        try {
+            issue = await API.get(`/api/issues/${id}`);
+        } catch (e) {
+            showToast('Failed to fetch issue context', 'error');
+            return;
+        }
+
+        const email = issue.reporter_email;
+        if (!email) {
+            showToast('Citizen email not found in record.', 'warning');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'DISPATCHING...';
+
+        try {
+            // Option B: Try Backend Send
+            await API.post(`/api/admin/issues/${id}/email`);
+            showToast('Email Dispatched via RESOLVIT Relay', 'success');
+        } catch (err) {
+            console.warn('[EmailRelay] Backend send failed or unconfigured. Falling back to Browser Compose.', err);
+            
+            // Option A: Fallback to Gmail Compose
+            const subject = encodeURIComponent(`Update on your RESOLVIT complaint - ${issue.tracking_id || id.slice(0,8)}`);
+            const bodyLine = (label, val) => val ? `${label}: ${val}\n` : '';
+            
+            let bodyText = `Hi ${issue.reporter_full_name || issue.reporter_name || 'Citizen'},\n\n`;
+            bodyText += `There is an update on your RESOLVIT complaint.\n\n`;
+            bodyText += `--- ISSUE DETAILS ---\n`;
+            bodyText += bodyLine('Tracking ID', issue.tracking_id || id);
+            bodyText += bodyLine('Title', issue.title);
+            bodyText += bodyLine('Category', issue.category);
+            bodyText += bodyLine('Current Status', issue.status.replace(/_/g, ' ').toUpperCase());
+            bodyText += bodyLine('Admin Note', document.getElementById('h-update-note').value || 'Processed by Authority');
+            bodyText += bodyLine('Location', issue.address);
+            bodyText += bodyLine('Reported', issue.created_at);
+            bodyText += `\nTrack details here: https://resolvit-ai.online/issue.html?id=${id}\n\n`;
+            bodyText += `Best regards,\nRESOLVIT Admin`;
+
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${subject}&body=${encodeURIComponent(bodyText)}`;
+            window.open(gmailUrl, '_blank');
+            showToast('Opening Gmail Compose...', 'info');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    },
+
     close() {
         const drawer = document.getElementById('resolution-hub-drawer');
         if (drawer) drawer.classList.remove('active');
@@ -716,6 +775,8 @@ const ResolutionHub = {
             .hub-textarea { height: 100px; resize: none; }
             .hub-btn-primary { grid-column: span 2; background: #6366f1; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 900; letter-spacing: 1px; cursor: pointer; transition: all 0.3s; margin-top: 8px; }
             .hub-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
+            .hub-btn-secondary { grid-column: span 2; background: rgba(99,102,241,0.1); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); padding: 14px; border-radius: 12px; font-weight: 800; letter-spacing: 1px; cursor: pointer; transition: all 0.3s; margin-top: 4px; }
+            .hub-btn-secondary:hover { background: rgba(99,102,241,0.2); border-color: #6366f1; }
             .auth-tag { font-size: 0.6rem; font-weight: 900; color: #d97706; background: rgba(217,119,6,0.1); padding: 2px 6px; border-radius: 4px; }
 
             .evidence-modal { position: fixed; inset: 0; z-index: 10001; background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 40px; }

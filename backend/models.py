@@ -161,6 +161,7 @@ class IssueResponse(BaseModel):
     authority_name:         Optional[str] = None
     authority_full_name:    Optional[str] = None
     authority_department:   Optional[str] = None
+    reporter_email:         Optional[str] = None
     resolution_note:        Optional[str]
     resolution_proof_url:   Optional[str]
     created_at:             datetime

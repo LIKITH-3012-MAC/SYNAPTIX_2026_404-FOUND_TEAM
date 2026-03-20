@@ -3,12 +3,15 @@ RESOLVIT - Admin Routes
 Specialized operations for managing citizens and authorities.
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List, Optional, Any
+import json
+from typing import Optional, List, Any
+from datetime import datetime
+import logging
 from models import UserResponse, MessageResponse
 from database import get_db
 from auth import require_roles
+from services.email_service import send_issue_update_email
 from pydantic import BaseModel
-from datetime import datetime
 
 router = APIRouter()
 
@@ -324,3 +327,46 @@ def get_admin_anomalies(current_admin: dict = Depends(require_roles("admin"))):
         """)
         rows = cursor.fetchall()
     return [{**dict(r), "id": str(r["id"]), "authority_id": str(r["authority_id"])} for r in rows]
+
+
+@router.post("/issues/{issue_id}/email", response_model=MessageResponse)
+def email_citizen(issue_id: str, current_admin: dict = Depends(require_roles("admin", "authority"))):
+    """Trigger a status update email to the reporter."""
+    with get_db() as cursor:
+        # Fetch issue and reporter email
+        cursor.execute(
+            """
+            SELECT i.*, u.email as reporter_email, u.full_name as reporter_name, u.username as reporter_username
+            FROM issues i
+            JOIN users u ON i.reporter_id = u.id
+            WHERE i.id = %s
+            """,
+            (issue_id,)
+        )
+        row = cursor.fetchone()
+        
+    if not row:
+        raise HTTPException(status_code=404, detail="Issue not found")
+        
+    issue_data = dict(row)
+    # Convert datetime objects to string for service
+    for key in ["created_at", "updated_at", "resolved_at", "sla_expires_at", "sla_due_at"]:
+        if issue_data.get(key) and hasattr(issue_data[key], "isoformat"):
+            issue_data[key] = issue_data[key].isoformat()
+            
+    to_email = issue_data["reporter_email"]
+    username = issue_data["reporter_name"] or issue_data["reporter_username"]
+    
+    success = send_issue_update_email(to_email, username, issue_data)
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send email. Ensure SMTP is configured.")
+        
+    # Log the email action
+    with get_db() as cursor:
+        cursor.execute(
+            "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, new_value) VALUES (%s, 'issue', %s, 'email_sent', %s)",
+            (current_admin["sub"], issue_id, json.dumps({"to": to_email, "status": "sent"}))
+        )
+        
+    return {"message": "Email notification dispatched successfully"}

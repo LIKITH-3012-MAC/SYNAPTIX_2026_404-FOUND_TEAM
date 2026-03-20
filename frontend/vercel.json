@@ -11,8 +11,15 @@
     }
   ],
   "rewrites": [
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/authority", "destination": "/authority.html" },
+    { "source": "/profile", "destination": "/citizen.html" },
+    { "source": "/report", "destination": "/submit.html" },
+    { "source": "/intelligence", "destination": "/intelligence.html" },
+    { "source": "/issue", "destination": "/issue.html" },
     {
-      "source": "/((?!sitemap\\.xml|robots\\.txt|favicon\\.ico|.*\\.css|.*\\.js|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|.*\\.webp|.*\\.woff2?).*)",
+      "source": "/((?!sitemap\\.xml|robots\\.txt|favicon\\.ico|resolvit\\.png|.*\\.css|.*\\.js|.*\\.html|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|.*\\.webp|.*\\.woff2?).*)",
       "destination": "/"
     }
   ]

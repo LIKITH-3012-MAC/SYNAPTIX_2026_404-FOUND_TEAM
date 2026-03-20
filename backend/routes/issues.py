@@ -26,9 +26,11 @@ from datetime import datetime, timezone
 router = APIRouter()
 
 
-def _serialize_issue(row: dict) -> dict:
+def _serialize_issue(row: dict, show_email: bool = False) -> dict:
     """Serialize DB row to IssueResponse-compatible dict."""
     r = dict(row)
+    if not show_email and "reporter_email" in r:
+        del r["reporter_email"]
     r["id"] = str(r["id"])
     r["reporter_id"] = str(r["reporter_id"])
     if r.get("assigned_authority_id"):
@@ -229,7 +231,7 @@ def create_issue(
         description=payload.description
     )
 
-    return _serialize_issue(issue)
+    return _serialize_issue(issue, show_email=True)
 
 
 # ── LIST ──────────────────────────────────────────────────────
@@ -277,6 +279,7 @@ def list_issues(
         SELECT i.*,
                u.username   AS reporter_name,
                u.full_name  AS reporter_full_name,
+               u.email      AS reporter_email,
                a.username   AS authority_name,
                a.full_name  AS authority_full_name,
                a.department AS authority_department
@@ -293,7 +296,8 @@ def list_issues(
         cursor.execute(query, params)
         rows = cursor.fetchall()
 
-    return [_serialize_issue(dict(r)) for r in rows]
+    is_privileged = current_user["role"] in ["admin", "authority"]
+    return [_serialize_issue(dict(r), show_email=is_privileged) for r in rows]
 
 
 # ── GET ONE ───────────────────────────────────────────────────
@@ -309,6 +313,7 @@ def get_issue(
             SELECT i.*,
                    u.username   AS reporter_name,
                    u.full_name  AS reporter_full_name,
+                   u.email      AS reporter_email,
                    a.username   AS authority_name,
                    a.full_name  AS authority_full_name,
                    a.department AS authority_department
@@ -335,7 +340,8 @@ def get_issue(
     #         detail="Access denied. You can only view details of issues you reported."
     #     )
 
-    return _serialize_issue(issue_data)
+    show_email = (current_user["role"] in ["admin", "authority"] or str(issue_data["reporter_id"]) == current_user["sub"])
+    return _serialize_issue(issue_data, show_email=show_email)
 
 
 # ── UPDATE ────────────────────────────────────────────────────
@@ -480,7 +486,7 @@ def update_issue(
         new_value={k: str(v) for k, v in fields.items()}
     )
 
-    return _serialize_issue(updated)
+    return _serialize_issue(updated, show_email=True)
 
 
 # ── OPERATIONAL ACTIONS ───────────────────────────────────────

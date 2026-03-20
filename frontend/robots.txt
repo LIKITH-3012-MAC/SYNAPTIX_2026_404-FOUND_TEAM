@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /authority
+Disallow: /profile
+Disallow: /admin.html
+Disallow: /authority.html
+Disallow: /citizen.html
+
+Sitemap: https://resolvit-ai.online/sitemap.xml
