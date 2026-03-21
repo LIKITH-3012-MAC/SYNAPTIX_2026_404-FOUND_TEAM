@@ -243,9 +243,11 @@ def execute_schema():
             recipient      VARCHAR(255) NOT NULL,
             subject        TEXT NOT NULL,
             error_message  TEXT,
+            response_body  TEXT,
             created_at     TIMESTAMPTZ DEFAULT NOW()
         );
         """,
+        "ALTER TABLE email_audit_logs ADD COLUMN IF NOT EXISTS response_body TEXT;",
         """
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
