@@ -86,9 +86,9 @@ def send_signup_otp(request: Request, body: dict):
     email = body.get("email", "").strip().lower()
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
-
-    print(f"[OTP-TRACE] send-signup-otp called for: {email}")
-
+        
+    print(f"[EMAIL-TRACE] send-signup-otp called for: {email}")
+    
     with get_db() as cursor:
         # Check collision
         cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
@@ -100,8 +100,13 @@ def send_signup_otp(request: Request, body: dict):
         otp = generate_otp()
         otp_hash = hash_token(otp)
         expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
+        
+        print(f"[EMAIL-TRACE] otp generated: {otp}")
+        print(f"[EMAIL-TRACE] target email: {email}")
+        print(f"[EMAIL-TRACE] resend key present: {not is_placeholder(RESEND_API_KEY)}")
+        print(f"[EMAIL-TRACE] sender email: {RESEND_FROM_EMAIL}")
 
-        # Invalidate old unsused codes
+        # Invalidate old unused codes
         cursor.execute(
             "UPDATE email_verification_otps SET invalidated_at = NOW(), invalidated_reason = 'new_request' "
             "WHERE email = %s AND verified = FALSE AND invalidated_at IS NULL",
@@ -117,11 +122,11 @@ def send_signup_otp(request: Request, body: dict):
             (email, otp_hash, expires_at, request.client.host, request.headers.get("user-agent"))
         )
         
-        print(f"[OTP-TRACE] Target: {email} | OTP generated. Calling email service...")
+        print(f"[EMAIL-TRACE] sending email through resend")
         success = send_verification_otp_email(email, otp)
         
         if not success:
-            print(f"[EMAIL-FAILURE] Resend delivery failed for {email}.")
+            print(f"[EMAIL-FAILURE] resend error for {email}.")
             return {
                 "success": False,
                 "message": "Unable to deliver verification code. Please check your email address."
@@ -129,7 +134,7 @@ def send_signup_otp(request: Request, body: dict):
 
     return {
         "success": True,
-        "message": "Verification code sent successfully. Check your inbox."
+        "message": "Verification code sent successfully."
     }
 
 
@@ -138,6 +143,8 @@ def verify_signup_otp(payload: VerifyOTPRequest):
     """POST /api/auth/verify-signup-otp - Step 2: Validate OTP."""
     email = payload.email.strip().lower()
     otp_input = payload.otp
+    
+    print(f"[OTP-TRACE] verify-signup-otp called for: {email}")
     
     with get_db() as cursor:
         cursor.execute(
@@ -167,31 +174,46 @@ def verify_signup_otp(payload: VerifyOTPRequest):
         return {"success": True, "signup_token": signup_token, "message": "Email verified successfully."}
 
 
-@router.post("/complete-signup", response_model=UserResponse, status_code=201)
-def complete_signup(payload: UserRegister):
+@router.post("/complete-signup", status_code=201)
+def complete_signup(payload: dict):
     """POST /api/auth/complete-signup - Final step: Create the actual user record."""
-    email = payload.email.strip().lower()
+    print(f"[SIGNUP-TRACE] complete-signup called")
+    
+    signup_token = payload.get("signup_token")
+    full_name = payload.get("full_name")
+    username = payload.get("username")
+    password = payload.get("password")
+    
+    if not signup_token:
+        raise HTTPException(status_code=400, detail="Signup token is missing")
 
-    # In production, we should verify the signup_token here.
-    # For this tactical fix, we proceed with creation.
+    from auth import decode_token
+    try:
+        token_data = decode_token(signup_token)
+        email = token_data.get("sub")
+        if not email:
+            raise HTTPException(status_code=400, detail="Invalid token payload")
+    except Exception as e:
+        print(f"[SIGNUP-TRACE] Token validation failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired signup token")
 
     with get_db() as cursor:
         cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail="User already registered")
 
-        pwd_hash = hash_password(payload.password)
+        pwd_hash = hash_password(password)
         cursor.execute(
-            "INSERT INTO users (full_name, username, email, password_hash, role) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (payload.full_name, payload.username, email, pwd_hash, payload.role)
+            "INSERT INTO users (full_name, username, email, password_hash, role) VALUES (%s, %s, %s, %s, 'citizen') RETURNING id",
+            (full_name, username, email, pwd_hash)
         )
         user_id = cursor.fetchone()["id"]
         
     return {
-        "id": user_id,
-        "full_name": payload.full_name,
-        "username": payload.username,
+        "id": str(user_id),
+        "full_name": full_name,
+        "username": username,
         "email": email,
-        "role": payload.role,
-        "created_at": datetime.now()
+        "role": "citizen",
+        "created_at": datetime.now().isoformat()
     }

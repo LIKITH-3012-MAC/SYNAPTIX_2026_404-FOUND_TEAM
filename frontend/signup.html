@@ -464,8 +464,8 @@
                     </button>
                 </form>
             </div>
-                // --- CONFIGURATION (FINAL PRODUCTION SYNC) ---
-        // Actual Render backend URL: https://synaptix-2026-404-found-team.onrender.com
+    <script>
+        // --- CONFIGURATION (FINAL PRODUCTION SYNC) ---
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:8000/api/auth' 
             : 'https://synaptix-2026-404-found-team.onrender.com/api/auth';
@@ -495,7 +495,6 @@
                     data = JSON.parse(text);
                 } catch (e) {
                     console.error('[RESOLVIT] Pipeline Error (Raw Response):', text);
-                    // Handle non-JSON (404, 502, 500 HTML)
                     throw new Error(`Server route is misconfigured (Invalid response). Please ensure backend is running at ${API_BASE_URL}`);
                 }
 
@@ -518,6 +517,8 @@
             errorEl.style.display = 'none';
             successEl.style.display = 'none';
             
+            if (!text) return;
+
             if (type === 'error') {
                 errorEl.textContent = text;
                 errorEl.style.display = 'block';
@@ -568,7 +569,6 @@
                 userEmail = email;
                 document.getElementById('display-email').textContent = maskEmail(email);
                 
-                // End-to-end: Transition to Step 2 (OTP Entry)
                 goToStep('otp');
                 startResendTimer();
                 showMessage('success', data.message || "Verification code sent!");
@@ -606,6 +606,7 @@
             if (otpCode.length < 6) return showMessage('error', 'Please enter the full 6-digit code.');
 
             setLoading('btn-otp', true);
+            showMessage('error', '');
             try {
                 const data = await safeFetch('verify-signup-otp', {
                     method: 'POST',
@@ -613,7 +614,6 @@
                 });
                 
                 signupToken = data.signup_token;
-                // Transition to Final Step: Password Creation
                 goToStep('password');
             } catch (err) {
                 showMessage('error', err.message);
@@ -622,11 +622,12 @@
             }
         });
 
-        // Resend Cooling logic
         function startResendTimer() {
             countdownSec = 60;
             const btnResend = document.getElementById('btn-resend');
             const timerEl = document.getElementById('countdown-timer');
+            if (!btnResend || !timerEl) return;
+            
             btnResend.disabled = true;
             timerEl.style.display = 'inline';
             
@@ -643,7 +644,8 @@
         }
 
         document.getElementById('btn-resend').addEventListener('click', async () => {
-            setLoading('btn-otp', true); // Use parent btn for loading feedback
+            setLoading('btn-otp', true);
+            showMessage('error', '');
             try {
                 await safeFetch('send-signup-otp', {
                     method: 'POST',
@@ -662,35 +664,38 @@
         const passInput = document.getElementById('password');
         const meter = document.getElementById('strength-meter');
         const bar = document.getElementById('strength-bar');
-        const text = document.getElementById('strength-text');
+        const strengthText = document.getElementById('strength-text');
 
-        passInput.addEventListener('input', () => {
-            const val = passInput.value;
-            if (!val) { meter.style.display = 'none'; text.textContent = ''; return; }
-            meter.style.display = 'block';
-            let strength = 0;
-            if (val.length >= 8) strength += 25;
-            if (/[A-Z]/.test(val)) strength += 25;
-            if (/[0-9]/.test(val)) strength += 25;
-            if (/[^A-Za-z0-9]/.test(val)) strength += 25;
-            bar.style.width = strength + '%';
-            if (strength <= 25) { bar.style.background = '#ef4444'; text.textContent = 'Too weak'; }
-            else if (strength <= 50) { bar.style.background = '#f59e0b'; text.textContent = 'Weak'; }
-            else if (strength <= 75) { bar.style.background = '#3b82f6'; text.textContent = 'Medium'; }
-            else { bar.style.background = '#10b981'; text.textContent = 'Very strong'; }
-        });
+        if (passInput) {
+            passInput.addEventListener('input', () => {
+                const val = passInput.value;
+                if (!val) { meter.style.display = 'none'; strengthText.textContent = ''; return; }
+                meter.style.display = 'block';
+                let strength = 0;
+                if (val.length >= 8) strength += 25;
+                if (/[A-Z]/.test(val)) strength += 25;
+                if (/[0-9]/.test(val)) strength += 25;
+                if (/[^A-Za-z0-9]/.test(val)) strength += 25;
+                bar.style.width = strength + '%';
+                if (strength <= 25) { bar.style.background = '#ef4444'; strengthText.textContent = 'Too weak'; }
+                else if (strength <= 50) { bar.style.background = '#f59e0b'; strengthText.textContent = 'Weak'; }
+                else if (strength <= 75) { bar.style.background = '#3b82f6'; strengthText.textContent = 'Medium'; }
+                else { bar.style.background = '#10b981'; strengthText.textContent = 'Very strong'; }
+            });
+        }
 
-        function togglePass(id) {
+        window.togglePass = function(id) {
             const input = document.getElementById(id);
+            if (!input) return;
             const icon = input.nextElementSibling.nextElementSibling;
             if (input.type === 'password') {
                 input.type = 'text';
-                icon.classList.replace('fa-eye', 'fa-eye-slash');
+                if (icon) icon.classList.replace('fa-eye', 'fa-eye-slash');
             } else {
                 input.type = 'password';
-                icon.classList.replace('fa-eye-slash', 'fa-eye');
+                if (icon) icon.classList.replace('fa-eye-slash', 'fa-eye');
             }
-        }
+        };
 
         document.getElementById('form-password').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -703,60 +708,20 @@
             if (password.length < 8) return showMessage('error', 'Password must be at least 8 characters.');
 
             setLoading('btn-complete', true);
+            showMessage('error', '');
             try {
-                // This logic calls /complete-signup which requires the signupToken
-                const data = await safeFetch('complete-signup', {
+                await safeFetch('complete-signup', {
                     method: 'POST',
                     body: JSON.stringify({
                         full_name: fullName,
                         username: username,
-                        email: userEmail,
                         password: password,
-                        role: 'citizen',
                         signup_token: signupToken
                     })
                 });
 
                 showMessage('success', 'Profile created! Redirecting to login...');
                 setTimeout(() => window.location.href = 'index.html?signedup=true', 2000);
-            } catch (err) {
-                showMessage('error', err.message);
-            } finally {
-                setLoading('btn-complete', false);
-            }
-        });
-t.textContent = 'Strong'; }
-        });
-
-        function togglePass(id) {
-            const el = document.getElementById(id);
-            el.type = el.type === 'password' ? 'text' : 'password';
-        }
-
-        document.getElementById('form-password').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fullName = document.getElementById('full_name').value;
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const confirm = document.getElementById('confirm_password').value;
-
-            if (password !== confirm) return showMessage('error', 'Passwords do not match.');
-
-            setLoading('btn-complete', true);
-            try {
-                await safeFetch(`${BACKEND_URL}/auth/complete-signup`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        signup_token: signupToken,
-                        full_name: fullName,
-                        username: username,
-                        password: password
-                    })
-                });
-                
-                showMessage('success', 'Account created! Redirecting to login...');
-                setTimeout(() => window.location.href = '/', 2000);
             } catch (err) {
                 showMessage('error', err.message);
             } finally {
