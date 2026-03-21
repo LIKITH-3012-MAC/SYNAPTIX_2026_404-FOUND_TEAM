@@ -17,6 +17,8 @@
             --text-main: #f8fafc;
             --text-dim: #94a3b8;
             --glass-border: rgba(255, 255, 255, 0.1);
+            --success: #10b981;
+            --error: #ef4444;
         }
 
         * {
@@ -41,7 +43,7 @@
 
         .signup-container {
             width: 100%;
-            max-width: 450px;
+            max-width: 480px;
             padding: 20px;
             z-index: 10;
         }
@@ -50,10 +52,12 @@
             background: var(--card-bg);
             backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 48px;
+            border-radius: 28px;
+            padding: 40px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
         }
 
         @keyframes slideUp {
@@ -63,28 +67,53 @@
 
         .brand {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
         }
 
         .brand-logo {
-            font-size: 42px;
+            font-size: 32px;
             background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 800;
-            display: inline-block;
-            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .brand-logo img {
+            width: 32px;
+            height: 32px;
         }
 
         .brand p {
             color: var(--text-dim);
-            font-size: 16px;
+            font-size: 14px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
 
-        h1 {
-            font-size: 28px;
+        /* Steps handling */
+        .step {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        h2 {
+            font-size: 24px;
             font-weight: 800;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             text-align: center;
             letter-spacing: -0.02em;
         }
@@ -92,17 +121,30 @@
         .instruction {
             color: var(--text-dim);
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
             font-size: 15px;
             line-height: 1.5;
         }
 
         .form-group {
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             position: relative;
         }
 
-        .form-group i {
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            margin-left: 4px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
             position: absolute;
             left: 16px;
             top: 50%;
@@ -116,7 +158,7 @@
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid var(--glass-border);
             border-radius: 14px;
-            padding: 16px 16px 16px 48px;
+            padding: 14px 16px 14px 44px;
             color: white;
             font-size: 16px;
             transition: all 0.3s;
@@ -131,6 +173,60 @@
 
         input:focus + i {
             color: var(--primary);
+        }
+
+        /* OTP Inputs */
+        .otp-wrapper {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .otp-input {
+            width: 50px;
+            height: 60px;
+            padding: 0;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            border-radius: 12px;
+        }
+
+        /* Password Strength */
+        .strength-meter {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .strength-bar {
+            height: 100%;
+            width: 0;
+            transition: all 0.3s;
+        }
+
+        .strength-text {
+            font-size: 12px;
+            margin-top: 4px;
+            color: var(--text-dim);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dim);
+            cursor: pointer;
+            z-index: 5;
+        }
+
+        .toggle-password:hover {
+            color: white;
         }
 
         .btn-primary {
@@ -151,15 +247,35 @@
             box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4);
         }
 
         .btn-primary:disabled {
-            opacity: 0.7;
+            opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
+        }
+
+        .resend-container {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .btn-link:disabled {
+            color: var(--text-dim);
+            cursor: default;
         }
 
         .footer-links {
@@ -175,19 +291,27 @@
             font-weight: 600;
         }
 
-        .footer-links a:hover {
-            text-decoration: underline;
-        }
-
-        #error-msg {
+        .error-msg {
             background: rgba(239, 68, 68, 0.1);
             color: #fca5a5;
             padding: 12px;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 14px;
             margin-bottom: 20px;
             display: none;
             border: 1px solid rgba(239, 68, 68, 0.2);
+            text-align: center;
+        }
+
+        .success-msg {
+            background: rgba(16, 185, 129, 0.1);
+            color: #6ee7b7;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+            border: 1px solid rgba(16, 185, 129, 0.2);
             text-align: center;
         }
 
@@ -205,11 +329,19 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Responsive */
+        .email-display {
+            background: rgba(255,255,255,0.05);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            color: var(--primary);
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
         @media (max-width: 480px) {
-            .signup-card {
-                padding: 32px 24px;
-            }
+            .signup-card { padding: 32px 24px; }
+            .otp-input { width: 42px; height: 50px; font-size: 20px; }
         }
     </style>
 </head>
@@ -217,80 +349,370 @@
     <div class="signup-container">
         <div class="signup-card">
             <div class="brand">
-                <span class="brand-logo">RESOLVIT</span>
+                <div class="brand-logo">
+                    <img src="/logo.svg" alt="Logo">
+                    <span>RESOLVIT</span>
+                </div>
                 <p>Digital Accountability Platform</p>
             </div>
 
-            <h1>Create Account</h1>
-            <p class="instruction">Enter your email to receive a secure verification code.</p>
+            <!-- Global Notifications -->
+            <div id="error-msg" class="error-msg"></div>
+            <div id="success-msg" class="success-msg"></div>
 
-            <div id="error-msg"></div>
-
-            <form id="signup-form">
-                <div class="form-group">
-                    <input type="email" id="email" placeholder="Enter your email" required autocomplete="email">
-                    <i class="fas fa-envelope"></i>
+            <!-- STEP 1: EMAIL ENTRY -->
+            <div id="step-email" class="step active">
+                <h2>Create Account</h2>
+                <p class="instruction">Enter your email to receive a secure verification code.</p>
+                
+                <form id="form-email">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <div class="input-wrapper">
+                            <input type="email" id="email" placeholder="example@gmail.com" required autocomplete="email">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-email">
+                        <span>Send Verification Code</span>
+                        <div class="spinner"></div>
+                    </button>
+                </form>
+                <div class="footer-links">
+                    Already have an account? <a href="/">Login here</a>
                 </div>
+            </div>
 
-                <button type="submit" class="btn-primary" id="submit-btn">
-                    <span id="btn-text">Send Verification Code</span>
-                    <div class="spinner" id="btn-spinner"></div>
-                </button>
-            </form>
+            <!-- STEP 2: OTP VERIFICATION -->
+            <div id="step-otp" class="step">
+                <h2>Verify Email</h2>
+                <p class="instruction">We sent a 6-digit code to <br><span class="email-display" id="display-email"></span></p>
+                
+                <form id="form-otp">
+                    <div class="otp-wrapper">
+                        <input type="text" class="otp-input" maxlength="1" pattern="\d*" inputmode="numeric">
+                        <input type="text" class="otp-input" maxlength="1" pattern="\d*" inputmode="numeric">
+                        <input type="text" class="otp-input" maxlength="1" pattern="\d*" inputmode="numeric">
+                        <input type="text" class="otp-input" maxlength="1" pattern="\d*" inputmode="numeric">
+                        <input type="text" class="otp-input" maxlength="1" pattern="\d*" inputmode="numeric">
+                        <input type="text" class="otp-input" maxlength="1" pattern="\d*" inputmode="numeric">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary" id="btn-otp">
+                        <span>Verify Code</span>
+                        <div class="spinner"></div>
+                    </button>
+                    
+                    <div class="resend-container">
+                        Didn't receive code? 
+                        <button type="button" class="btn-link" id="btn-resend">Resend</button>
+                        <span id="countdown-timer"></span>
+                    </div>
+                    <div style="text-align:center; margin-top:12px;">
+                        <button type="button" class="btn-link" onclick="goToStep('email')" style="font-size:12px; opacity:0.7;">Change Email</button>
+                    </div>
+                </form>
+            </div>
 
-            <div class="footer-links">
-                Already have an account? <a href="/">Login here</a>
+            <!-- STEP 3: PASSWORD SETUP -->
+            <div id="step-password" class="step">
+                <h2>Complete Profile</h2>
+                <p class="instruction">Set your username and secure password to finish signup.</p>
+                
+                <form id="form-password">
+                    <div class="form-group">
+                        <label for="full_name">Full Name</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="full_name" placeholder="John Doe" required autocomplete="name">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="username" placeholder="johndoe123" required autocomplete="username">
+                            <i class="fas fa-at"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Create Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="password" placeholder="••••••••" required>
+                            <i class="fas fa-lock"></i>
+                            <i class="fas fa-eye toggle-password" onclick="togglePass('password')"></i>
+                        </div>
+                        <div class="strength-meter" id="strength-meter">
+                            <div class="strength-bar" id="strength-bar"></div>
+                        </div>
+                        <div class="strength-text" id="strength-text"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirm_password" placeholder="••••••••" required>
+                            <i class="fas fa-check-circle"></i>
+                            <i class="fas fa-eye toggle-password" onclick="togglePass('confirm_password')"></i>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="btn-complete">
+                        <span>Create Account</span>
+                        <div class="spinner"></div>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
     <script>
-        const API_BASE = '/api'; // Adjusted for production routing
+        // --- CONFIGURATION ---
+        const BACKEND_URL = 'https://resolvit-ai.online/api'; // Production Backend
+        let userEmail = '';
+        let signupToken = '';
+        let countdownSec = 60;
+        let countdownInterval;
 
-        document.getElementById('signup-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const btn = document.getElementById('submit-btn');
-            const btnText = document.getElementById('btn-text');
-            const btnSpinner = document.getElementById('btn-spinner');
-            const errorMsg = document.getElementById('error-msg');
-
-            // Reset UI
-            errorMsg.style.display = 'none';
-            btn.disabled = true;
-            btnText.style.display = 'none';
-            btnSpinner.style.display = 'block';
-
+        // --- AUTH ENGINE ---
+        async function safeFetch(url, options) {
             try {
-                const response = await fetch(`${API_BASE}/auth/send-signup-otp`, {
+                const response = await fetch(url, options);
+                const text = await response.text();
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    // Fallback for non-JSON responses (HTML errors)
+                    throw new Error(`Server returned an invalid response (${response.status}). Please try again later.`);
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || data.detail || 'An error occurred. Please check your inputs.');
+                }
+                return data;
+            } catch (err) {
+                console.error('Fetch Error:', err);
+                throw err;
+            }
+        }
+
+        function showMessage(type, text) {
+            const errorEl = document.getElementById('error-msg');
+            const successEl = document.getElementById('success-msg');
+            
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+            
+            if (type === 'error') {
+                errorEl.textContent = text;
+                errorEl.style.display = 'block';
+            } else {
+                successEl.textContent = text;
+                successEl.style.display = 'block';
+            }
+        }
+
+        function setLoading(btnId, isLoading) {
+            const btn = document.getElementById(btnId);
+            const span = btn.querySelector('span');
+            const spinner = btn.querySelector('.spinner');
+            
+            btn.disabled = isLoading;
+            span.style.display = isLoading ? 'none' : 'inline-block';
+            spinner.style.display = isLoading ? 'inline-block' : 'none';
+        }
+
+        function goToStep(stepId) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step-${stepId}`).classList.add('active');
+            document.getElementById('error-msg').style.display = 'none';
+            document.getElementById('success-msg').style.display = 'none';
+        }
+
+        // --- STEP 1: EMAIL ---
+        document.getElementById('form-email').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            userEmail = document.getElementById('email').value.trim().toLowerCase();
+            
+            setLoading('btn-email', true);
+            try {
+                await safeFetch(`${BACKEND_URL}/auth/send-signup-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
+                    body: JSON.stringify({ email: userEmail })
                 });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Store email for next step
-                    localStorage.setItem('signup_email', email);
-                    // Redirect to verify page
-                    window.location.href = '/verify-email.html';
-                } else {
-                    throw new Error(data.detail || 'Failed to send OTP');
-                }
+                
+                document.getElementById('display-email').textContent = userEmail;
+                goToStep('otp');
+                startResendTimer();
+                // Focus first OTP field
+                setTimeout(() => document.querySelectorAll('.otp-input')[0].focus(), 500);
             } catch (err) {
-                errorMsg.textContent = err.message;
-                errorMsg.style.display = 'block';
-                btn.disabled = false;
-                btnText.style.display = 'block';
-                btnSpinner.style.display = 'none';
+                showMessage('error', err.message);
+            } finally {
+                setLoading('btn-email', false);
             }
         });
-        
-        // Auto-fill email if returned from somewhere
-        const prefill = new URLSearchParams(window.location.search).get('email');
-        if (prefill) document.getElementById('email').value = prefill;
+
+        // --- STEP 2: OTP ---
+        const otpInputs = document.querySelectorAll('.otp-input');
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.data && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+                // Check if all fields filled
+                const fullOTP = Array.from(otpInputs).map(i => i.value).join('');
+                if (fullOTP.length === 6) {
+                    // Auto-submit? Optional, but better manually for safety
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !input.value && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+            });
+
+            // Paste support
+            input.addEventListener('paste', (e) => {
+                const pasteData = e.clipboardData.getData('text').slice(0, 6);
+                if (/^\d+$/.test(pasteData)) {
+                    pasteData.split('').forEach((char, i) => {
+                        if (otpInputs[index + i]) otpInputs[index + i].value = char;
+                    });
+                    if (otpInputs[index + pasteData.length]) {
+                        otpInputs[index + pasteData.length].focus();
+                    } else {
+                        otpInputs[5].focus();
+                    }
+                }
+                e.preventDefault();
+            });
+        });
+
+        document.getElementById('form-otp').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const otp = Array.from(otpInputs).map(i => i.value).join('');
+            if (otp.length < 6) return showMessage('error', 'Please enter the 6-digit code.');
+
+            setLoading('btn-otp', true);
+            try {
+                const data = await safeFetch(`${BACKEND_URL}/auth/verify-signup-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail, otp })
+                });
+                
+                signupToken = data.signup_token;
+                goToStep('password');
+            } catch (err) {
+                showMessage('error', err.message);
+            } finally {
+                setLoading('btn-otp', false);
+            }
+        });
+
+        // Resend Logic
+        const btnResend = document.getElementById('btn-resend');
+        const timerEl = document.getElementById('countdown-timer');
+
+        function startResendTimer() {
+            countdownSec = 60;
+            btnResend.disabled = true;
+            timerEl.style.display = 'inline';
+            
+            clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                countdownSec--;
+                timerEl.textContent = `(${countdownSec}s)`;
+                if (countdownSec <= 0) {
+                    clearInterval(countdownInterval);
+                    btnResend.disabled = false;
+                    timerEl.style.display = 'none';
+                }
+            }, 1000);
+        }
+
+        btnResend.addEventListener('click', async () => {
+            setLoading('btn-otp', true);
+            try {
+                await safeFetch(`${BACKEND_URL}/auth/send-signup-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail })
+                });
+                showMessage('success', 'New verification code sent!');
+                startResendTimer();
+            } catch (err) {
+                showMessage('error', err.message);
+            } finally {
+                setLoading('btn-otp', false);
+            }
+        });
+
+        // --- STEP 3: PASSWORD ---
+        const passInput = document.getElementById('password');
+        const meter = document.getElementById('strength-meter');
+        const bar = document.getElementById('strength-bar');
+        const text = document.getElementById('strength-text');
+
+        passInput.addEventListener('input', () => {
+            const val = passInput.value;
+            if (!val) { meter.style.display = 'none'; text.textContent = ''; return; }
+            
+            meter.style.display = 'block';
+            let strength = 0;
+            if (val.length >= 8) strength += 25;
+            if (/[A-Z]/.test(val)) strength += 25;
+            if (/[0-9]/.test(val)) strength += 25;
+            if (/[^A-Za-z0-9]/.test(val)) strength += 25;
+
+            bar.style.width = strength + '%';
+            if (strength <= 25) { bar.style.background = '#ef4444'; text.textContent = 'Too weak'; }
+            else if (strength <= 50) { bar.style.background = '#f59e0b'; text.textContent = 'Weak'; }
+            else if (strength <= 75) { bar.style.background = '#3b82f6'; text.textContent = 'Medium'; }
+            else { bar.style.background = '#10b981'; text.textContent = 'Strong'; }
+        });
+
+        function togglePass(id) {
+            const el = document.getElementById(id);
+            el.type = el.type === 'password' ? 'text' : 'password';
+        }
+
+        document.getElementById('form-password').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fullName = document.getElementById('full_name').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm_password').value;
+
+            if (password !== confirm) return showMessage('error', 'Passwords do not match.');
+
+            setLoading('btn-complete', true);
+            try {
+                await safeFetch(`${BACKEND_URL}/auth/complete-signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        signup_token: signupToken,
+                        full_name: fullName,
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                showMessage('success', 'Account created! Redirecting to login...');
+                setTimeout(() => window.location.href = '/', 2000);
+            } catch (err) {
+                showMessage('error', err.message);
+            } finally {
+                setLoading('btn-complete', false);
+            }
+        });
     </script>
 </body>
 </html>

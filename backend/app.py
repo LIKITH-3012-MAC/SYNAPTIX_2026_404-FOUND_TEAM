@@ -19,7 +19,10 @@ if os.getenv("RENDER") is None:
 # -----------------------------
 # Import internal modules
 # -----------------------------
-from core.exceptions import global_exception_handler, value_error_handler
+from core.exceptions import (
+    global_exception_handler, value_error_handler, http_exception_handler
+)
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from core.security import limiter, rate_limit_exceeded_handler
 from core.config import settings
 
@@ -55,6 +58,7 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 # -----------------------------
 app.add_exception_handler(Exception, global_exception_handler)
 app.add_exception_handler(ValueError, value_error_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 
 # -----------------------------
 # CORS Middleware
