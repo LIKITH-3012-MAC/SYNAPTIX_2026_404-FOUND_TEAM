@@ -138,30 +138,13 @@ def start_up():
 
 @app.on_event("startup")
 def validate_email_config():
-    """Aggressive production validation for Resend and Base URL."""
-    from services.email_service import (
-        RESEND_API_KEY, RESEND_FROM_EMAIL, APP_BASE_URL, 
-        EMAIL_ENABLED, is_placeholder
-    )
+    """Aggressive production validation for Resend."""
+    from services.email_service import RESEND_API_KEY, RESEND_FROM_EMAIL, is_placeholder
     
-    print(f"[EMAIL-TRACE] Initializing Email Service...")
-    print(f"[EMAIL-TRACE] EMAIL_ENABLED: {EMAIL_ENABLED}")
-    print(f"[EMAIL-TRACE] APP_BASE_URL: {APP_BASE_URL}")
-
-    if EMAIL_ENABLED:
-        if is_placeholder(RESEND_API_KEY):
-            print("[EMAIL-FAILURE] CRITICAL: RESEND_API_KEY is missing or is a placeholder!")
-            print("[EMAIL-FAILURE] Update Render Environment Variables immediately.")
-        else:
-            print(f"[EMAIL-TRACE] RESEND_API_KEY: [CONFIGURED]")
-            
-        if not RESEND_FROM_EMAIL or "your_email" in RESEND_FROM_EMAIL:
-             print("[EMAIL-FAILURE] CRITICAL: RESEND_FROM_EMAIL is misconfigured!")
-        else:
-            print(f"[EMAIL-TRACE] SENDER: {RESEND_FROM_EMAIL}")
-
-    if "localhost" in APP_BASE_URL.lower() and os.getenv("RENDER"):
-        print("[EMAIL-FAILURE] WARNING: APP_BASE_URL is set to localhost on Render!")
+    if not RESEND_API_KEY or is_placeholder(RESEND_API_KEY) or not RESEND_FROM_EMAIL:
+        print("[EMAIL-FAILURE] Email system misconfigured")
+    else:
+        print("[EMAIL-TRACE] Email system ready")
 
 
 @app.on_event("startup")

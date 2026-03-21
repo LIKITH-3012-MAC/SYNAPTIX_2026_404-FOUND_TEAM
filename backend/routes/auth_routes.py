@@ -87,7 +87,7 @@ def send_signup_otp(request: Request, body: dict):
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
         
-    print(f"[EMAIL-TRACE] send-signup-otp called for: {email}")
+    print(f"[EMAIL-TRACE] send-signup-otp called")
     
     with get_db() as cursor:
         # Check collision
@@ -102,9 +102,8 @@ def send_signup_otp(request: Request, body: dict):
         expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
         
         print(f"[EMAIL-TRACE] otp generated: {otp}")
-        print(f"[EMAIL-TRACE] target email: {email}")
+        print(f"[EMAIL-TRACE] email target: {email}")
         print(f"[EMAIL-TRACE] resend key present: {not is_placeholder(RESEND_API_KEY)}")
-        print(f"[EMAIL-TRACE] sender email: {RESEND_FROM_EMAIL}")
 
         # Invalidate old unused codes
         cursor.execute(
@@ -122,7 +121,7 @@ def send_signup_otp(request: Request, body: dict):
             (email, otp_hash, expires_at, request.client.host, request.headers.get("user-agent"))
         )
         
-        print(f"[EMAIL-TRACE] sending email through resend")
+        print(f"[EMAIL-TRACE] sending email")
         success = send_verification_otp_email(email, otp)
         
         if not success:
