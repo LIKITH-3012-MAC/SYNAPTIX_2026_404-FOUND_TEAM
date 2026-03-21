@@ -71,7 +71,6 @@ origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://resolvit-app-2026.vercel.app",
-    "https://resolvit-app-2026.vercel.app/",
     "https://www.resolvit-ai.online",
     "https://resolvit-ai.online",
     "https://synaptix-2026-404-found-team.onrender.com",
@@ -116,10 +115,11 @@ def root():
 @app.get("/api/health")
 def health():
     return {
+        "success": True,
+        "service": "backend",
         "status": "online",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "1.0.0",
-        "system": "RESOLVIT Engine"
+        "version": "1.0.0"
     }
 
 # -----------------------------

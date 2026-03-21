@@ -503,15 +503,16 @@
                 }
 
                 if (!response.ok || (data && data.success === false)) {
+                    console.error('[RESOLVIT] Request Failed:', data);
                     const msg = data.message || data.detail || `Request failed (${response.status})`;
                     throw new Error(msg);
                 }
 
                 return data;
             } catch (err) {
-                console.error('[RESOLVIT] Pipeline Network/CORS Error:', err);
-                if (err.message === 'Failed to fetch') {
-                    throw new Error(`Failed to contact server at ${API_BASE_URL}. Possible CORS block or server is down.`);
+                console.error('[RESOLVIT] Pipeline Network/CORS/Fetch Error:', err);
+                if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+                    throw new Error(`Unable to communicate with the verification server. This could be due to a strict CORS policy or the backend (${API_BASE_URL}) being temporarily unavailable. Please try again in a few seconds.`);
                 }
                 throw err;
             }
