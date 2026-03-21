@@ -98,17 +98,57 @@ def send_email(to_email: str, subject: str, html_content: str, issue_id: Optiona
         return False
 
 def send_verification_otp_email(to_email: str, otp: str) -> bool:
-    print(f"[OTP-TRACE] Sending OTP {otp} to {to_email}")
-    subject = f"{otp} is your RESOLVIT verification code"
+    print(f"[OTP-TRACE] Sending Branded OTP {otp} to {to_email}")
+    subject = f"Your RESOLVIT Verification Code: {otp}"
+    
     html = f"""
-    <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 40px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
-        <h1 style="color: #6366f1; margin: 0 0 24px 0;">Verify your identity</h1>
-        <p style="color: #666; font-size: 16px;">Use the code below to complete your RESOLVIT signup.</p>
-        <div style="background: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0;">
-            <span style="font-size: 42px; font-weight: 800; color: #1e1b4b; letter-spacing: 12px; margin-left: 12px;">{otp}</span>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{ background-color: #0f172a; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+            .wrapper {{ width: 100%; table-layout: fixed; background-color: #0f172a; padding-bottom: 40px; }}
+            .container {{ max-width: 600px; margin: 40px auto; background-color: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); }}
+            .header {{ padding: 40px 0; text-align: center; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }}
+            .header h1 {{ margin: 0; color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase; }}
+            .content {{ padding: 48px 40px; text-align: center; color: #f1f5f9; }}
+            .otp-box {{ margin: 32px 0; padding: 24px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }}
+            .otp-code {{ font-family: 'Monaco', 'Consolas', monospace; font-size: 48px; font-weight: 800; color: #818cf8; letter-spacing: 0.1em; }}
+            .footer {{ padding: 32px 40px; background-color: #0f172a; text-align: center; color: #94a3b8; font-size: 14px; border-top: 1px solid rgba(255, 255, 255, 0.05); }}
+            .warning {{ color: #f43f5e; font-size: 13px; margin-top: 24px; font-weight: 500; }}
+            .highlight {{ color: #818cf8; font-weight: 600; }}
+        </style>
+    </head>
+    <body>
+        <div class="wrapper">
+            <div class="container">
+                <div class="header">
+                    <h1>RESOLVIT</h1>
+                </div>
+                <div class="content">
+                    <h2 style="margin-top: 0; font-size: 24px; font-weight: 700; color: #ffffff;">Verify your identity</h2>
+                    <p style="color: #94a3b8; line-height: 1.6; font-size: 16px;">
+                        Use the secure verification code below to complete your registration on the <span class="highlight">RESOLVIT</span> Civic Governance Platform.
+                    </p>
+                    <div class="otp-box">
+                        <div class="otp-code">{otp}</div>
+                    </div>
+                    <p style="font-size: 14px; color: #94a3b8;">
+                        This code will expire in <strong style="color: #f1f5f9;">5 minutes</strong>.
+                    </p>
+                    <p class="warning">
+                        Do not share this code with anyone. RESOLVIT security staff will never ask for this code.
+                    </p>
+                </div>
+                <div class="footer">
+                    <p style="margin: 0;">&copy; 2024 RESOLVIT. Cyber-Safe Civic Governance.</p>
+                    <p style="margin-top: 8px; font-size: 12px; opacity: 0.7;">This is an automated security message. Please do not reply.</p>
+                </div>
+            </div>
         </div>
-        <p style="color: #999; font-size: 13px;">This code expires in {OTP_EXPIRE_MINUTES} minutes.</p>
-    </div>
+    </body>
+    </html>
     """
     return send_email(to_email, subject, html)
 
