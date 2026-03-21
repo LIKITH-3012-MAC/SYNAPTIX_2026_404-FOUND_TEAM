@@ -212,11 +212,19 @@ class AuditLogResponse(BaseModel):
     timestamp:      datetime
 
 
-# ── Generic Response ──────────────────────────────────────────
-class MessageResponse(BaseModel) :
+# ── Generic Responses ──────────────────────────────────────────
+class MessageResponse(BaseModel):
     success: bool = True
     message: str
     detail:  Optional[Any] = None
+
+from typing import TypeVar, Generic
+T = TypeVar("T")
+
+class DataResponse(BaseModel, Generic[T]):
+    success: bool = True
+    message: Optional[str] = None
+    data:    T
 
 
 # ── Feedback Schemas ──────────────────────────────────────────

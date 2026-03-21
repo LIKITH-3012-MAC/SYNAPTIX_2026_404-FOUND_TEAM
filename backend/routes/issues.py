@@ -14,7 +14,7 @@ import os
 import shutil
 from pydantic import BaseModel
 from typing import Optional
-from models import IssueCreate, IssueUpdate, IssueResponse, MessageResponse
+from models import IssueCreate, IssueUpdate, IssueResponse, MessageResponse, DataResponse
 from database import get_db
 from auth import get_current_user, require_roles
 from services.priority import calculate_priority, get_sla_hours, get_sla_expiry, predict_sla_breach_risk
@@ -30,8 +30,8 @@ router = APIRouter()
 def _serialize_issue(row: dict, show_email: bool = False) -> dict:
     """Serialize DB row to IssueResponse-compatible dict."""
     r = dict(row)
-    if not show_email and "reporter_email" in r:
-        del r["reporter_email"]
+    if not show_email:
+        r.pop("reporter_email", None)
     r["id"] = str(r["id"])
     r["reporter_id"] = str(r["reporter_id"])
     if r.get("assigned_authority_id"):
@@ -51,19 +51,29 @@ def _serialize_issue(row: dict, show_email: bool = False) -> dict:
             delta = (resolved - created).total_seconds()
         else:
             delta = (datetime.now(timezone.utc) - created).total_seconds()
-        r["days_unresolved"] = round(delta / 86400, 1)
+        r["days_unresolved"] = float(round(delta / 86400, 1))
 
     # SLA countdown in seconds
     for f in ["sla_expires_at", "sla_due_at"]:
         val = r.get(f)
         if val:
-            if val.tzinfo is None:
-                val = val.replace(tzinfo=timezone.utc)
-            r[f] = val.isoformat()
+            if hasattr(val, "isoformat"):
+                r[f] = val.isoformat()
+            
             if f == "sla_due_at":
-                sla_rem = (val - datetime.now(timezone.utc)).total_seconds()
-                r["sla_seconds_remaining"] = max(sla_rem, 0)
-                r["sla_breached"] = sla_rem <= 0
+                # Ensure val is datetime for subtraction
+                dt_val = val
+                if isinstance(val, str):
+                    try: dt_val = datetime.fromisoformat(val)
+                    except: pass
+                
+                if hasattr(dt_val, "tzinfo") and dt_val.tzinfo is None:
+                    dt_val = dt_val.replace(tzinfo=timezone.utc)
+                
+                if isinstance(dt_val, datetime):
+                    sla_rem = (dt_val - datetime.now(timezone.utc)).total_seconds()
+                    r["sla_seconds_remaining"] = max(sla_rem, 0)
+                    r["sla_breached"] = sla_rem <= 0
 
     # Datetime serialization for other fields
     for field in ("created_at", "updated_at", "resolved_at"):
@@ -127,7 +137,7 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
 
 
 # ── CREATE ────────────────────────────────────────────────────
-@router.post("", status_code=201, response_model=IssueResponse)
+@router.post("", status_code=201, response_model=DataResponse[IssueResponse])
 def create_issue(
     payload: IssueCreate,
     current_user: dict = Depends(get_current_user)
@@ -232,11 +242,15 @@ def create_issue(
         description=payload.description
     )
 
-    return _serialize_issue(issue, show_email=True)
+    return {
+        "success": True,
+        "message": "Issue created successfully",
+        "data": _serialize_issue(issue, show_email=True)
+    }
 
 
 # ── LIST ──────────────────────────────────────────────────────
-@router.get("", response_model=list)
+@router.get("", response_model=DataResponse[list[IssueResponse]])
 def list_issues(
     category: Optional[str]  = Query(None),
     status:   Optional[str]  = Query(None),
@@ -298,11 +312,16 @@ def list_issues(
         rows = cursor.fetchall()
 
     is_privileged = current_user["role"] in ["admin", "authority"]
-    return [_serialize_issue(dict(r), show_email=is_privileged) for r in rows]
+    data = [_serialize_issue(dict(r), show_email=is_privileged) for r in rows]
+    return {
+        "success": True,
+        "message": f"Successfully retrieved {len(data)} issues",
+        "data": data
+    }
 
 
 # ── GET ONE ───────────────────────────────────────────────────
-@router.get("/{issue_id}", response_model=IssueResponse)
+@router.get("/{issue_id}", response_model=DataResponse[IssueResponse])
 def get_issue(
     issue_id: str,
     current_user: dict = Depends(get_current_user)
@@ -342,11 +361,14 @@ def get_issue(
     #     )
 
     show_email = (current_user["role"] in ["admin", "authority"] or str(issue_data["reporter_id"]) == current_user["sub"])
-    return _serialize_issue(issue_data, show_email=show_email)
+    return {
+        "success": True,
+        "data": _serialize_issue(issue_data, show_email=show_email)
+    }
 
 
 # ── UPDATE ────────────────────────────────────────────────────
-@router.patch("/{issue_id}", response_model=IssueResponse)
+@router.patch("/{issue_id}", response_model=DataResponse[IssueResponse])
 def update_issue(
     issue_id: str,
     payload: IssueUpdate,
@@ -510,7 +532,11 @@ def update_issue(
     except Exception as e:
         print(f"[EMAIL ERR] {e}")
 
-    return _serialize_issue(updated, show_email=True)
+    return {
+        "success": True,
+        "message": "Issue updated successfully",
+        "data": _serialize_issue(updated, show_email=True)
+    }
 
 
 # ── OPERATIONAL ACTIONS ───────────────────────────────────────
@@ -534,7 +560,7 @@ def _add_issue_history(cursor, issue_id: str, action_type: str, actor_id: str, a
         )
     )
 
-@router.get("/{issue_id}/history", response_model=list)
+@router.get("/{issue_id}/history", response_model=DataResponse[list])
 def get_issue_history(issue_id: str, current_user: dict = Depends(get_current_user)):
     """Retrieve full audit trail of an issue."""
     with get_db() as cursor:
@@ -550,7 +576,6 @@ def get_issue_history(issue_id: str, current_user: dict = Depends(get_current_us
         )
         rows = cursor.fetchall()
     
-    # Simple serialization
     results = []
     for r in rows:
         item = dict(r)
@@ -560,9 +585,13 @@ def get_issue_history(issue_id: str, current_user: dict = Depends(get_current_us
         if item.get("created_at") and hasattr(item["created_at"], "isoformat"):
             item["created_at"] = item["created_at"].isoformat()
         results.append(item)
-    return results
+    
+    return {
+        "success": True,
+        "data": results
+    }
 
-@router.get("/{issue_id}/attachments", response_model=list)
+@router.get("/{issue_id}/attachments", response_model=DataResponse[list])
 def get_issue_attachments(issue_id: str, current_user: dict = Depends(get_current_user)):
     """Retrieve all evidence/attachments for an issue."""
     with get_db() as cursor:
@@ -581,7 +610,10 @@ def get_issue_attachments(issue_id: str, current_user: dict = Depends(get_curren
         if item.get("created_at") and hasattr(item["created_at"], "isoformat"):
             item["created_at"] = item["created_at"].isoformat()
         results.append(item)
-    return results
+    return {
+        "success": True,
+        "data": results
+    }
 
 class AssignPayload(BaseModel):
     authority_id: str
@@ -648,7 +680,10 @@ def assign_issue(issue_id: str, payload: AssignPayload, current_user: dict = Dep
     except Exception as e:
         print(f"[EMAIL ERR] {e}")
 
-    return {"message": "Issue assigned successfully"}
+    return {
+        "success": True,
+        "message": "Issue assigned successfully"
+    }
 
 @router.post("/{issue_id}/escalate", response_model=MessageResponse)
 def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
@@ -711,7 +746,10 @@ def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_use
     except Exception as e:
         print(f"[EMAIL ERR] {e}")
 
-    return {"message": "Issue escalated successfully"}
+    return {
+        "success": True,
+        "message": "Issue escalated successfully"
+    }
 
 @router.post("/{issue_id}/resolve", response_model=MessageResponse)
 def resolve_issue(issue_id: str, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
@@ -766,7 +804,10 @@ def resolve_issue(issue_id: str, note: Optional[str] = Query(None), current_user
     except Exception as e:
         print(f"[EMAIL ERR] {e}")
 
-    return {"message": "Issue resolved successfully"}
+    return {
+        "success": True,
+        "message": "Issue resolved successfully"
+    }
 
 @router.post("/{issue_id}/archive", response_model=MessageResponse)
 def archive_issue(issue_id: str, current_user: dict = Depends(require_roles("admin"))):
@@ -792,4 +833,7 @@ def archive_issue(issue_id: str, current_user: dict = Depends(require_roles("adm
                 "Status: Archived | Note: Moved to archives"
             )
         )
-    return {"message": "Issue archived successfully"}
+    return {
+        "success": True,
+        "message": "Issue archived successfully"
+    }
