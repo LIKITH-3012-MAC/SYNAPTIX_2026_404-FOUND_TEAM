@@ -209,6 +209,10 @@ def execute_schema():
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS pressure_score FLOAT DEFAULT 0.0;",
         "ALTER TABLE issues ADD COLUMN IF NOT EXISTS priority_manual_override BOOLEAN DEFAULT FALSE;",
         
+        # User Table Extensions
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider_id VARCHAR(255);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture TEXT;",
+
         # New Tables
         """
         CREATE TABLE IF NOT EXISTS anomalies (
