@@ -1,158 +1,214 @@
 """
-RESOLVIT - Production-Grade Email Service
-Strict Resend implementation. Fail-fast. No fallbacks.
+RESOLVIT - Email Service
+Handles sending emails including password reset notifications
 """
 import os
-import requests
-import traceback
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Optional
-from database import get_db
+import logging
 
-# ── Config (Strict Environment Validation) ─────────────────────────
-RESEND_API_KEY    = os.getenv("RESEND_API_KEY")
-RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "updates@resolvit-ai.online")
-EMAIL_ENABLED     = os.getenv("EMAIL_ENABLED", "true").lower() == "true"
+logger = logging.getLogger(__name__)
 
-# Expiry Settings
-OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "5"))
+# Email configuration from environment
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "RESOLVIT <noreply@resolvit.gov>")
 
-# Aggressive Placeholder Detection
-PLACEHOLDERS = ["your_key", "re_your_key", "test_key", "placeholder", "key_here", "your_email", "your_app_password"]
+# Fallback mode when SMTP is not configured
+EMAIL_ENABLED = bool(SMTP_USER and SMTP_PASSWORD)
 
-def is_placeholder(key: Optional[str]) -> bool:
-    if not key: return True
-    k = key.lower()
-    return any(p in k for p in PLACEHOLDERS)
 
-def _log_email_attempt(recipient: str, subject: str, success: bool, error: Optional[str] = None, issue_id: Optional[str] = None, response_body: Optional[str] = None):
-    """Persists every delivery attempt to the database."""
-    try:
-        with get_db() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO email_audit_logs (issue_id, recipient, subject, email_sent, error_message, response_body)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """,
-                (issue_id, recipient, subject, success, error, response_body)
-            )
-    except Exception as e:
-        print(f"[CRITICAL-DB] Failed to log email audit: {e}")
-
-def send_email(to_email: str, subject: str, html_content: str, issue_id: Optional[str] = None) -> bool:
+def send_email(to_email: str, subject: str, html_body: str, text_body: Optional[str] = None) -> bool:
     """
-    Core delivery function using Resend. 
-    Strictly follows production requirements: No fallbacks. Fail-fast.
+    Send an email to the specified recipient.
+    
+    Args:
+        to_email: Recipient email address
+        subject: Email subject line
+        html_body: HTML content of the email
+        text_body: Plain text fallback (optionals)
+    
+    Returns:
+        True if email was sent successfully, False otherwise
     """
     if not EMAIL_ENABLED:
-        print(f"[EMAIL-TRACE] MOCK SEND (Disabled) -> To: {to_email}")
-        return True
-
-    # 1. Strict API Key Validation
-    if not RESEND_API_KEY or is_placeholder(RESEND_API_KEY):
-        err = "Invalid RESEND_API_KEY"
-        print(f"[EMAIL-FAILURE] {err}")
-        _log_email_attempt(to_email, subject, False, err, issue_id)
+        logger.warning(f"Email not enabled. Would send to {to_email}: {subject}")
+        # Log the email content for debugging
+        logger.debug(f"Email content: {html_body}")
         return False
-
-    print(f"[EMAIL-TRACE] email target: {to_email}")
-    print(f"[EMAIL-TRACE] resend key present: True")
-    print(f"[EMAIL-TRACE] sending email")
-
-    payload = {
-        "from": f"RESOLVIT <{RESEND_FROM_EMAIL}>",
-        "to": [to_email],
-        "subject": subject,
-        "html": html_content
-    }
-
-    try:
-        response = requests.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json=payload,
-            timeout=15
-        )
-
-        status_code = response.status_code
-        resp_text = response.text
-        
-        print(f"[EMAIL-TRACE] resend response: {resp_text}")
-
-        if status_code in [200, 201, 202, 204]:
-            print(f"[EMAIL-SUCCESS] Delivered to {to_email}")
-            _log_email_attempt(to_email, subject, True, None, issue_id, resp_text)
-            return True
-        else:
-            err_msg = f"resend error {status_code}: {resp_text}"
-            print(f"[EMAIL-FAILURE] {err_msg}")
-            _log_email_attempt(to_email, subject, False, err_msg, issue_id, resp_text)
-            return False
-
-    except Exception as e:
-        err_msg = f"Exception during send: {str(e)}"
-        print(f"[EMAIL-FAILURE] {err_msg}")
-        _log_email_attempt(to_email, subject, False, str(e), issue_id)
-        return False
-
-def send_verification_otp_email(to_email: str, otp: str) -> bool:
-    print(f"[OTP-TRACE] Sending Branded OTP {otp} to {to_email}")
-    subject = f"Your RESOLVIT Verification Code: {otp}"
     
-    html = f"""
+    try:
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['From'] = SMTP_FROM
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        
+        # Attach plain text and HTML parts
+        if text_body:
+            msg.attach(MIMEText(text_body, 'plain'))
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Connect to SMTP server and send
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, to_email, msg.as_string())
+        
+        logger.info(f"Email sent successfully to {to_email}")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        return False
+
+
+def send_password_reset_email(to_email: str, reset_token: str, username: str) -> bool:
+    """
+    Send a password reset email to the user.
+    
+    Args:
+        to_email: User's email address
+        reset_token: JWT token for password reset
+        username: User's username
+    
+    Returns:
+        True if email was sent successfully, False otherwise
+    """
+    # In production, this would be your actual domain
+    reset_link = f"https://synaptix.vercel.app/reset-password.html?token={reset_token}"
+    
+    # For local development
+    if os.getenv("RENDER") is None:
+        reset_link = f"http://localhost:5500/frontend/reset-password.html?token={reset_token}"
+    
+    subject = "🔐 Reset Your RESOLVIT Password"
+    
+    html_body = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <meta charset="utf-8">
-        <style>
-            body {{ background-color: #0f172a; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
-            .wrapper {{ width: 100%; table-layout: fixed; background-color: #0f172a; padding-bottom: 40px; }}
-            .container {{ max-width: 600px; margin: 40px auto; background-color: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); }}
-            .header {{ padding: 40px 0; text-align: center; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }}
-            .header h1 {{ margin: 0; color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase; }}
-            .content {{ padding: 48px 40px; text-align: center; color: #f1f5f9; }}
-            .otp-box {{ margin: 32px 0; padding: 24px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }}
-            .otp-code {{ font-family: 'Monaco', 'Consolas', monospace; font-size: 48px; font-weight: 800; color: #818cf8; letter-spacing: 0.1em; }}
-            .footer {{ padding: 32px 40px; background-color: #0f172a; text-align: center; color: #94a3b8; font-size: 14px; border-top: 1px solid rgba(255, 255, 255, 0.05); }}
-            .warning {{ color: #f43f5e; font-size: 13px; margin-top: 24px; font-weight: 500; }}
-            .highlight {{ color: #818cf8; font-weight: 600; }}
-        </style>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Reset - RESOLVIT</title>
     </head>
-    <body>
-        <div class="wrapper">
-            <div class="container">
-                <div class="header">
-                    <h1>RESOLVIT</h1>
-                </div>
-                <div class="content">
-                    <h2 style="margin-top: 0; font-size: 24px; font-weight: 700; color: #ffffff;">Verify your identity</h2>
-                    <p style="color: #94a3b8; line-height: 1.6; font-size: 16px;">
-                        Use the secure verification code below to complete your registration on the <span class="highlight">RESOLVIT</span> Civic Governance Platform.
-                    </p>
-                    <div class="otp-box">
-                        <div class="otp-code">{otp}</div>
-                    </div>
-                    <p style="font-size: 14px; color: #94a3b8;">
-                        This code will expire in <strong style="color: #f1f5f9;">5 minutes</strong>.
-                    </p>
-                    <p class="warning">
-                        Do not share this code with anyone. RESOLVIT security staff will never ask for this code.
-                    </p>
-                </div>
-                <div class="footer">
-                    <p style="margin: 0;">&copy; 2024 RESOLVIT. Cyber-Safe Civic Governance.</p>
-                    <p style="margin-top: 8px; font-size: 12px; opacity: 0.7;">This is an automated security message. Please do not reply.</p>
-                </div>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; padding: 20px;">
+        <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+                <h1 style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 24px;">Reset Your Password</h1>
+                <p style="color: #64748b; margin: 0;">Hi {username}, we received a request to reset your password.</p>
+            </div>
+            
+            <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <p style="color: #334155; margin: 0 0 16px 0;">Click the button below to create a new password:</p>
+                <a href="{reset_link}" style="display: inline-block; background: #1E3A8A; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; text-align: center;">Reset Password</a>
+            </div>
+            
+            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 8px 0;">
+                This link will expire in 30 minutes for your security.
+            </p>
+            
+            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
+                If you didn't request a password reset, you can safely ignore this email.
+            </p>
+            
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center;">
+                <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                    © 2024 RESOLVIT - Civic Resolution Platform
+                </p>
             </div>
         </div>
     </body>
     </html>
     """
-    return send_email(to_email, subject, html)
+    
+    text_body = f"""
+    Reset Your RESOLVIT Password
+    
+    Hi {username},
+    
+    We received a request to reset your password.
+    
+    Click the link below to create a new password:
+    {reset_link}
+    
+    This link will expire in 30 minutes for your security.
+    
+    If you didn't request a password reset, you can safely ignore this email.
+    
+    © 2024 RESOLVIT - Civic Resolution Platform
+    """
+    
+    return send_email(to_email, subject, html_body, text_body)
 
-def send_issue_update_email(to_email: str, name: str, issue_data: dict) -> bool:
-    subject = f"Update on your report: {issue_data['title']}"
-    html = f"<div><h2>Issue Update: {issue_data['status']}</h2><p>Hello {name}, your issue {issue_data['title']} is now {issue_data['status']}.</p></div>"
-    return send_email(to_email, subject, html, issue_id=issue_data['id'])
+
+def send_welcome_email(to_email: str, username: str, role: str) -> bool:
+    """
+    Send a welcome email to new users.
+    
+    Args:
+        to_email: User's email address
+        username: User's username
+        role: User's role (citizen, authority, admin)
+    
+    Returns:
+        True if email was sent successfully, False otherwise
+    """
+    role_display = {
+        "citizen": "Citizen",
+        "authority": "Authority", 
+        "admin": "Administrator"
+    }.get(role, "User")
+    
+    subject = f"Welcome to RESOLVIT, {username}!"
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome - RESOLVIT</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; padding: 20px;">
+        <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⚖️</div>
+                <h1 style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 24px;">Welcome to RESOLVIT!</h1>
+                <p style="color: #64748b; margin: 0;">Hi {username}, your account has been created successfully.</p>
+            </div>
+            
+            <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <p style="color: #334155; margin: 0 0 8px 0;"><strong>Account Details:</strong></p>
+                <ul style="color: #334155; margin: 0; padding-left: 20px;">
+                    <li>Username: {username}</li>
+                    <li>Role: {role_display}</li>
+                    <li>Email: {to_email}</li>
+                </ul>
+            </div>
+            
+            <p style="color: #64748b; margin: 0 0 16px 0;">
+                You can now report civic issues and track their resolution. Together, we can make our city better!
+            </p>
+            
+            <div style="text-align: center;">
+                <a href="https://synaptix.vercel.app/dashboard.html" style="display: inline-block; background: #1E3A8A; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">Go to Dashboard</a>
+            </div>
+            
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; margin-top: 24px;">
+                <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                    © 2024 RESOLVIT - Civic Resolution Platform
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return send_email(to_email, subject, html_body)
+

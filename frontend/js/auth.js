@@ -9,18 +9,15 @@ const Auth = {
     async login(email, password) {
         const data = await API.post('/api/auth/login', { email, password });
         localStorage.setItem('resolvit_token', data.access_token);
-        
-        const u = data.user || data;
-
         localStorage.setItem('resolvit_user', JSON.stringify({
-            id:            u.id || u.user_id || u.sub,
-            username:      u.username,
+            id:            data.user_id,
+            username:      data.username,
             email:         email,
-            role:          u.role,
-            department:    u.department || null,
+            role:          data.role,
+            department:    data.department || null,
             auth_provider: 'database'
         }));
-        return u;
+        return data;
     },
 
     /**
@@ -181,10 +178,7 @@ const Auth = {
                     <div class="form-group"><label class="form-label">Email</label><input type="email" id="u-email" class="form-input" required/></div>
                     <div class="form-group"><label class="form-label">Password</label><input type="password" id="u-pass" class="form-input" required/></div>
                     <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;">Sign In</button>
-                    <div style="text-align:center;margin-top:10px;">
-                        <a href="forgot-password.html" style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;transition:color 0.3s ease;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Forgot Password?</a>
-                    </div>
-                    <p style="text-align:center;font-size:0.85rem;color:var(--text-muted);">New यहाँ? <a href="signup.html" style="color:var(--accent);font-weight:700;">Create Account</a></p>
+                    <p style="text-align:center;font-size:0.85rem;color:var(--text-muted);">New यहाँ? <a href="#" onclick="Auth.showModal('register')" style="color:var(--accent);font-weight:700;">Create Account</a></p>
                 </form>`;
 
             document.getElementById('unified-login-form').onsubmit = async (e) => {

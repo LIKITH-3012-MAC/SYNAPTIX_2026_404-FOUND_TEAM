@@ -15,9 +15,6 @@ SECRET_KEY   = os.getenv("SECRET_KEY", "resolvit-super-secret-key-change-in-prod
 ALGORITHM    = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "24"))
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = int(os.getenv("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "30"))
-OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "5"))
-SIGNUP_TOKEN_EXPIRE_MINUTES = 15
-APP_BASE_URL = os.getenv("APP_BASE_URL", "https://www.resolvit-ai.online")
 
 bearer_scheme = HTTPBearer()
 
@@ -34,22 +31,32 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 # ── Password Reset Token Utilities ───────────────────────────
-def generate_reset_token() -> str:
-    """Generate a secure random token for password reset."""
-    import secrets
-    return secrets.token_urlsafe(32)
+def create_password_reset_token(email: str) -> str:
+    """
+    Create a signed JWT token for password reset.
+    This token is sent to the user's email for verification.
+    """
+    payload = {
+        "sub": email,
+        "type": "password_reset",
+        "iat": datetime.utcnow(),
+        "exp": datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def hash_token(token: str) -> str:
-    """Hash a token or OTP using SHA-256 for secure storage."""
-    import hashlib
-    return hashlib.sha256(token.encode()).hexdigest()
-
-
-def generate_otp() -> str:
-    """Generate a 6-digit numeric OTP."""
-    import secrets
-    return "".join([str(secrets.randbelow(10)) for _ in range(6)])
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """
+    Verify a password reset token and return the email if valid.
+    Returns None if token is invalid or expired.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "password_reset":
+            return None
+        return payload.get("sub")
+    except JWTError:
+        return None
 
 
 # ── JWT Utilities ─────────────────────────────────────────────
@@ -62,17 +69,6 @@ def create_access_token(user_id: str, role: str, email: str, department: Optiona
         "department": department,
         "iat": datetime.utcnow(),
         "exp": datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def create_signup_token(email: str) -> str:
-    """Create a short-lived JWT token for completing signup after OTP verification."""
-    payload = {
-        "sub": email,
-        "type": "signup_verification",
-        "iat": datetime.utcnow(),
-        "exp": datetime.utcnow() + timedelta(minutes=SIGNUP_TOKEN_EXPIRE_MINUTES)
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
