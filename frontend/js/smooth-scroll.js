@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
         direction: 'vertical',
         gestureDirection: 'vertical',
         smooth: true,
-        smoothTouch: true, // Unified buttery feel on mobile
+        smoothTouch: false, // Let native OS momentum take over on mobile for 100% natural feel
         touchMultiplier: 1.5,
         infinite: false,
     });

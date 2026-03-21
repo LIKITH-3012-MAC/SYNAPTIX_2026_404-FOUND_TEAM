@@ -52,6 +52,12 @@
   --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* --- LIGHT THEME OVERRIDES --- */
 [data-theme="light"] {
   --bg-primary: #f8fafc;
