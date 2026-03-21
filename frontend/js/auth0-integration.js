@@ -148,22 +148,32 @@ const Auth0Integration = {
       picture: auth0User.picture || ""
     };
 
-    const res = await fetch(`${backendBase}/api/auth/oauth-login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      let msg = `Backend responded ${res.status}`;
+    let data;
+    if (typeof API !== "undefined" && API.post) {
+      // Use robust API utility to handle Render cold-starts gracefully
       try {
-        const data = await res.json();
-        msg = data.detail || msg;
-      } catch (_) {}
-      throw new Error(msg);
-    }
+        data = await API.post("/api/auth/oauth-login", payload, { silent: silent });
+      } catch (err) {
+        throw new Error(err.message || "Backend synchronization failed");
+      }
+    } else {
+      // Fallback for isolated testing without api.js
+      const res = await fetch(`${backendBase}/api/auth/oauth-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-    const data = await res.json();
+      if (!res.ok) {
+        let msg = `Backend responded ${res.status}`;
+        try {
+          const errData = await res.json();
+          msg = errData.detail || msg;
+        } catch (_) {}
+        throw new Error(msg);
+      }
+      data = await res.json();
+    }
 
     localStorage.setItem("resolvit_token", data.access_token);
     localStorage.setItem(
