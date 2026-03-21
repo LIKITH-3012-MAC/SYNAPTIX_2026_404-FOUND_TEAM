@@ -2,37 +2,37 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
   <url>
-    <loc>https://resolvit-ai.online/</loc>
+    <loc>https://www.resolvit-ai.online/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   <url>
-    <loc>https://resolvit-ai.online/dashboard</loc>
+    <loc>https://www.resolvit-ai.online/dashboard</loc>
     <changefreq>always</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://resolvit-ai.online/report</loc>
+    <loc>https://www.resolvit-ai.online/report</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://resolvit-ai.online/profile</loc>
+    <loc>https://www.resolvit-ai.online/profile</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://resolvit-ai.online/admin</loc>
+    <loc>https://www.resolvit-ai.online/admin</loc>
     <changefreq>daily</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://resolvit-ai.online/authority</loc>
+    <loc>https://www.resolvit-ai.online/authority</loc>
     <changefreq>daily</changefreq>
     <priority>0.5</priority>
   </url>

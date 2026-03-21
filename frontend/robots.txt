@@ -7,4 +7,4 @@ Disallow: /admin.html
 Disallow: /authority.html
 Disallow: /citizen.html
 
-Sitemap: https://resolvit-ai.online/sitemap.xml
+Sitemap: https://www.resolvit-ai.online/sitemap.xml
