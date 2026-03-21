@@ -204,7 +204,7 @@ def verify_signup_otp(payload: VerifyOTPRequest):
         }
 
 # ── Step 3: Complete Signup ────────────────────────────────────
-@router.post("/complete-signup", status_code=201)
+@router.post("/complete-signup", status_code=200)
 def complete_signup(payload: CompleteSignupRequest):
     """
     POST /api/auth/complete-signup
@@ -213,43 +213,66 @@ def complete_signup(payload: CompleteSignupRequest):
     3. Create Actual User
     """
     print(f"[SIGNUP-TRACE] complete-signup called")
+    print(f"[SIGNUP-TRACE] signup token received")
     
     try:
         token_data = decode_token(payload.signup_token)
         email = token_data.get("sub")
         if not email:
-            raise HTTPException(status_code=400, detail="Invalid token payload")
+            print(f"[SIGNUP-TRACE] token decode failure")
+            return {"success": False, "message": "Invalid token payload."}
+        print(f"[SIGNUP-TRACE] token decode success")
+        print(f"[SIGNUP-TRACE] email extracted from token")
     except Exception as e:
         print(f"[SIGNUP-TRACE] Token validation failure: {e}")
-        raise HTTPException(status_code=401, detail="Invalid or expired signup session")
+        return {"success": False, "message": "Invalid or expired signup session."}
 
-    with get_db() as cursor:
-        # Final Safety Check: Ensure this email was actually verified in the last 15 mins
-        cursor.execute(
-            "SELECT id FROM email_verification_otps WHERE email = %s AND verified = TRUE AND verified_at > NOW() - INTERVAL '15 minutes' LIMIT 1",
-            (email,)
-        )
-        if not cursor.fetchone():
-            raise HTTPException(status_code=403, detail="Email verification session expired or not found.")
+    print(f"[SIGNUP-TRACE] username/full_name received")
+    if len(payload.password) < 8:
+        print(f"[SIGNUP-FAILURE] Password validation failed")
+        return {"success": False, "message": "Password does not meet requirements."}
+    print(f"[SIGNUP-TRACE] password validation passed")
 
-        # Check collision again (just in case)
-        cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-        if cursor.fetchone():
-            raise HTTPException(status_code=400, detail="Account already created.")
+    try:
+        with get_db() as cursor:
+            # Final Safety Check: Ensure this email was actually verified in the last 15 mins
+            cursor.execute(
+                "SELECT id FROM email_verification_otps WHERE email = %s AND verified = TRUE AND verified_at > NOW() - INTERVAL '15 minutes' LIMIT 1",
+                (email,)
+            )
+            if not cursor.fetchone():
+                print(f"[SIGNUP-FAILURE] Email verification session expired or not found")
+                return {"success": False, "message": "Email verification session expired or not found."}
 
-        pwd_hash = hash_password(payload.password)
-        cursor.execute(
-            "INSERT INTO users (full_name, username, email, password_hash, role) VALUES (%s, %s, %s, %s, 'citizen') RETURNING id",
-            (payload.full_name, payload.username, email, pwd_hash)
-        )
-        user_id = cursor.fetchone()["id"]
-        print(f"[SIGNUP-TRACE] account created for {email}")
-        
-    return {
-        "success": True,
-        "message": "Account created successfully.",
-        "user_id": str(user_id)
-    }
+            # Check collision (username or email)
+            cursor.execute("SELECT id FROM users WHERE email = %s OR username = %s LIMIT 1", (email, payload.username))
+            if cursor.fetchone():
+                print(f"[SIGNUP-TRACE] user already exists true")
+                return {"success": False, "message": "Account already exists with this email or username."}
+            print(f"[SIGNUP-TRACE] user already exists false")
+
+            pwd_hash = hash_password(payload.password)
+            cursor.execute(
+                "INSERT INTO users (full_name, username, email, password_hash, role, auth_provider) VALUES (%s, %s, %s, %s, 'citizen', 'database') RETURNING id",
+                (payload.full_name, payload.username, email, pwd_hash)
+            )
+            user_id = cursor.fetchone()["id"]
+            print(f"[SIGNUP-TRACE] user row created")
+            # The context manager automatically commits if no exception is raised
+            print(f"[SIGNUP-TRACE] db commit success")
+            
+        print(f"[SIGNUP-TRACE] returning success response")
+        return {
+            "success": True,
+            "message": "Account created successfully.",
+            "user_id": str(user_id)
+        }
+    except Exception as e:
+        print(f"[SIGNUP-FAILURE] exception details: {e}")
+        return {
+            "success": False,
+            "message": "Unable to create account."
+        }
 
 # ── Standard Auth ──────────────────────────────────────────────
 

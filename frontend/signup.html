@@ -726,8 +726,12 @@
 
             setLoading('btn-complete', true);
             showMessage('error', '');
+            
+            console.log(`[SIGNUP-DEBUG] Final endpoint URL: ${API_BASE_URL}/complete-signup`);
+            console.log(`[SIGNUP-DEBUG] Request payload keys: ['full_name', 'username', 'password', 'signup_token']`);
+
             try {
-                await safeFetch('complete-signup', {
+                const data = await safeFetch('complete-signup', {
                     method: 'POST',
                     body: JSON.stringify({
                         full_name: fullName,
@@ -737,10 +741,16 @@
                     })
                 });
 
-                showMessage('success', 'Profile created! Redirecting to login...');
+                console.log(`[SIGNUP-DEBUG] Response status: success = ${data.success}`);
+                console.log(`[SIGNUP-DEBUG] Parsed JSON:`, data);
+
+                showMessage('success', 'Account created successfully. Redirecting to login...');
                 setTimeout(() => window.location.href = 'index.html?signedup=true', 2000);
             } catch (err) {
-                showMessage('error', err.message);
+                console.error(`[SIGNUP-DEBUG] Network/fetch error details:`, err);
+                // If safeFetch generated a specific message (e.g. CORS), we use it, otherwise fallback
+                const errMsg = err.message || 'Unable to complete signup. Please try again.';
+                showMessage('error', errMsg);
             } finally {
                 setLoading('btn-complete', false);
             }
