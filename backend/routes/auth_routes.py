@@ -147,7 +147,7 @@ def verify_signup_otp(payload: VerifyOTPRequest):
     
     with get_db() as cursor:
         cursor.execute(
-            "SELECT id, otp_hash, expires_at FROM email_verification_otps "
+            "SELECT id, otp_hash, expires_at, attempt_count, max_attempts FROM email_verification_otps "
             "WHERE email = %s AND verified = FALSE AND invalidated_at IS NULL ORDER BY created_at DESC LIMIT 1",
             (email,)
         )
@@ -156,12 +156,21 @@ def verify_signup_otp(payload: VerifyOTPRequest):
         if not row:
             raise HTTPException(status_code=400, detail="No active verification request found.")
         
+        if row["attempt_count"] >= row["max_attempts"]:
+            cursor.execute(
+                "UPDATE email_verification_otps SET invalidated_at = NOW(), invalidated_reason = 'max_attempts' WHERE id = %s", 
+                (row["id"],)
+            )
+            raise HTTPException(status_code=400, detail="Too many failed attempts. Please request a new code.")
+
         if row["expires_at"] < datetime.utcnow():
             raise HTTPException(status_code=400, detail="Verification code has expired.")
 
         # Verify Hash
         current_hash = hash_token(otp_input)
         if current_hash != row["otp_hash"]:
+            # Increment attempt
+            cursor.execute("UPDATE email_verification_otps SET attempt_count = attempt_count + 1 WHERE id = %s", (row["id"],))
             raise HTTPException(status_code=400, detail="Invalid verification code.")
 
         cursor.execute(
