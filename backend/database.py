@@ -45,7 +45,12 @@ def init_pool():
             minconn=5,
             maxconn=100,
             dsn=DATABASE_URL,
-            cursor_factory=RealDictCursor
+            cursor_factory=RealDictCursor,
+            connect_timeout=10,
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=5
         )
         print("[DB] Connection pool initialized.")
     return _pool
@@ -233,6 +238,55 @@ def execute_schema():
             original_name VARCHAR(255),
             size_bytes    INTEGER,
             created_at    TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS email_audit_logs (
+            id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            issue_id       UUID REFERENCES issues(id) ON DELETE SET NULL,
+            email_sent     BOOLEAN DEFAULT FALSE,
+            recipient      VARCHAR(255) NOT NULL,
+            subject        TEXT NOT NULL,
+            error_message  TEXT,
+            response_body  TEXT,
+            created_at     TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        "ALTER TABLE email_audit_logs ADD COLUMN IF NOT EXISTS response_body TEXT;",
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id            UUID REFERENCES users(id) ON DELETE CASCADE,
+            email_snapshot     VARCHAR(255) NOT NULL,
+            token_hash         VARCHAR(255) NOT NULL,
+            expires_at         TIMESTAMPTZ NOT NULL,
+            used               BOOLEAN DEFAULT FALSE,
+            used_at            TIMESTAMPTZ,
+            created_at         TIMESTAMPTZ DEFAULT NOW(),
+            requested_ip       VARCHAR(45),
+            user_agent         TEXT,
+            resend_message_id  VARCHAR(255),
+            invalidated_at     TIMESTAMPTZ,
+            invalidated_reason VARCHAR(255)
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS email_verification_otps (
+            id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            email              VARCHAR(255) NOT NULL,
+            otp_hash           VARCHAR(255) NOT NULL,
+            expires_at         TIMESTAMPTZ NOT NULL,
+            attempt_count      INTEGER DEFAULT 0,
+            max_attempts       INTEGER DEFAULT 5,
+            verified           BOOLEAN DEFAULT FALSE,
+            verified_at        TIMESTAMPTZ,
+            created_at         TIMESTAMPTZ DEFAULT NOW(),
+            requested_ip       VARCHAR(45),
+            user_agent         TEXT,
+            resend_message_id  VARCHAR(255),
+            purpose            VARCHAR(32),
+            invalidated_at     TIMESTAMPTZ,
+            invalidated_reason VARCHAR(255)
         );
         """,
 

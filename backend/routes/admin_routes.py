@@ -3,16 +3,19 @@ RESOLVIT - Admin Routes
 Specialized operations for managing citizens and authorities.
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List, Optional, Any
-from models import UserResponse, MessageResponse
+import json
+from typing import Optional, List, Any
+from datetime import datetime
+import logging
+from models import UserResponse, MessageResponse, DataResponse
 from database import get_db
 from auth import require_roles
+from services.email_service import send_issue_update_email
 from pydantic import BaseModel
-from datetime import datetime
 
 router = APIRouter()
 
-@router.get("/citizens", response_model=List[UserResponse])
+@router.get("/citizens", response_model=DataResponse[List[UserResponse]])
 def list_citizens(
     search: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=1000),
@@ -49,9 +52,12 @@ def list_citizens(
         item = dict(r)
         item["id"] = str(item["id"])
         results.append(item)
-    return results
+    return {
+        "success": True,
+        "data": results
+    }
 
-@router.get("/citizens/{user_id}", response_model=UserResponse)
+@router.get("/citizens/{user_id}", response_model=DataResponse[UserResponse])
 def get_citizen_detail(user_id: str, current_admin: dict = Depends(require_roles("admin"))):
     """Get detailed profile for a specific citizen."""
     with get_db() as cursor:
@@ -71,7 +77,10 @@ def get_citizen_detail(user_id: str, current_admin: dict = Depends(require_roles
         
     item = dict(row)
     item["id"] = str(item["id"])
-    return item
+    return {
+        "success": True,
+        "data": item
+    }
 
 class CreditPayload(BaseModel):
     delta: int
@@ -94,7 +103,10 @@ def adjust_credits(user_id: str, payload: CreditPayload, current_admin: dict = D
             """,
             (user_id, payload.delta, payload.note)
         )
-    return {"message": f"Successfully adjusted credits by {payload.delta}"}
+    return {
+        "success": True,
+        "message": f"Successfully adjusted credits by {payload.delta}"
+    }
 
 @router.post("/citizens/{user_id}/suspend", response_model=MessageResponse)
 def suspend_user(user_id: str, suspend: bool = True, current_admin: dict = Depends(require_roles("admin"))):
@@ -106,9 +118,12 @@ def suspend_user(user_id: str, suspend: bool = True, current_admin: dict = Depen
             "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, new_value) VALUES (%s, 'user', %s, %s, %s)",
             (current_admin["sub"], user_id, "suspension_toggle", suspend)
         )
-    return {"message": f"User {'suspended' if suspend else 'unsuspended'} successfully"}
+    return {
+        "success": True,
+        "message": f"User {'suspended' if suspend else 'unsuspended'} successfully"
+    }
 
-@router.get("/audit_logs", response_model=list)
+@router.get("/audit_logs", response_model=DataResponse[list])
 def get_audit_logs(
     entity_type: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=1000),
@@ -126,7 +141,7 @@ def get_audit_logs(
         SELECT l.*, u.username as admin_username
         FROM admin_audit_logs l
         LEFT JOIN users u ON l.admin_id = u.id
-        {where_clause}
+        {{where_clause}}
         ORDER BY l.created_at DESC
         LIMIT %s OFFSET %s
     """
@@ -143,12 +158,15 @@ def get_audit_logs(
         item["id"] = str(item["id"])
         if item.get("admin_id"): item["admin_id"] = str(item["admin_id"])
         if item.get("entity_id"): item["entity_id"] = str(item["entity_id"])
-        if item.get("created_at") and isinstance(item["created_at"], datetime):
-            item["created_at"] = item["created_at"].isoformat()
+        if item.get("created_at") and hasattr(item["created_at"], "isoformat"):
+            item["created_at"] = str(item["created_at"].isoformat())
         results.append(item)
-    return results
+    return {
+        "success": True,
+        "data": results
+    }
 
-@router.get("/stats", response_model=dict)
+@router.get("/stats", response_model=DataResponse[dict])
 def get_admin_stats_full(current_admin: dict = Depends(require_roles("admin"))):
     """Core operational metrics for the Control Tower."""
     with get_db() as cursor:
@@ -178,21 +196,24 @@ def get_admin_stats_full(current_admin: dict = Depends(require_roles("admin"))):
         total_credits = cursor.fetchone()["sum"] or 0
 
     return {
-        "issues": {
-            "total_issues": total_issues,
-            "escalated": escalated_count,
-            "resolved": resolved_count,
-            "sla_breached": sla_breaches
-        },
-        "users": {
-            "total": total_users
-        },
-        "credits": {
-            "total_awarded": total_credits
+        "success": True,
+        "data": {
+            "issues": {
+                "total_issues": total_issues,
+                "escalated": escalated_count,
+                "resolved": resolved_count,
+                "sla_breached": sla_breaches
+            },
+            "users": {
+                "total": total_users
+            },
+            "credits": {
+                "total_awarded": total_credits
+            }
         }
     }
 
-@router.get("/authorities", response_model=List[dict])
+@router.get("/authorities", response_model=DataResponse[List[dict]])
 def list_authorities():
     """Directory of all active authorities/departments."""
     with get_db() as cursor:
@@ -204,11 +225,14 @@ def list_authorities():
         item = dict(r)
         item["id"] = str(item["id"])
         results.append(item)
-    return results
+    return {
+        "success": True,
+        "data": results
+    }
 
 from services.pressure import compute_governance_health
 
-@router.get("/leaderboard", response_model=list)
+@router.get("/leaderboard", response_model=DataResponse[list])
 def get_admin_leaderboard():
     """Ranked leaderboard of all citizens based on civic credits."""
     with get_db() as cursor:
@@ -231,9 +255,12 @@ def get_admin_leaderboard():
             "name": r["full_name"] or r["username"],
             "credits": int(r["points_cache"] or 0)
         })
-    return results
+    return {
+        "success": True,
+        "data": results
+    }
 
-@router.get("/dashboard", response_model=dict)
+@router.get("/dashboard", response_model=DataResponse[dict])
 def get_admin_dashboard(current_admin: dict = Depends(require_roles("admin"))):
     """Aggregate data for the Control Tower main view."""
     with get_db() as cursor:
@@ -260,16 +287,19 @@ def get_admin_dashboard(current_admin: dict = Depends(require_roles("admin"))):
         cat_dist = [dict(r) for r in cursor.fetchall()]
 
     return {
-        "heatmap_issues": heatmap,
-        "department_performance": dept_perf,
-        "category_distribution": cat_dist,
-        "civic_engagement": {
-            "total_reports": len(heatmap),
-            "participation_index": 85.4 # Heuristic for now
+        "success": True,
+        "data": {
+            "heatmap_issues": heatmap,
+            "department_performance": dept_perf,
+            "category_distribution": cat_dist,
+            "civic_engagement": {
+                "total_reports": len(heatmap),
+                "participation_index": 85.4 # Heuristic for now
+            }
         }
     }
 
-@router.get("/escalations", response_model=list)
+@router.get("/escalations", response_model=DataResponse[list])
 def get_admin_escalations(current_admin: dict = Depends(require_roles("admin"))):
     """Fetch all escalated issues requiring oversight."""
     with get_db() as cursor:
@@ -288,16 +318,23 @@ def get_admin_escalations(current_admin: dict = Depends(require_roles("admin")))
     for r in rows:
         item = dict(r)
         item["id"] = str(item["id"])
-        item["hours_overdue"] = max(0, round(float(item["hours_overdue"] or 0), 1))
+        item["hours_overdue"] = float(max(0, round(float(item["hours_overdue"] or 0), 1)))
         results.append(item)
-    return results
+    data = results
+    return {
+        "success": True,
+        "data": data
+    }
 
-@router.get("/governance_health")
+@router.get("/governance_health", response_model=DataResponse[dict])
 def get_admin_gov_health(current_admin: dict = Depends(require_roles("admin"))):
     """Compute and return the system-wide health index."""
-    return compute_governance_health()
+    return {
+        "success": True,
+        "data": compute_governance_health()
+    }
 
-@router.get("/pressure_board", response_model=list)
+@router.get("/pressure_board", response_model=DataResponse[list])
 def get_pressure_board(current_admin: dict = Depends(require_roles("admin"))):
     """Top issues ranked by Governance Pressure Score."""
     with get_db() as cursor:
@@ -309,9 +346,12 @@ def get_pressure_board(current_admin: dict = Depends(require_roles("admin"))):
             LIMIT 10
         """)
         rows = cursor.fetchall()
-    return [{**dict(r), "id": str(r["id"])} for r in rows]
+    return {
+        "success": True,
+        "data": [{**dict(r), "id": str(r["id"])} for r in rows]
+    }
 
-@router.get("/anomalies", response_model=list)
+@router.get("/anomalies", response_model=DataResponse[list])
 def get_admin_anomalies(current_admin: dict = Depends(require_roles("admin"))):
     """List detected system/officer anomalies."""
     with get_db() as cursor:
@@ -323,4 +363,53 @@ def get_admin_anomalies(current_admin: dict = Depends(require_roles("admin"))):
             ORDER BY a.created_at DESC
         """)
         rows = cursor.fetchall()
-    return [{**dict(r), "id": str(r["id"]), "authority_id": str(r["authority_id"])} for r in rows]
+    return {
+        "success": True,
+        "data": [{**dict(r), "id": str(r["id"]), "authority_id": str(r["authority_id"])} for r in rows]
+    }
+
+
+@router.post("/issues/{issue_id}/email", response_model=MessageResponse)
+def email_citizen(issue_id: str, current_admin: dict = Depends(require_roles("admin", "authority"))):
+    """Trigger a status update email to the reporter."""
+    with get_db() as cursor:
+        # Fetch issue and reporter email
+        cursor.execute(
+            """
+            SELECT i.*, u.email as reporter_email, u.full_name as reporter_name, u.username as reporter_username
+            FROM issues i
+            JOIN users u ON i.reporter_id = u.id
+            WHERE i.id = %s
+            """,
+            (issue_id,)
+        )
+        row = cursor.fetchone()
+        
+    if not row:
+        raise HTTPException(status_code=404, detail="Issue not found")
+        
+    issue_data = dict(row)
+    # Convert datetime objects to string for service
+    for key in ["created_at", "updated_at", "resolved_at", "sla_expires_at", "sla_due_at"]:
+        if issue_data.get(key) and hasattr(issue_data[key], "isoformat"):
+            issue_data[key] = str(issue_data[key].isoformat())
+            
+    to_email = issue_data["reporter_email"]
+    username = issue_data["reporter_name"] or issue_data["reporter_username"]
+    
+    success = send_issue_update_email(to_email, username, issue_data)
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send email. Ensure SMTP is configured.")
+        
+    # Log the email action
+    with get_db() as cursor:
+        cursor.execute(
+            "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, new_value) VALUES (%s, 'issue', %s, 'email_sent', %s)",
+            (current_admin["sub"], issue_id, json.dumps({"to": to_email, "status": "sent"}))
+        )
+        
+    return {
+        "success": True,
+        "message": "Email notification dispatched successfully"
+    }
