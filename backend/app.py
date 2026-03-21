@@ -73,7 +73,7 @@ origins = [
     "https://resolvit-app-2026.vercel.app",
     "https://www.resolvit-ai.online",
     "https://resolvit-ai.online",
-    "https://synaptix-2026-404-found-team.onrender.com",
+    "https://synaptix-2026-404-found-team.onrender.com"
 ]
 
 app.add_middleware(
@@ -118,8 +118,8 @@ def health():
         "success": True,
         "service": "backend",
         "status": "online",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 # -----------------------------

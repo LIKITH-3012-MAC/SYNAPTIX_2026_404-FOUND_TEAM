@@ -480,16 +480,22 @@
         // --- ROBUST AUTH ENGINE (JSON-ONLY) ---
         async function safeFetch(endpoint, options = {}) {
             const url = `${API_BASE_URL}/${endpoint.replace(/^\//, '')}`;
-            console.log(`[RESOLVIT-TRACE] Fetching: ${url}`);
+            console.log(`[RESOLVIT-TRACE] Initializing fetch: ${url}`);
             
             try {
+                // Handle potential Render cold starts by adding a longer timeout if needed
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout for cold start
+
                 const response = await fetch(url, {
                     ...options,
+                    signal: controller.signal,
                     headers: {
                         'Content-Type': 'application/json',
                         ...options.headers
                     }
                 });
+                clearTimeout(timeoutId);
 
                 const text = await response.text();
                 console.log(`[RESOLVIT-TRACE] Response Status: ${response.status}`);
@@ -499,7 +505,7 @@
                     data = JSON.parse(text);
                 } catch (e) {
                     console.error('[RESOLVIT] Pipeline Error (Raw Response):', text);
-                    throw new Error(`Server at ${API_BASE_URL} returned a non-JSON response. This usually means a 404 or 500 HTML error.`);
+                    throw new Error(`Server at ${API_BASE_URL} responded with invalid data. The backend might be starting up or experiencing an internal error.`);
                 }
 
                 if (!response.ok || (data && data.success === false)) {
@@ -510,9 +516,12 @@
 
                 return data;
             } catch (err) {
-                console.error('[RESOLVIT] Pipeline Network/CORS/Fetch Error:', err);
+                console.error('[RESOLVIT] Pipeline Connectivity/CORS Error:', err);
+                if (err.name === 'AbortError') {
+                    throw new Error('Connection timed out. The backend gateway may be waking up. Please try once more.');
+                }
                 if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
-                    throw new Error(`Unable to communicate with the verification server. This could be due to a strict CORS policy or the backend (${API_BASE_URL}) being temporarily unavailable. Please try again in a few seconds.`);
+                    throw new Error(`Failed to contact server at ${API_BASE_URL}. This is usually a CORS block or the backend is sleeping on Render's free tier. Please wait 10 seconds and try again.`);
                 }
                 throw err;
             }
