@@ -73,7 +73,7 @@ const API = {
 
         this.status = 'online';
         this._emitStatus();
-        return data;
+        return (data && data.success === true && data.data !== undefined) ? data.data : data;
 
       } catch (error) {
         if (error.status && error.status >= 400 && error.status < 500 && error.status !== 429) {
