@@ -469,7 +469,9 @@
 
     <script>
         // --- CONFIGURATION ---
-        const BACKEND_URL = 'https://resolvit-ai.online/api'; // Production Backend
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const BACKEND_URL = isLocal ? 'http://localhost:8000/api' : 'https://resolvit-ai.online/api';
+        console.log(`[RESOLVIT] Initialized with backend: ${BACKEND_URL}`);
         let userEmail = '';
         let signupToken = '';
         let countdownSec = 60;
