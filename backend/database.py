@@ -45,7 +45,12 @@ def init_pool():
             minconn=5,
             maxconn=100,
             dsn=DATABASE_URL,
-            cursor_factory=RealDictCursor
+            cursor_factory=RealDictCursor,
+            connect_timeout=10,
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=5
         )
         print("[DB] Connection pool initialized.")
     return _pool

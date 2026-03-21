@@ -18,7 +18,7 @@ from services.email_service import (
     RESEND_API_KEY, RESEND_FROM_EMAIL, OTP_EXPIRE_MINUTES
 )
 from core.security import limiter
-from models import MessageResponse
+from models import MessageResponse, UserLogin
 
 router = APIRouter()
 
@@ -246,9 +246,65 @@ def complete_signup(payload: CompleteSignupRequest):
     }
 
 # ── Standard Auth ──────────────────────────────────────────────
-# (Keeping basic login/verify for completeness if they existed)
-@router.post("/login")
-def login(payload: UserLogin):
-    # This would normally be here, but we are focusing on Signup Rebuild.
-    # If the user needs the full file kept, I'll reintegrate other methods.
-    pass
+
+@router.post("/login", response_model=dict)
+@limiter.limit("10/minute")
+def login(request: Request, payload: UserLogin):
+    """
+    POST /api/auth/login
+    Standard database-driven login using bcrypt and JWT.
+    (Used alongside Auth0 for hybrid local/cloud auth).
+    """
+    email = payload.email.strip().lower()
+    print(f"[AUTH-TRACE] Login attempt for: {email}")
+
+    with get_db() as cursor:
+        cursor.execute(
+            """
+            SELECT id, email, password_hash, role, username, department, is_suspended, auth_provider
+            FROM users WHERE email = %s
+            """,
+            (email,)
+        )
+        user = cursor.fetchone()
+
+    if not user:
+        print(f"[AUTH-TRACE] User {email} not found.")
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    if user["is_suspended"]:
+        print(f"[AUTH-TRACE] User {email} is suspended.")
+        raise HTTPException(status_code=403, detail="Your account has been suspended.")
+
+    if user["auth_provider"] != "database":
+        print(f"[AUTH-TRACE] User {email} uses {user['auth_provider']} (not database).")
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Please sign in using your {user['auth_provider']} account."
+        )
+
+    if not verify_password(payload.password, user["password_hash"]):
+        print(f"[AUTH-TRACE] Password mismatch for {email}.")
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    # Success!
+    print(f"[AUTH-TRACE] Login success for {email} (ID: {user['id']})")
+    access_token = create_access_token(
+        user_id=str(user["id"]),
+        role=user["role"],
+        email=user["email"],
+        department=user["department"]
+    )
+
+    return {
+        "success": True,
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user["id"]),
+            "username": user["username"],
+            "email": user["email"],
+            "role": user["role"],
+            "department": user["department"]
+        }
+    }
