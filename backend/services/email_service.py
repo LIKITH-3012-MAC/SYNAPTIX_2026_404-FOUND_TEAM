@@ -18,6 +18,7 @@ EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
 APP_BASE_URL = os.getenv("APP_BASE_URL", "https://resolvit-ai.online")
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "support@resolvit-ai.online")
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = int(os.getenv("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "30"))
+OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "5"))
 
 # Initialize Resend
 if RESEND_API_KEY:
@@ -130,6 +131,59 @@ def send_password_reset_email(email: str, token: str, username: str) -> bool:
                 <p style="color: #94a3b8; font-size: 12px; margin: 0;">
                     Need help? Contact our support at {SUPPORT_EMAIL}<br>
                     © 2024 RESOLVIT - Civic Governance Platform
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return send_email(email, subject, html_body)
+
+
+def send_signup_otp_email(email: str, otp: str) -> bool:
+    """
+    Send a 6-digit OTP to a new user for email verification during signup.
+    """
+    subject = f"{otp} is your RESOLVIT verification code"
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verify your email - RESOLVIT</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 20px;">
+        <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 20px; padding: 48px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; text-align: center;">
+            <div style="margin-bottom: 32px;">
+                <div style="font-size: 52px; margin-bottom: 16px;">⚖️</div>
+                <h1 style="color: #6366f1; margin: 0 0 8px 0; font-size: 28px; font-weight: 900; letter-spacing: -0.02em;">Verify your email</h1>
+                <p style="color: #64748b; margin: 0; font-size: 16px;">Secure your RESOLVIT account</p>
+            </div>
+            
+            <div style="margin-bottom: 40px; line-height: 1.6; color: #475569;">
+                <p>Use the 6-digit verification code below to complete your signup process. This code will expire shortly.</p>
+            </div>
+
+            <div style="margin-bottom: 40px;">
+                <div style="background: #f1f5f9; border-radius: 16px; padding: 24px; display: inline-block;">
+                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 42px; font-weight: 800; color: #1e1b4b; letter-spacing: 12px; margin-left:12px;">{otp}</span>
+                </div>
+            </div>
+
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 40px;">
+                <p style="margin: 0; font-size: 14px; font-weight: 700; color: #ef4444;">🛡️ Security Warning</p>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #b91c1c;">
+                    This code expires in <strong>{OTP_EXPIRE_MINUTES} minutes</strong>. Do not share it with anyone.
+                </p>
+            </div>
+
+            <div style="border-top: 1px solid #f1f5f9; padding-top: 32px; color: #94a3b8; font-size: 12px;">
+                <p style="margin: 0;">
+                    If you didn't request this code, you can safely ignore this email.<br>
+                    © 2024 RESOLVIT - AI-Powered Civic Governance
                 </p>
             </div>
         </div>

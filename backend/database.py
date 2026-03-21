@@ -263,6 +263,25 @@ def execute_schema():
             invalidated_reason VARCHAR(255)
         );
         """,
+        """
+        CREATE TABLE IF NOT EXISTS email_verification_otps (
+            id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            email              VARCHAR(255) NOT NULL,
+            otp_hash           VARCHAR(255) NOT NULL,
+            expires_at         TIMESTAMPTZ NOT NULL,
+            attempt_count      INTEGER DEFAULT 0,
+            max_attempts       INTEGER DEFAULT 5,
+            verified           BOOLEAN DEFAULT FALSE,
+            verified_at        TIMESTAMPTZ,
+            created_at         TIMESTAMPTZ DEFAULT NOW(),
+            requested_ip       VARCHAR(45),
+            user_agent         TEXT,
+            resend_message_id  VARCHAR(255),
+            purpose            VARCHAR(32),
+            invalidated_at     TIMESTAMPTZ,
+            invalidated_reason VARCHAR(255)
+        );
+        """,
 
         # Adjusting Constraints
         "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_issues_cluster') THEN ALTER TABLE issues ADD CONSTRAINT fk_issues_cluster FOREIGN KEY (cluster_id) REFERENCES issue_clusters(id) ON DELETE SET NULL; END IF; END $$;",

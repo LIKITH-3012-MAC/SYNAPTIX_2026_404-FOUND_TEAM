@@ -181,7 +181,7 @@ const Auth = {
                     <div style="text-align:center;margin-top:10px;">
                         <a href="forgot-password.html" style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;transition:color 0.3s ease;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Forgot Password?</a>
                     </div>
-                    <p style="text-align:center;font-size:0.85rem;color:var(--text-muted);">New यहाँ? <a href="#" onclick="Auth.showModal('register')" style="color:var(--accent);font-weight:700;">Create Account</a></p>
+                    <p style="text-align:center;font-size:0.85rem;color:var(--text-muted);">New यहाँ? <a href="signup.html" style="color:var(--accent);font-weight:700;">Create Account</a></p>
                 </form>`;
 
             document.getElementById('unified-login-form').onsubmit = async (e) => {

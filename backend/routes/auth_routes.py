@@ -8,12 +8,19 @@ POST /api/auth/forgot-password
 POST /api/auth/reset-password
 """
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from models import UserRegister, UserLogin, OAuthLogin, TokenResponse, UserResponse, MessageResponse
 from database import get_db
-from auth import hash_password, verify_password, create_access_token, get_current_user, generate_reset_token, hash_token
+from auth import (
+    hash_password, verify_password, create_access_token, get_current_user, 
+    generate_reset_token, hash_token, generate_otp, create_signup_token,
+    decode_token
+)
 from core.config import settings
-from services.email_service import send_password_reset_email, PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+from services.email_service import (
+    send_password_reset_email, send_signup_otp_email, 
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES, OTP_EXPIRE_MINUTES
+)
 from datetime import datetime, timedelta
 from core.security import limiter
 import uuid
@@ -309,6 +316,32 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
+# ── SIGNUP OTP MODELS ─────────────────────────────────────────
+class SendOTPRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+class CompleteSignupRequest(BaseModel):
+    signup_token: str
+    full_name: str
+    username: str = Field(..., min_length=3, max_length=64)
+    password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
+        return v
+
+
 @router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(payload: ForgotPasswordRequest, request: Request):
     """
@@ -431,3 +464,147 @@ def reset_password(payload: ResetPasswordRequest):
         )
         
     return {"message": "Password has been reset successfully. You can now login."}
+
+
+# ── SIGNUP OTP ROUTES ─────────────────────────────────────────
+
+@router.post("/send-signup-otp", response_model=MessageResponse)
+@limiter.limit("5/hour")
+def send_signup_otp(payload: SendOTPRequest, request: Request):
+    """
+    Send a 6-digit OTP to a new user for email verification.
+    """
+    email = payload.email.strip().lower()
+    
+    # 1. Check if user already exists
+    with get_db() as cursor:
+        cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+        if cursor.fetchone():
+            return {"message": "If an account exists, you will receive a verification code. Please sign in if you already have an account."}
+        
+        # 2. Invalidate previous OTPs for this email
+        cursor.execute(
+            "UPDATE email_verification_otps SET invalidated_at = NOW(), invalidated_reason = 'new_request' "
+            "WHERE email = %s AND verified = FALSE AND invalidated_at IS NULL",
+            (email,)
+        )
+        
+        # 3. Generate OTP and hash
+        otp = generate_otp()
+        otp_h = hash_token(otp)
+        expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
+        
+        # 4. Store in DB
+        user_agent = request.headers.get("User-Agent")
+        requested_ip = request.client.host
+        
+        cursor.execute(
+            """
+            INSERT INTO email_verification_otps 
+            (email, otp_hash, expires_at, requested_ip, user_agent, purpose)
+            VALUES (%s, %s, %s, %s, %s, 'signup')
+            RETURNING id
+            """,
+            (email, otp_h, expires_at, requested_ip, user_agent)
+        )
+        
+        # 5. Send Email
+        success = send_signup_otp_email(email, otp)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to send verification email.")
+            
+    return {"message": "Verification code sent to your email."}
+
+
+@router.post("/verify-signup-otp")
+def verify_signup_otp(payload: VerifyOTPRequest):
+    """
+    Verify the 6-digit OTP and issue a short-lived signup token.
+    """
+    email = payload.email.strip().lower()
+    otp_h = hash_token(payload.otp)
+    
+    with get_db() as cursor:
+        cursor.execute(
+            """
+            SELECT id, attempt_count, max_attempts, expires_at 
+            FROM email_verification_otps 
+            WHERE email = %s AND verified = FALSE AND invalidated_at IS NULL
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (email,)
+        )
+        row = cursor.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=400, detail="No active verification request found.")
+        
+        if row["expires_at"] < datetime.utcnow():
+            raise HTTPException(status_code=400, detail="Verification code has expired.")
+            
+        if row["attempt_count"] >= row["max_attempts"]:
+            raise HTTPException(status_code=400, detail="Too many failed attempts. Please request a new code.")
+            
+        # Check OTP
+        cursor.execute(
+            "SELECT id FROM email_verification_otps WHERE id = %s AND otp_hash = %s",
+            (row["id"], otp_h)
+        )
+        if not cursor.fetchone():
+            cursor.execute(
+                "UPDATE email_verification_otps SET attempt_count = attempt_count + 1 WHERE id = %s",
+                (row["id"],)
+            )
+            raise HTTPException(status_code=400, detail="Invalid verification code.")
+            
+        # Success
+        cursor.execute(
+            "UPDATE email_verification_otps SET verified = TRUE, verified_at = NOW() WHERE id = %s",
+            (row["id"],)
+        )
+        
+        # Issue signup token
+        signup_token = create_signup_token(email)
+        
+    return {
+        "message": "Email verified successfully.",
+        "signup_token": signup_token
+    }
+
+
+@router.post("/complete-signup", response_model=UserResponse)
+def complete_signup(payload: CompleteSignupRequest):
+    """
+    Final step of signup: user provides profile details and password.
+    Requires a valid signup token issued after OTP verification.
+    """
+    try:
+        decoded = decode_token(payload.signup_token)
+        if decoded.get("type") != "signup_verification":
+            raise HTTPException(status_code=401, detail="Invalid signup token.")
+        email = decoded["sub"]
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired signup session.")
+        
+    # 1. Final verification check in DB (optional but safer)
+    with get_db() as cursor:
+        cursor.execute(
+            "SELECT id FROM users WHERE email = %s OR username = %s",
+            (email, payload.username)
+        )
+        if cursor.fetchone():
+            raise HTTPException(status_code=409, detail="User already exists.")
+            
+        # 2. Create User
+        user_id = str(uuid.uuid4())
+        cursor.execute(
+            """
+            INSERT INTO users (id, username, email, password_hash, role, full_name)
+            VALUES (%s, %s, %s, %s, 'citizen', %s)
+            RETURNING id, username, email, role, full_name, created_at
+            """,
+            (user_id, payload.username, email, hash_password(payload.password), payload.full_name)
+        )
+        user = dict(cursor.fetchone())
+        
+    return {**user, "id": str(user["id"])}
