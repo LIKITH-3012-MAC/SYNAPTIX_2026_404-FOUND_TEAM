@@ -611,13 +611,20 @@ def get_user_profile(current_user: dict = Depends(get_current_user)):
     Returns full profile with default stats / badges for ProfileManager frontend.
     """
     user_data = get_me(current_user)
+    user_id = current_user["sub"]
+    
+    with get_db() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM issues WHERE reporter_id = %s", (user_id,))
+        count_data = cursor.fetchone()
+        issues_count = count_data[0] if count_data else 0
+
     return {
         "success": True,
         "user": user_data,
         "stats": {
             "total_points": user_data.get("points_cache", 0),
             "rank": user_data.get("rank", "Citizen"),
-            "issues_count": 0
+            "issues_count": issues_count
         },
         "badges": []
     }

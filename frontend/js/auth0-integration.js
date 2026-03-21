@@ -31,7 +31,7 @@ const Auth0Integration = {
       location.hostname.endsWith(".local");
 
     const cand = isLocal
-      ? `${location.origin}/index.html`
+      ? location.origin
       : (c.redirectUri || location.origin).replace(/\/$/, "");
 
     // Auth0 Callback Mismatch Debugging

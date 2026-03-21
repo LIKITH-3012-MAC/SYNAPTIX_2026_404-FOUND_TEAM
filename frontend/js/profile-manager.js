@@ -1,10 +1,11 @@
 /**
- * RESOLVIT - Profile Identity Manager
- * Handles premium identity dashboard logic and role-aware rendering.
+ * RESOLVIT - Profile & Unified Identity Intelligence
+ * Handles cross-role profile rendering, civic stats, and audit logs.
  */
-
 const ProfileManager = {
     user: null,
+    stats: {},
+    badges: [],
 
     async init() {
         console.log("[Profile] Initializing Identity Dashboard...");
@@ -15,6 +16,7 @@ const ProfileManager = {
         }
 
         this.user = Auth.getUser();
+        console.log("[Profile] Current User:", this.user);
         if (!this.user) {
             console.warn("[Profile] No user session found. Redirecting to landing...");
             window.location.href = 'index.html';
@@ -25,16 +27,22 @@ const ProfileManager = {
         document.body.dataset.role = this.user.role || 'citizen';
 
         // Initial render with cached data
+        console.log("[Profile] Rendering Sidebar...");
         this.renderIdentitySidebar(this.user);
+        console.log("[Profile] Rendering Content Area (Initial)...");
+        this.renderContentArea(this.user);
         
         // Fetch fresh data
+        console.log("[Profile] Fetching Fresh Data...");
         await this.fetchFreshData();
     },
 
     async fetchFreshData() {
         try {
+            console.log("[Profile] Starting Fetch...");
             // 1. Fetch Unified Profile Intelligence
             const profileData = await API.get(`/api/user/profile`);
+            console.log("[Profile] Profile Data Received:", profileData);
             
             // 2. Update local state — merge profile data correctly
             const serverUser = profileData.user || {};
@@ -56,7 +64,7 @@ const ProfileManager = {
                 role: this.user.role,
                 department: this.user.department || null,
                 auth_provider: this.user.auth_provider || 'database',
-                full_name: this.user.full_name,
+                full_name: this.user.full_name || this.user.name,
                 picture: this.user.profile_picture || this.user.picture,
                 profile_picture: this.user.profile_picture || this.user.picture
             }));
@@ -67,28 +75,51 @@ const ProfileManager = {
             } else if (this.user.role === 'authority') {
                 await this.loadAuthorityStats();
             } else {
-                // Fetch personal issues list
-                this.user.myIssues = await API.get('/api/user/issues', options).catch(() => []);
+                // Fetch real citizen stats and issues
+                console.log("[Profile] Loading Citizen Stats...");
+                await this.loadCitizenStats();
+                console.log("[Profile] Fetching My Issues...");
+                this.user.myIssues = await API.get('/api/user/issues').catch(() => []);
+                console.log("[Profile] Initializing Personal Map...");
+                this.initPersonalMap(this.user.myIssues);
             }
             
-            // 3.5 Clear 'Decrypting Identity' placeholder (Failsafe)
+            // 4. Update UI with fresh data
+            console.log("[Profile] Updating UI...");
+            this.renderIdentitySidebar(this.user);
+            this.renderContentArea(this.user);
             this.clearLoadingPlaceholders();
+            console.log("[Profile] Initialization Complete.");
         } catch (error) {
             console.error("[Profile] Identity Sync Failure:", error);
+            // Even on failure, try to clear skeletons and show what we have
             this.clearLoadingPlaceholders();
-            if (!options.silent) showToast("Failed to synchronise identity dossier.", "error");
+            if (typeof showToast === 'function') {
+                showToast("Failed to synchronise identity dossier.", "error");
+            }
         }
     },
 
     clearLoadingPlaceholders() {
-        const placeholder = document.getElementById('identity-sidebar')?.querySelector('div[style*="Decrypting Identity"]');
-        if (placeholder) placeholder.remove();
-        
-        // Secondary check for ANY text-based placeholder in the sidebar or content area
-        [...document.querySelectorAll('div, span')].filter(el => 
-            el.textContent.includes('Decrypting Identity') || 
-            el.textContent.includes('Processing identity history')
-        ).forEach(el => el.remove());
+        console.log("[Profile] Clearing Placeholders...");
+        // Remove ALL skeletons and opacity blocks
+        [...document.querySelectorAll('.identity-card, .panel-premium, [style*="opacity: 0.5"]')]
+            .forEach(el => {
+                el.style.opacity = "1";
+                el.classList.remove('loading', 'skeleton');
+            });
+
+        [...document.querySelectorAll('div, span')]
+            .filter(el => 
+                el.textContent.includes('Decrypting Identity') || 
+                el.textContent.includes('Processing identity history') ||
+                el.textContent.includes('Contribution Statistics') && el.parentElement.classList.contains('panel-premium')
+            ).forEach(el => {
+                // If it's a "Decrypting Identity" text node, remove it
+                if (el.textContent.includes('Decrypting Identity')) el.remove();
+            });
+            
+        console.log("[Profile] Placeholders Cleared.");
     },
 
     /**
@@ -98,401 +129,285 @@ const ProfileManager = {
         const sidebar = document.getElementById('identity-sidebar');
         if (!sidebar) return;
 
-        const providerName = user.auth_provider === 'google' ? 'Google' : 
-                             user.auth_provider === 'github' ? 'GitHub' : 
-                             user.auth_provider === 'twitter' ? 'Twitter' : 'Email/Password';
-        
-        let providerIcon = '🔐';
-        if (user.auth_provider === 'google') {
-            providerIcon = 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg';
-        } else if (user.auth_provider === 'github') {
-            providerIcon = 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
-        } else if (user.auth_provider === 'twitter') {
-            providerIcon = 'https://abs.twimg.com/favicons/twitter.3.ico';
-        }
-
-        // Avatar logic — check both field names
-        const profilePic = user.profile_picture || user.picture;
-        const initials = user.full_name 
-            ? user.full_name.split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2)
-            : (user.username || 'U').substring(0,2).toUpperCase();
-        
-        const avatarHtml = profilePic 
-            ? `<img src="${profilePic}" class="profile-avatar" alt="${user.username}">`
-            : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--accent-gradient);color:white;font-size:3rem;font-weight:900;">${initials}</div>`;
+        const profilePic = user.profile_picture || user.picture || 'assets/default-avatar.png';
+        const isGoogle = user.auth_provider === 'google' || user.email?.includes('gmail.com');
 
         sidebar.innerHTML = `
             <div class="identity-card">
                 <div class="profile-avatar-wrapper">
-                    ${avatarHtml}
-                    <div class="provider-badge">
-                        ${user.auth_provider === 'database' ? `<span>${providerIcon}</span>` : `<img src="${providerIcon}" alt="${providerName}">`}
+                    <div class="hero-avatar-ring">
+                        <div class="hero-avatar-inner">
+                            <img src="${profilePic}" alt="Identity">
+                        </div>
                     </div>
+                    ${isGoogle ? '<div class="provider-badge"><img src="https://www.google.com/favicon.ico" alt="Google"></div>' : ''}
                 </div>
                 
-                <h2 class="identity-name">${user.full_name || user.username}</h2>
-                <div class="identity-email">${user.email || 'No email provided'}</div>
+                <h2 class="identity-name">${user.full_name || user.username || 'CITIZEN'}</h2>
+                <p class="identity-email">${user.email}</p>
                 
                 <div class="role-badge-chip">
-                    <span>${this.getRoleIcon(user.role)}</span> ${user.role}
-                </div>
-
-                <div class="auth-source-card">
-                    <div class="auth-icon-wrapper">
-                        ${user.auth_provider === 'google' ? '🌐' : user.auth_provider === 'github' ? '🐙' : user.auth_provider === 'twitter' ? '𝕏' : '🔑'}
-                    </div>
-                    <div class="auth-details" style="text-align:left;">
-                        <h4>Logged in via ${providerName}</h4>
-                        <p>Identity verified through secure Auth channel</p>
-                    </div>
+                    <span>${user.role === 'authority' ? '🏛️ AUTHORITY' : user.role === 'admin' ? '⭐ ADMIN' : '👤 CITIZEN'}</span>
                 </div>
 
                 <div class="identity-meta">
                     <div class="meta-item">
                         <span class="meta-label">Account ID</span>
-                        <span class="meta-value">ID: ${(user.id || 'pending').substring(0, 8)}…</span>
+                        <span class="meta-value">${user.id.substring(0, 12)}…</span>
                     </div>
                     <div class="meta-item">
-                        <span class="meta-label">Account Status</span>
-                        <span class="meta-value">✅ Active / Verified</span>
+                        <span class="meta-label">Status</span>
+                        <span class="meta-value" style="color:#10b981;">✅ Active / Verified</span>
                     </div>
-                    ${user.created_at ? `
                     <div class="meta-item">
-                        <span class="meta-label">Member Since</span>
-                        <span class="meta-value">${new Date(user.created_at).toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'})}</span>
-                    </div>` : ''}
-                    ${user.department ? `
-                    <div class="meta-item">
-                        <span class="meta-label">Department</span>
-                        <span class="meta-value">${user.department}</span>
-                    </div>` : ''}
+                        <span class="meta-label">Joined Sector</span>
+                        <span class="meta-value">${this.formatDate(user.created_at || new Date().toISOString())}</span>
+                    </div>
+                </div>
+
+                <div class="security-visual-box" style="margin-top:20px; text-align:left;">
+                    <div class="secure-badge">
+                        <span class="secure-icon">🛡️</span>
+                        <span>Dossier Encrypted</span>
+                    </div>
                 </div>
             </div>
         `;
-    },
-
-    getRoleIcon(role) {
-        switch(role) {
-            case 'admin': return '🛡️';
-            case 'authority': return '🏛️';
-            default: return '👤';
-        }
     },
 
     /**
-     * Renders stats and activity cards based on user role.
+     * Renders the main command center area.
      */
-    async renderContentArea(user) {
-        const content = document.getElementById('profile-content-area');
-        if (!content) return;
-
-        let statsHtml = '';
-        if (user.role === 'admin') {
-            statsHtml = this.getAdminStatsHtml(user);
-        } else if (user.role === 'authority') {
-            statsHtml = this.getAuthorityStatsHtml(user);
-        } else {
-            statsHtml = this.getCitizenStatsHtml(user);
-        }
-
-        content.innerHTML = `
-            <div class="profile-content">
-                <!-- Stats Section -->
-                <div class="panel-premium">
-                    <div class="panel-header">
-                        <div class="panel-title">⭐ Contribution Statistics</div>
-                    </div>
-                    ${statsHtml}
-                </div>
-
-                <!-- Export Section -->
-                <div class="panel-premium">
-                    <div class="panel-header">
-                        <div class="panel-title">📋 Report Intelligence & Exports</div>
-                        <button onclick="document.getElementById('export-modal').style.display='flex'" class="btn btn-sm btn-ghost">Advanced Options</button>
-                    </div>
-                    <div class="stat-grid-premium" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
-                        <div class="stat-card-premium" style="text-align:left; display:flex; gap:20px; align-items:center;">
-                            <div style="font-size:2rem; background:rgba(255,255,255,0.05); padding:12px; border-radius:12px;">📊</div>
-                            <div>
-                                <div style="font-size:1.1rem; font-weight:700;">Issue History</div>
-                                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:12px;">Download all your reported data</div>
-                                <div style="display:flex; gap:8px;">
-                                    <button onclick="ProfileManager.triggerExport('pdf')" class="btn btn-sm btn-primary" style="padding:4px 12px; font-size:0.7rem;">PDF Report</button>
-                                    <button onclick="ProfileManager.triggerExport('csv')" class="btn btn-sm btn-ghost" style="padding:4px 12px; font-size:0.7rem;">CSV Data</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="stat-card-premium" style="text-align:left; display:flex; gap:20px; align-items:center; opacity: 0.6;">
-                            <div style="font-size:2rem; background:rgba(255,255,255,0.05); padding:12px; border-radius:12px;">🏆</div>
-                            <div>
-                                <div style="font-size:1.1rem; font-weight:700;">Civic Certificates</div>
-                                <div style="font-size:0.75rem; color:var(--text-muted);">Coming soon: Branded impact stickers</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="role-specific-content"></div>
-
-                <div class="panel-premium">
-                    <div class="panel-header">
-                        <div class="panel-title">🕒 Recent Activity Timeline</div>
-                    </div>
-                    <div class="activity-timeline-premium" id="profile-activity-feed">
-                        <div class="loading-placeholder">Processing identity history...</div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        this.loadActivityFeed(user);
-    },
-
-    async triggerExport(format) {
-        const btnPdf = document.getElementById('btn-export-pdf');
-        const btnCsv = document.getElementById('btn-export-csv');
-        const statusEl = document.getElementById('export-status');
-        const categoryEl = document.getElementById('export-category');
+    renderContentArea(user) {
+        console.log("[Profile] Rendering Command Center for:", user.role);
         
-        // UI State: Loading
-        const originalText = format === 'pdf' ? (btnPdf?.innerHTML || 'PDF Report') : (btnCsv?.innerHTML || 'CSV Data');
-        if (btnPdf) btnPdf.disabled = true;
-        if (btnCsv) btnCsv.disabled = true;
+        // Populate Hero Section
+        this.renderHeroSection(user);
         
-        if (typeof showToast === 'function') {
-            showToast(`⏳ Generating your premium ${format.toUpperCase()} report...`, 'info');
-        }
-
-        const token = localStorage.getItem('resolvit_token');
-        const status = statusEl?.value || '';
-        const category = categoryEl?.value || '';
+        // Populate Power Stats
+        this.renderPowerStats(user);
         
-        let url = `${API.BASE_URL}/api/export/issues/${format}`;
-        const params = new URLSearchParams();
-        if (status) params.append('status', status);
-        if (category) params.append('category', category);
-        if (params.toString()) url += `?${params.toString()}`;
+        // Populate History Section
+        this.renderHistorySection(user);
 
-        try {
-            const response = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+        // Populate Analytics Panel
+        this.renderAnalyticsPanel(user);
+    },
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || 'Export failed');
+    renderHeroSection(user) {
+        const container = document.getElementById('profile-hero-section');
+        if (!container) return;
+
+        const stats = user.stats || { total_points: 0 };
+        const rank = user.role === 'admin' ? 'System Architect' : user.role === 'authority' ? 'Sector Commander' : 'Prime Citizen';
+
+        container.innerHTML = `
+            <div class="profile-hero-card">
+                <div class="hero-info-glow">
+                    <div style="font-size:0.8rem; color:var(--accent); text-transform:uppercase; letter-spacing:3px; margin-bottom:8px;">Identity Dossier</div>
+                    <h2>Welcome, ${user.full_name?.split(' ')[0] || user.username}</h2>
+                    <p style="color:var(--text-muted); font-size:1.1rem; margin-top:8px;">Designated Rank: <span style="color:white; font-weight:700;">${rank}</span></p>
+                </div>
+                <div style="margin-left:auto; text-align:right;">
+                    <div style="font-size:0.7rem; color:var(--text-muted);">CURRENT IMPACT SCORE</div>
+                    <div style="font-size:3rem; font-weight:900; color:var(--accent); line-height:1;">${stats.total_points || 0}</div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderPowerStats(user) {
+        const container = document.getElementById('profile-stats-section');
+        if (!container) return;
+
+        const stats = user.stats || { total_points: 0, issues_count: 0, rank: '?' };
+        const myIssues = user.myIssues || [];
+        
+        const solvedCount = myIssues.filter(i => i.status === 'resolved').length;
+        const activeCount = myIssues.filter(i => i.status !== 'resolved').length;
+
+        container.innerHTML = `
+            <div class="power-stat-grid">
+                <div class="power-stat-card">
+                    <div class="stat-icon-wrapper" style="color:#00CFFF;">🚩</div>
+                    <div class="stat-main-info">
+                        <span class="stat-value-elite" data-target="${stats.issues_count || 0}">0</span>
+                        <span class="stat-label-elite">Reports Filed</span>
+                    </div>
+                </div>
+                <div class="power-stat-card">
+                    <div class="stat-icon-wrapper" style="color:#10b981;">✅</div>
+                    <div class="stat-main-info">
+                        <span class="stat-value-elite" data-target="${solvedCount}">0</span>
+                        <span class="stat-label-elite">Resolved</span>
+                    </div>
+                </div>
+                <div class="power-stat-card">
+                    <div class="stat-icon-wrapper" style="color:#f97316;">⚡</div>
+                    <div class="stat-main-info">
+                        <span class="stat-value-elite" data-target="${activeCount}">0</span>
+                        <span class="stat-label-elite">Active Ops</span>
+                    </div>
+                </div>
+                <div class="power-stat-card">
+                    <div class="stat-icon-wrapper" style="color:#FACC15;">🏆</div>
+                    <div class="stat-main-info">
+                        <span class="stat-value-elite" data-target="${stats.total_points || 0}">0</span>
+                        <span class="stat-label-elite">Civic Credits</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Trigger count-up animation
+        setTimeout(() => this.animateStats(), 100);
+    },
+
+    animateStats() {
+        document.querySelectorAll('.stat-value-elite').forEach(el => {
+            const target = parseInt(el.dataset.target);
+            this.countUp(el, target, 1500);
+        });
+    },
+
+    countUp(element, target, duration) {
+        let start = 0;
+        const increment = target / (duration / 16);
+        const timer = setInterval(() => {
+            start += increment;
+            if (start >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(start);
             }
+        }, 16);
+    },
 
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = downloadUrl;
-            a.download = `resolvit_export_${new Date().toISOString().split('T')[0]}_${status || 'all'}.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(downloadUrl);
-            
-            if (typeof showToast === 'function') showToast(`✅ ${format.toUpperCase()} Export Complete!`, 'success');
-        } catch (error) {
-            console.error(error);
-            if (typeof showToast === 'function') showToast(`❌ Export failed: ${error.message}`, 'error');
-        } finally {
-            if (btnPdf) btnPdf.disabled = false;
-            if (btnCsv) btnCsv.disabled = false;
+    renderHistorySection(user) {
+        const container = document.getElementById('profile-history-section');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="profile-section">
+                <div class="section-header-row">
+                    <h3 class="section-title">📜 Operational History</h3>
+                    <button class="view-all-btn" onclick="window.location.href='dashboard.html'">Full Intel Dashboard</button>
+                </div>
+                <div id="issues-list-container" class="issue-timeline-premium">
+                    <div class="ledger-loading">Accessing classified reports...</div>
+                </div>
+            </div>
+        `;
+
+        this.renderMyIssues(user.myIssues);
+    },
+
+    renderMyIssues(issues) {
+        const container = document.getElementById('issues-list-container');
+        if (!container) return;
+
+        if (!issues || issues.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state-premium">
+                    <div class="empty-icon">📁</div>
+                    <p>No active operations found in your dossier.</p>
+                    <button class="btn-sm btn-primary" onclick="window.location.href='submit.html'" style="margin-top:10px;">Initiate Report</button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = issues.slice(0, 5).map(issue => `
+            <div class="timeline-card" onclick="window.location.href='issue.html?id=${issue.id}'">
+                <div class="issue-main-info">
+                    <div class="issue-title-row">
+                        <span class="issue-id">#${issue.tracking_id || issue.id.substring(0,8)}</span>
+                        <h4 class="issue-title-text" style="margin:0;">${issue.title}</h4>
+                    </div>
+                    <div class="issue-meta-row" style="margin-top:8px;">
+                        <span class="issue-category" style="color:var(--accent);">${issue.category}</span>
+                        <span>•</span>
+                        <span class="issue-date">${this.formatDate(issue.created_at)}</span>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="issue-status-badge status-${issue.status.toLowerCase()}">${issue.status.replace('_', ' ')}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:8px; cursor:pointer;">View Full Intel →</div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    renderAnalyticsPanel(user) {
+        const trustVal = document.getElementById('trust-score-value');
+        if (trustVal) {
+            const score = user.stats?.total_points > 500 ? 98 : user.stats?.total_points > 100 ? 85 : 72;
+            this.countUp(trustVal, score, 2000);
+        }
+
+        const miniStats = document.getElementById('analytics-mini-stats');
+        if (miniStats) {
+            miniStats.innerHTML = `
+                <div class="mini-stat-card">
+                    <span class="mini-stat-val">${user.stats?.rank || '#1'}</span>
+                    <span class="mini-stat-lbl">Global Rank</span>
+                </div>
+                <div class="mini-stat-card">
+                    <span class="mini-stat-val">100%</span>
+                    <span class="mini-stat-lbl">Auth Strength</span>
+                </div>
+            `;
         }
     },
 
-    getCitizenStatsHtml(user) {
-        const pts = user.stats?.total_points || 0;
-        const rank = user.stats?.rank || '—';
-        const reported = user.stats?.issues_count || 0;
-
-        return `
-            <div class="stat-grid-premium">
-                <div class="stat-card-premium">
-                    <div class="stat-icon">💰</div>
-                    <div class="stat-val">${pts.toLocaleString()}</div>
-                    <div class="stat-lbl">Civic Points Earned</div>
-                </div>
-                <div class="stat-card-premium">
-                    <div class="stat-icon">📈</div>
-                    <div class="stat-val">#${rank}</div>
-                    <div class="stat-lbl">Global Contributor Rank</div>
-                </div>
-                <div class="stat-card-premium">
-                    <div class="stat-icon">📝</div>
-                    <div class="stat-val">${reported}</div>
-                    <div class="stat-lbl">Civic Issues Reported</div>
-                </div>
-            </div>
-        `;
+    async loadActivityLedger(userId) {
+        // Obsolete in new layout but kept for compatibility if needed elsewhere
     },
 
-    getAdminStatsHtml(user) {
-        return `
-            <div class="stat-grid-premium">
-                <div class="stat-card-premium">
-                    <div class="stat-icon">🎛️</div>
-                    <div class="stat-val">Full Access</div>
-                    <div class="stat-lbl">System Oversight Level</div>
-                </div>
-                <div class="stat-card-premium">
-                    <div class="stat-icon">📊</div>
-                    <div class="stat-val">${user.stats?.total_monitored || 'ALL'}</div>
-                    <div class="stat-lbl">Monitored Infrastructures</div>
-                </div>
-                <div class="stat-card-premium">
-                    <div class="stat-icon">🛡️</div>
-                    <div class="stat-val">Active</div>
-                    <div class="stat-lbl">Governance Status</div>
-                </div>
-            </div>
-        `;
+    formatDate(dateStr) {
+        if (!dateStr) return 'Unknown Date';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     },
 
-    getAuthorityStatsHtml(user) {
-        const resolved = user.stats?.resolved_count || 0;
-        const pending = user.stats?.pending_count || 0;
-        return `
-            <div class="stat-grid-premium">
-                <div class="stat-card-premium">
-                    <div class="stat-icon">📋</div>
-                    <div class="stat-val">${pending}</div>
-                    <div class="stat-lbl">Active Assignments</div>
-                </div>
-                <div class="stat-card-premium">
-                    <div class="stat-icon">✅</div>
-                    <div class="stat-val">${resolved}</div>
-                    <div class="stat-lbl">Impact Resolutions Completed</div>
-                </div>
-                <div class="stat-card-premium">
-                    <div class="stat-icon">⚡</div>
-                    <div class="stat-val">${user.stats?.sla_performance || '94%'}</div>
-                    <div class="stat-lbl">SLA Performance Rating</div>
-                </div>
-            </div>
-        `;
-    },
-
-    async loadActivityFeed(user) {
-        const feed = document.getElementById('profile-activity-feed');
-        if (!feed) return;
-
-        try {
-            // Fetch live activity from unified ledger
-            const activity = await API.get("/api/user/activity");
-            const items = activity.map(t => ({
-                title: t.note || t.action || 'Civic Contribution',
-                time: new Date(t.created_at).toLocaleDateString() + ' ' + new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                icon: t.credits_delta > 0 ? '💰' : '🔹',
-                color: t.credits_delta > 0 ? '#10b981' : '#6366f1',
-                delta: t.credits_delta
-            }));
-
-            // Merge with local issues if any (heuristic)
-            if (this.user.myIssues) {
-                this.user.myIssues.slice(0, 5).forEach(i => {
-                    items.push({
-                        title: `Reported: ${i.title}`,
-                        time: new Date(i.created_at).toLocaleDateString(),
-                        icon: '📝',
-                        color: '#6366f1'
-                    });
-                });
-            }
-
-            if (items.length === 0) {
-                feed.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">No recent logs discovered in the audit trail.</div>`;
-                return;
-            }
-
-            // Sort by time (heuristic since we mixed types)
-            feed.innerHTML = items.slice(0, 8).map(item => `
-                <div class="activity-item">
-                    <div class="activity-icon" style="background:${item.color}15;color:${item.color};">
-                        ${item.icon}
-                    </div>
-                    <div class="activity-info">
-                        <div class="activity-title">${item.title}</div>
-                        <div class="activity-time">${item.time}</div>
-                    </div>
-                </div>
-            `).join('');
-
-        } catch (e) {
-            feed.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">Failed to decrypt activity logs.</div>`;
-        }
-    },
-
-    renderSecuritySection(user) {
-        const content = document.getElementById('role-specific-content');
-        if (!content) return;
-
-        content.innerHTML += `
-            <div class="panel-premium">
-                <div class="panel-header">
-                    <div class="panel-title">🛡️ Security & Account Access</div>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px;">
-                    <div class="auth-source-card" style="border-style: dashed;">
-                        <div class="auth-icon-wrapper">🔐</div>
-                        <div class="auth-details">
-                            <h4>Session Fingerprint</h4>
-                            <p>Current session is encrypted and hardware-accelerated.</p>
-                        </div>
-                    </div>
-                    <div class="auth-source-card" style="border-style: dashed;">
-                        <div class="auth-icon-wrapper">📱</div>
-                        <div class="auth-details">
-                            <h4>Two-Factor Authentication</h4>
-                            <p>Status: <span style="color:var(--text-muted);">Not configured yet</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    },
+    renderAdminDashboard(user, container) { this.renderContentArea(user); },
+    renderAuthorityDashboard(user, container) { this.renderContentArea(user); },
 
     // Helper stubs for fetching actual backend metrics
     async loadCitizenStats() {
-        const credits = await API.get("/api/credits/me").catch(() => ({}));
-        const issues = await API.get("/api/issues").catch(() => []);
-        const myIssues = issues.filter(i => i.reporter_id === this.user.id || i.reporter_name === this.user.username);
-        this.user.myIssues = myIssues;
-        this.user.stats = {
-            total_points: credits.total_points || 0,
-            rank: credits.rank || '?',
-            issues_count: myIssues.length
-        };
+        try {
+            const credits = await API.get("/api/credits/me").catch(() => ({}));
+            const issues = await API.get("/api/issues").catch(() => []);
+            const myIssues = issues.filter(i => i.reporter_id === this.user.id || i.reporter_name === this.user.username);
+            this.user.myIssues = myIssues;
+            this.user.stats = {
+                total_points: credits.total_points || 0,
+                rank: credits.rank || '#1',
+                issues_count: myIssues.length
+            };
+        } catch (err) {
+            console.error("[Profile] Failed to load citizen stats:", err);
+        }
     },
 
     initPersonalMap(myIssues) {
-        const container = document.getElementById('personal-impact-map-container');
-        if (!container) return;
-        container.style.display = 'block';
-
-        setTimeout(() => {
-            if (typeof MapManager !== 'undefined') {
-                MapManager.init("personal-map", [12.9716, 77.5946]);
-                MapManager.updateData(myIssues, "citizen");
-            }
-        }, 300);
+        // Removed from main view as per elite design, but could be added back to analytics
     },
 
-    async loadAdminStats() {
-        this.user.stats = { total_monitored: 'All Sectors' };
-    },
-
+    async loadAdminStats() { this.user.stats = { total_monitored: 'All Sectors' }; },
     async loadAuthorityStats() {
-        const issues = await API.get("/api/issues").catch(() => []);
-        const myIssues = issues.filter(i => i.department === this.user.department);
-        this.user.stats = {
-            pending_count: myIssues.filter(i => i.status !== 'resolved').length,
-            resolved_count: myIssues.filter(i => i.status === 'resolved').length,
-            sla_performance: '96.4%'
-        };
+        try {
+            const issues = await API.get("/api/issues").catch(() => []);
+            const myIssues = issues.filter(i => i.department === this.user.department);
+            this.user.stats = {
+                pending_count: myIssues.filter(i => i.status !== 'resolved').length,
+                resolved_count: myIssues.filter(i => i.status === 'resolved').length,
+                sla_performance: '96.4%'
+            };
+        } catch (err) {
+            console.error("[Profile] Failed to load authority stats:", err);
+        }
     }
 };
 
