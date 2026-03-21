@@ -154,25 +154,30 @@ def verify_signup_otp(payload: VerifyOTPRequest):
         row = cursor.fetchone()
         
         if not row:
-            raise HTTPException(status_code=400, detail="No active verification request found.")
+            return {"success": False, "message": "No active verification request found."}
         
-        if row["attempt_count"] >= row["max_attempts"]:
+        # Increment attempt counter
+        cursor.execute(
+            "UPDATE email_verification_otps SET attempt_count = attempt_count + 1 WHERE id = %s",
+            (row["id"],)
+        )
+        
+        if row["attempt_count"] + 1 > row["max_attempts"]:
             cursor.execute(
-                "UPDATE email_verification_otps SET invalidated_at = NOW(), invalidated_reason = 'max_attempts' WHERE id = %s", 
+                "UPDATE email_verification_otps SET invalidated_at = NOW(), invalidated_reason = 'too_many_attempts' WHERE id = %s",
                 (row["id"],)
             )
-            raise HTTPException(status_code=400, detail="Too many failed attempts. Please request a new code.")
-
+            return {"success": False, "message": "Too many failed attempts. Please request a new code."}
+        
         if row["expires_at"] < datetime.utcnow():
-            raise HTTPException(status_code=400, detail="Verification code has expired.")
+            return {"success": False, "message": "Verification code has expired."}
 
-        # Verify Hash
+        # Verify SHA256 Hash
         current_hash = hash_token(otp_input)
         if current_hash != row["otp_hash"]:
-            # Increment attempt
-            cursor.execute("UPDATE email_verification_otps SET attempt_count = attempt_count + 1 WHERE id = %s", (row["id"],))
-            raise HTTPException(status_code=400, detail="Invalid verification code.")
+            return {"success": False, "message": "Invalid verification code."}
 
+        # Success!
         cursor.execute(
             "UPDATE email_verification_otps SET verified = TRUE, verified_at = NOW() WHERE id = %s",
             (row["id"],)

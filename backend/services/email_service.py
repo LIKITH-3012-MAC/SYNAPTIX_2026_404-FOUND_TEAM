@@ -108,7 +108,6 @@ def send_verification_otp_email(to_email: str, otp: str) -> bool:
             <span style="font-size: 42px; font-weight: 800; color: #1e1b4b; letter-spacing: 12px; margin-left: 12px;">{otp}</span>
         </div>
         <p style="color: #999; font-size: 13px;">This code expires in {OTP_EXPIRE_MINUTES} minutes.</p>
-        <p style="color: #ef4444; font-size: 13px; font-weight: bold;">Do not share this code with anyone.</p>
     </div>
     """
     return send_email(to_email, subject, html)
