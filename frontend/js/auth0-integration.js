@@ -30,18 +30,17 @@ const Auth0Integration = {
       location.hostname === "0.0.0.0" ||
       location.hostname.endsWith(".local");
 
-    // CANONICAL: Always enforce https://www.resolvit-ai.online in production
     const cand = isLocal
-      ? `http://${window.location.host}`
-      : "https://www.resolvit-ai.online";
+      ? `${location.origin}/index.html`
+      : (c.redirectUri || location.origin).replace(/\/$/, "");
 
     // Auth0 Callback Mismatch Debugging
     console.log("[Auth0] Config Origin:", location.origin);
     console.log("[Auth0] Config RedirectURI:", cand);
 
     return {
-      domain: window.AUTH0_CONFIG?.domain || "resolvit-ai.us.auth0.com",
-      clientId: window.AUTH0_CONFIG?.clientId || "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
+      domain: c.domain || "resolvit-ai.us.auth0.com",
+      clientId: c.clientId || "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
       redirectUri: cand,
       cacheLocation: "localstorage"
     };
@@ -113,16 +112,7 @@ const Auth0Integration = {
               const hasLocalSession = !!localStorage.getItem("resolvit_user");
               if (!hasLocalSession) {
                 console.log("[Auth0] Restoring missing local session...");
-                try {
-                  await this.syncWithBackend(user, true);
-                } catch (err) {
-                  console.warn('[Auth0] syncWithBackend failed:', err.message);
-                  // Only show toast if it's NOT a transient fetch error during background sync
-                  const isFetchError = err.message.toLowerCase().includes('failed to fetch');
-                  if (!isFetchError && typeof showToast === 'function') {
-                      showToast(`Backend Sync: ${err.message}`, "error");
-                  }
-                }
+                await this.syncWithBackend(user, true);
               } else {
                 this.refreshNavbarOnly();
               }
