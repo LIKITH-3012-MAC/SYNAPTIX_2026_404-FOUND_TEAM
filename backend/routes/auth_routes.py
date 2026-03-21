@@ -143,10 +143,11 @@ def send_signup_otp(request: Request, body: dict):
 @router.post("/verify-signup-otp")
 def verify_signup_otp(payload: VerifyOTPRequest):
     """POST /api/auth/verify-signup-otp - Step 2: Validate OTP."""
+    print(f"[OTP-TRACE] verify-signup-otp endpoint reached")
     email = payload.email.strip().lower()
     otp_input = payload.otp.strip()
     
-    print(f"[OTP-TRACE] verify-signup-otp called for: {email}")
+    print(f"[OTP-TRACE] verify-signup-otp processing for: {email}")
     
     with get_db() as cursor:
         # 1. Fetch the latest active row

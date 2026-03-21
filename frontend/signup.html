@@ -480,6 +480,8 @@
         // --- ROBUST AUTH ENGINE (JSON-ONLY) ---
         async function safeFetch(endpoint, options = {}) {
             const url = `${API_BASE_URL}/${endpoint.replace(/^\//, '')}`;
+            console.log(`[RESOLVIT-TRACE] Fetching: ${url}`);
+            
             try {
                 const response = await fetch(url, {
                     ...options,
@@ -490,12 +492,14 @@
                 });
 
                 const text = await response.text();
+                console.log(`[RESOLVIT-TRACE] Response Status: ${response.status}`);
+                
                 let data;
                 try {
                     data = JSON.parse(text);
                 } catch (e) {
                     console.error('[RESOLVIT] Pipeline Error (Raw Response):', text);
-                    throw new Error(`Server route is misconfigured (Invalid response). Please ensure backend is running at ${API_BASE_URL}`);
+                    throw new Error(`Server at ${API_BASE_URL} returned a non-JSON response. This usually means a 404 or 500 HTML error.`);
                 }
 
                 if (!response.ok || (data && data.success === false)) {
@@ -505,7 +509,10 @@
 
                 return data;
             } catch (err) {
-                console.error('[RESOLVIT] Pipeline Error:', err);
+                console.error('[RESOLVIT] Pipeline Network/CORS Error:', err);
+                if (err.message === 'Failed to fetch') {
+                    throw new Error(`Failed to contact server at ${API_BASE_URL}. Possible CORS block or server is down.`);
+                }
                 throw err;
             }
         }
