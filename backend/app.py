@@ -74,6 +74,7 @@ origins = [
     "https://resolvit-app-2026.vercel.app/",
     "https://www.resolvit-ai.online",
     "https://resolvit-ai.online",
+    "https://synaptix-2026-404-found-team.onrender.com",
 ]
 
 app.add_middleware(

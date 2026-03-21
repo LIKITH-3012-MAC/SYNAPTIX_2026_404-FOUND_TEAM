@@ -464,24 +464,20 @@
                     </button>
                 </form>
             </div>
-        </div>
-    </div>
-
-    <script>
-        // --- CONFIGURATION (SINGLE SOURCE OF TRUTH) ---
-        // Change this to your actual Render backend URL if it's different from the frontend domain
+                // --- CONFIGURATION (FINAL PRODUCTION SYNC) ---
+        // Actual Render backend URL: https://synaptix-2026-404-found-team.onrender.com
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:8000/api/auth' 
-            : 'https://resolvit-ai.online/api/auth';
+            : 'https://synaptix-2026-404-found-team.onrender.com/api/auth';
 
-        console.log(`[RESOLVIT] Connectivity initialized. Target: ${API_BASE_URL}`);
+        console.log(`[RESOLVIT] Connectivity initialized. Current Target: ${API_BASE_URL}`);
         
         let userEmail = '';
         let signupToken = '';
         let countdownSec = 60;
         let countdownInterval;
 
-        // --- ROBUST AUTH ENGINE ---
+        // --- ROBUST AUTH ENGINE (JSON-ONLY) ---
         async function safeFetch(endpoint, options = {}) {
             const url = `${API_BASE_URL}/${endpoint.replace(/^\//, '')}`;
             try {
@@ -498,9 +494,9 @@
                 try {
                     data = JSON.parse(text);
                 } catch (e) {
-                    // If not JSON, it might be a 404 HTML page or server crash
-                    console.error('[RESOLVIT] Non-JSON response:', text);
-                    throw new Error(`Server configuration error (Invalid response). Please ensure backend is running at ${API_BASE_URL}`);
+                    console.error('[RESOLVIT] Pipeline Error (Raw Response):', text);
+                    // Handle non-JSON (404, 502, 500 HTML)
+                    throw new Error(`Server route is misconfigured (Invalid response). Please ensure backend is running at ${API_BASE_URL}`);
                 }
 
                 if (!response.ok || (data && data.success === false)) {
@@ -515,10 +511,10 @@
             }
         }
 
+        // --- UI UTILS ---
         function showMessage(type, text) {
             const errorEl = document.getElementById('error-msg');
             const successEl = document.getElementById('success-msg');
-            
             errorEl.style.display = 'none';
             successEl.style.display = 'none';
             
@@ -533,19 +529,19 @@
 
         function setLoading(btnId, isLoading) {
             const btn = document.getElementById(btnId);
+            if (!btn) return;
             const span = btn.querySelector('span');
             const spinner = btn.querySelector('.spinner');
             
             btn.disabled = isLoading;
-            span.style.display = isLoading ? 'none' : 'inline-block';
-            spinner.style.display = isLoading ? 'inline-block' : 'none';
+            if (span) span.style.display = isLoading ? 'none' : 'inline-block';
+            if (spinner) spinner.style.display = isLoading ? 'inline-block' : 'none';
         }
 
         function goToStep(stepId) {
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
             document.getElementById(`step-${stepId}`).classList.add('active');
-            document.getElementById('error-msg').style.display = 'none';
-            document.getElementById('success-msg').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function maskEmail(email) {
@@ -554,7 +550,7 @@
             return `${local.substring(0, 3)}••••@${domain}`;
         }
 
-        // --- STEP 1: EMAIL ---
+        // --- STEP 1: EMAIL (Send OTP) ---
         document.getElementById('form-email').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value.trim().toLowerCase();
@@ -572,6 +568,7 @@
                 userEmail = email;
                 document.getElementById('display-email').textContent = maskEmail(email);
                 
+                // End-to-end: Transition to Step 2 (OTP Entry)
                 goToStep('otp');
                 startResendTimer();
                 showMessage('success', data.message || "Verification code sent!");
@@ -583,38 +580,21 @@
             }
         });
 
-        // --- STEP 2: OTP ---
+        // --- STEP 2: OTP (Verify Code) ---
         const otpInputs = document.querySelectorAll('.otp-input');
         otpInputs.forEach((input, index) => {
             input.addEventListener('input', (e) => {
-                if (e.data && index < otpInputs.length - 1) {
-                    otpInputs[index + 1].focus();
-                }
-                // Check if all fields filled
-                const fullOTP = Array.from(otpInputs).map(i => i.value).join('');
-                if (fullOTP.length === 6) {
-                    // Auto-submit? Optional, but better manually for safety
-                }
+                if (e.data && index < otpInputs.length - 1) otpInputs[index + 1].focus();
             });
-
             input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !input.value && index > 0) {
-                    otpInputs[index - 1].focus();
-                }
+                if (e.key === 'Backspace' && !input.value && index > 0) otpInputs[index - 1].focus();
             });
-
-            // Paste support
             input.addEventListener('paste', (e) => {
-                const pasteData = e.clipboardData.getData('text').slice(0, 6);
-                if (/^\d+$/.test(pasteData)) {
-                    pasteData.split('').forEach((char, i) => {
-                        if (otpInputs[index + i]) otpInputs[index + i].value = char;
-                    });
-                    if (otpInputs[index + pasteData.length]) {
-                        otpInputs[index + pasteData.length].focus();
-                    } else {
-                        otpInputs[5].focus();
-                    }
+                const pData = e.clipboardData.getData('text').slice(0, 6);
+                if (/^\d+$/.test(pData)) {
+                    pData.split('').forEach((char, i) => { if (otpInputs[index + i]) otpInputs[index + i].value = char; });
+                    if (otpInputs[index + pData.length]) otpInputs[index + pData.length].focus();
+                    else otpInputs[5].focus();
                 }
                 e.preventDefault();
             });
@@ -622,17 +602,18 @@
 
         document.getElementById('form-otp').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const otp = Array.from(otpInputs).map(i => i.value).join('');
-            if (otp.length < 6) return showMessage('error', 'Please enter the 6-digit code.');
+            const otpCode = Array.from(otpInputs).map(i => i.value).join('');
+            if (otpCode.length < 6) return showMessage('error', 'Please enter the full 6-digit code.');
 
             setLoading('btn-otp', true);
             try {
                 const data = await safeFetch('verify-signup-otp', {
                     method: 'POST',
-                    body: JSON.stringify({ email: userEmail, otp })
+                    body: JSON.stringify({ email: userEmail, otp: otpCode })
                 });
                 
                 signupToken = data.signup_token;
+                // Transition to Final Step: Password Creation
                 goToStep('password');
             } catch (err) {
                 showMessage('error', err.message);
@@ -641,12 +622,11 @@
             }
         });
 
-        // Resend Logic
-        const btnResend = document.getElementById('btn-resend');
-        const timerEl = document.getElementById('countdown-timer');
-
+        // Resend Cooling logic
         function startResendTimer() {
             countdownSec = 60;
+            const btnResend = document.getElementById('btn-resend');
+            const timerEl = document.getElementById('countdown-timer');
             btnResend.disabled = true;
             timerEl.style.display = 'inline';
             
@@ -662,8 +642,8 @@
             }, 1000);
         }
 
-        btnResend.addEventListener('click', async () => {
-            setLoading('btn-otp', true);
+        document.getElementById('btn-resend').addEventListener('click', async () => {
+            setLoading('btn-otp', true); // Use parent btn for loading feedback
             try {
                 await safeFetch('send-signup-otp', {
                     method: 'POST',
@@ -678,7 +658,7 @@
             }
         });
 
-        // --- STEP 3: PASSWORD ---
+        // --- STEP 3: PASSWORD & COMPLETION ---
         const passInput = document.getElementById('password');
         const meter = document.getElementById('strength-meter');
         const bar = document.getElementById('strength-bar');
@@ -687,19 +667,65 @@
         passInput.addEventListener('input', () => {
             const val = passInput.value;
             if (!val) { meter.style.display = 'none'; text.textContent = ''; return; }
-            
             meter.style.display = 'block';
             let strength = 0;
             if (val.length >= 8) strength += 25;
             if (/[A-Z]/.test(val)) strength += 25;
             if (/[0-9]/.test(val)) strength += 25;
             if (/[^A-Za-z0-9]/.test(val)) strength += 25;
-
             bar.style.width = strength + '%';
             if (strength <= 25) { bar.style.background = '#ef4444'; text.textContent = 'Too weak'; }
             else if (strength <= 50) { bar.style.background = '#f59e0b'; text.textContent = 'Weak'; }
             else if (strength <= 75) { bar.style.background = '#3b82f6'; text.textContent = 'Medium'; }
-            else { bar.style.background = '#10b981'; text.textContent = 'Strong'; }
+            else { bar.style.background = '#10b981'; text.textContent = 'Very strong'; }
+        });
+
+        function togglePass(id) {
+            const input = document.getElementById(id);
+            const icon = input.nextElementSibling.nextElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        document.getElementById('form-password').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fullName = document.getElementById('full_name').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm_password').value;
+
+            if (password !== confirm) return showMessage('error', 'Passwords do not match.');
+            if (password.length < 8) return showMessage('error', 'Password must be at least 8 characters.');
+
+            setLoading('btn-complete', true);
+            try {
+                // This logic calls /complete-signup which requires the signupToken
+                const data = await safeFetch('complete-signup', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        full_name: fullName,
+                        username: username,
+                        email: userEmail,
+                        password: password,
+                        role: 'citizen',
+                        signup_token: signupToken
+                    })
+                });
+
+                showMessage('success', 'Profile created! Redirecting to login...');
+                setTimeout(() => window.location.href = 'index.html?signedup=true', 2000);
+            } catch (err) {
+                showMessage('error', err.message);
+            } finally {
+                setLoading('btn-complete', false);
+            }
+        });
+t.textContent = 'Strong'; }
         });
 
         function togglePass(id) {

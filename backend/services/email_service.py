@@ -1,6 +1,6 @@
 """
-RESOLVIT - Hardened Email Service V2
-Strict environment validation, direct HTTP API, and detailed audit logging.
+RESOLVIT - Production Hardened Email Service V3
+Aggressive placeholder detection, environment-first config, and strict [EMAIL-TRACE] logging.
 """
 import os
 import requests
@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Optional
 from database import get_db
 
-# ── Config (Strict Environment) ────────────────────────────────
+# ── Config (Strict Environment Validation) ─────────────────────────
 RESEND_API_KEY    = os.getenv("RESEND_API_KEY")
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "updates@resolvit-ai.online")
 APP_BASE_URL      = os.getenv("APP_BASE_URL", "https://resolvit-ai.online")
@@ -18,11 +18,18 @@ EMAIL_ENABLED     = os.getenv("EMAIL_ENABLED", "true").lower() == "true"
 
 # Expiry Settings
 OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "5"))
-PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = int(os.getenv("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "30"))
+
+# Aggressive Placeholder Detection
+PLACEHOLDERS = ["your_key", "re_your_key", "test_key", "placeholder", "key_here"]
+
+def is_placeholder(key: Optional[str]) -> bool:
+    if not key: return True
+    k = key.lower()
+    return any(p in k for p in PLACEHOLDERS)
 
 
-def _log_email_attempt(recipient: str, subject: str, success: bool, error: Optional[str] = None, issue_id: Optional[str] = None, response_body: str = None):
-    """Internal helper to log all email attempts to the database audit table."""
+def _log_email_attempt(recipient: str, subject: str, success: bool, error: Optional[str] = None, issue_id: Optional[str] = None, response_body: Optional[str] = None):
+    """Persists every delivery attempt to the database for production auditing."""
     try:
         with get_db() as cursor:
             cursor.execute(
@@ -38,20 +45,23 @@ def _log_email_attempt(recipient: str, subject: str, success: bool, error: Optio
 
 def send_email(to_email: str, subject: str, html_content: str, issue_id: Optional[str] = None) -> bool:
     """
-    Sends an email via Resend Direct HTTP API.
-    Strictly logs every step with [EMAIL-TRACE], [EMAIL-SUCCESS], [EMAIL-FAILURE].
+    Core delivery function using Resend Direct HTTP API.
+    Strictly uses: [EMAIL-TRACE], [EMAIL-SUCCESS], [EMAIL-FAILURE].
     """
     if not EMAIL_ENABLED:
-        print(f"[EMAIL-MOCK] To: {to_email} | Subject: {subject}")
+        print(f"[EMAIL-TRACE] MOCK SEND (Email Disabled) -> To: {to_email} | Subject: {subject}")
         return True
 
-    if not RESEND_API_KEY or "your_key" in RESEND_API_KEY.lower():
-        err = "RESEND_API_KEY is missing or invalid (placeholder detected)."
-        print(f"[EMAIL-FAILURE] {err} Target: {to_email}")
-        _log_email_attempt(to_email, subject, False, err, issue_id)
+    # 1. Validate API Key
+    if is_placeholder(RESEND_API_KEY):
+        error_msg = "RESEND_API_KEY is missing or invalid (placeholder detected)."
+        print(f"[EMAIL-FAILURE] {error_msg} Target: {to_email}")
+        _log_email_attempt(to_email, subject, False, error_msg, issue_id)
         return False
 
-    print(f"[EMAIL-TRACE] Start send process to {to_email}")
+    print(f"[EMAIL-TRACE] Starting delivery to: {to_email}")
+    print(f"[EMAIL-TRACE] Using sender: {RESEND_FROM_EMAIL}")
+    print(f"[EMAIL-TRACE] RESEND_API_KEY present: {bool(RESEND_API_KEY)}")
     
     payload = {
         "from": f"RESOLVIT <{RESEND_FROM_EMAIL}>",
@@ -61,7 +71,7 @@ def send_email(to_email: str, subject: str, html_content: str, issue_id: Optiona
     }
 
     try:
-        print(f"[EMAIL-TRACE] Calling Resend API...")
+        print(f"[EMAIL-TRACE] Sending via Resend API...")
         response = requests.post(
             "https://api.resend.com/emails",
             headers={
@@ -75,11 +85,11 @@ def send_email(to_email: str, subject: str, html_content: str, issue_id: Optiona
         status_code = response.status_code
         resp_text = response.text
         
-        print(f"[EMAIL-TRACE] Resend API Response Status: {status_code}")
-        print(f"[EMAIL-TRACE] Resend API Response Body: {resp_text}")
+        print(f"[EMAIL-TRACE] Resend API response status: {status_code}")
+        print(f"[EMAIL-TRACE] Resend API response body: {resp_text}")
 
         if status_code in [200, 201, 202, 204]:
-            print(f"[EMAIL-SUCCESS] Sent to {to_email}. Response: {resp_text}")
+            print(f"[EMAIL-SUCCESS] Delivery accepted for {to_email}.")
             _log_email_attempt(to_email, subject, True, None, issue_id, resp_text)
             return True
         else:
@@ -102,33 +112,18 @@ def send_email(to_email: str, subject: str, html_content: str, issue_id: Optiona
 
 
 def send_verification_otp_email(to_email: str, otp: str) -> bool:
-    """Sends the 6-digit verification code for signups."""
-    print(f"[OTP-TRACE] Preparing OTP email for {to_email}")
+    """Sends the 6-digit OTP for user signup identity verification."""
+    print(f"[OTP-TRACE] Preparing OTP email for: {to_email}")
     subject = f"{otp} is your RESOLVIT verification code"
     
     html = f"""
-    <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #eee; padding: 40px; border-radius: 12px; text-align: center;">
-        <h1 style="color: #6366f1; margin-bottom: 24px;">Verify your identity</h1>
+    <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 40px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
+        <h1 style="color: #6366f1; margin: 0 0 24px 0;">Verify your identity</h1>
         <p style="color: #666; font-size: 16px;">Use the code below to complete your RESOLVIT signup.</p>
         <div style="background: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0;">
-            <span style="font-size: 42px; font-weight: 800; color: #1e1b4b; letter-spacing: 12px; margin-left:12px;">{otp}</span>
+            <span style="font-size: 42px; font-weight: 800; color: #1e1b4b; letter-spacing: 12px; margin-left: 12px;">{otp}</span>
         </div>
         <p style="color: #999; font-size: 13px;">This code expires in {OTP_EXPIRE_MINUTES} minutes.</p>
     </div>
     """
-    return send_email(to_email, subject, html)
-
-
-def send_password_reset_email(to_email: str, reset_token: str) -> bool:
-    """Sends a password reset link."""
-    reset_link = f"{APP_BASE_URL}/reset-password.html?token={reset_token}"
-    subject = "Reset your RESOLVIT password"
-    html = f"<h1>Reset Password</h1><p>Click <a href='{reset_link}'>here</a> to reset your password.</p>"
-    return send_email(to_email, subject, html)
-
-
-def send_welcome_email(to_email: str, username: str) -> bool:
-    """Sends a welcome email."""
-    subject = "Welcome to RESOLVIT!"
-    html = f"<h1>Welcome {username}!</h1><p>Your account is now active.</p>"
     return send_email(to_email, subject, html)
