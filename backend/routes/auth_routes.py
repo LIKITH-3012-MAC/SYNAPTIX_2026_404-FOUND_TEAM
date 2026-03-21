@@ -36,6 +36,38 @@ class CompleteSignupRequest(BaseModel):
     username:     str
     password:     str
 
+# ── Diagnostics (Production Verification) ──────────────────────
+
+@router.get("/health")
+def health_check():
+    """GET /api/auth/health - Check service and email status."""
+    return {
+        "success": True, 
+        "service": "auth", 
+        "resend_enabled": not is_placeholder(RESEND_API_KEY),
+        "from_email": RESEND_FROM_EMAIL
+    }
+
+@router.get("/email-config-check")
+def email_config_check():
+    """GET /api/auth/email-config-check - Detailed Resend status."""
+    return {
+        "resend_api_key_set": not is_placeholder(RESEND_API_KEY),
+        "from_email": RESEND_FROM_EMAIL,
+        "is_production": os.getenv("RENDER") == "true"
+    }
+
+@router.post("/test-email")
+def test_email_delivery(body: dict):
+    """POST /api/auth/test-email - Trigger real test email."""
+    email = body.get("email", "").strip().lower()
+    if not email:
+        return {"success": False, "message": "Email is required."}
+
+    print(f"[EMAIL-TRACE] Manual test-email for: {email}")
+    success = send_email(email, "RESOLVIT Production Test", "<h1>Test Success</h1><p>Resend is working.</p>")
+    return {"success": success, "message": "Check Render logs for [EMAIL-FAILURE] if success=false."}
+
 # ── Step 1: Send OTP ───────────────────────────────────────────
 @router.post("/send-signup-otp", response_model=MessageResponse)
 @limiter.limit("5/hour")
