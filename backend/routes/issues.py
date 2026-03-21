@@ -466,9 +466,11 @@ def update_issue(
                 )
             )
 
-        # 7. Resolution credits — awarded ONCE on first resolution
+        # 7. Resolution rewards & activity sync
+        reporter_id = str(existing["reporter_id"])
+        
         if is_resolving:
-            reporter_id = str(existing["reporter_id"])
+            # award_credits handles both points update AND activity ledger in one go
             try:
                 award_credits(
                     user_id=reporter_id,
@@ -480,21 +482,21 @@ def update_issue(
                 )
             except Exception as e:
                 print(f"[REWARD ERR] {e}")
-        
-        # 8. SYNC: Push update to citizen activity ledger (with issue_id)
-        cursor.execute(
-            """
-            INSERT INTO citizen_activity (user_id, issue_id, action, credits_delta, note, created_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-            """,
-            (
-                str(existing["reporter_id"]),
-                issue_id,
-                f"Issue {payload.status.value if payload.status else 'updated'}", 
-                50 if is_resolving else 0, 
-                f"Status: {payload.status.value if payload.status else 'Modified'} | Note: {payload.resolution_note or 'Admin update'}"
+        else:
+            # For non-resolving updates, we still log to activity ledger (sans points)
+            cursor.execute(
+                """
+                INSERT INTO citizen_activity (user_id, issue_id, action, credits_delta, note, created_at)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+                """,
+                (
+                    reporter_id,
+                    issue_id,
+                    f"Issue {payload.status.value if payload.status else 'updated'}", 
+                    0, 
+                    f"Status: {payload.status.value if payload.status else 'Modified'} | Note: {payload.resolution_note or 'Admin update'}"
+                )
             )
-        )
 
     # Post-transaction: Recalculate priority (separate transaction is fine)
     from services.priority import recalculate_issue_priority
