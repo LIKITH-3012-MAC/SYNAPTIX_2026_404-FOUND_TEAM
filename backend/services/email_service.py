@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 RESEND_FROM = os.getenv("RESEND_FROM_EMAIL", "RESOLVIT <updates@resolvit-ai.online>")
 EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://resolvit-ai.online")
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "support@resolvit-ai.online")
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = int(os.getenv("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "30"))
 
 # Initialize Resend
 if RESEND_API_KEY:
@@ -71,17 +74,14 @@ def send_email(to_email: str, subject: str, html_body: str, issue_id: Optional[s
         return False
 
 
-def send_password_reset_email(to_email: str, reset_token: str, username: str) -> bool:
+def send_password_reset_email(email: str, token: str, username: str) -> bool:
     """
-    Send a password reset email to the user.
+    Send a password reset email to the user with a premium template.
     """
-    reset_link = f"https://resolvit-ai.online/reset-password.html?token={reset_token}"
+    # Format reset link
+    reset_link = f"{APP_BASE_URL}/pass-reset?token={token}"
     
-    # For local development
-    if os.getenv("RENDER") is None:
-        reset_link = f"http://localhost:5500/frontend/reset-password.html?token={reset_token}"
-    
-    subject = "🔐 Reset Your RESOLVIT Password"
+    subject = "Reset your RESOLVIT password"
     
     html_body = f"""
     <!DOCTYPE html>
@@ -89,32 +89,47 @@ def send_password_reset_email(to_email: str, reset_token: str, username: str) ->
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Password Reset - RESOLVIT</title>
+        <title>Reset Password - RESOLVIT</title>
     </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; padding: 20px;">
-        <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 24px;">
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+            <div style="text-align: center; margin-bottom: 32px;">
                 <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
-                <h1 style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 24px;">Reset Your Password</h1>
-                <p style="color: #64748b; margin: 0;">Hi {username}, we received a request to reset your password.</p>
+                <h1 style="color: #6366f1; margin: 0 0 8px 0; font-size: 26px; font-weight: 800;">Password Reset</h1>
+                <p style="color: #64748b; margin: 0; font-size: 16px;">Hello {username},</p>
             </div>
             
-            <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                <p style="color: #334155; margin: 0 0 16px 0;">Click the button below to create a new password:</p>
-                <a href="{reset_link}" style="display: inline-block; background: #1E3A8A; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; text-align: center;">Reset Password</a>
+            <div style="margin-bottom: 32px; line-height: 1.6; color: #475569; text-align: center;">
+                <p>We received a request to reset the password for your RESOLVIT account. Click the button below to proceed.</p>
+                <p style="font-size: 14px; color: #94a3b8;">This link will expire in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutes.</p>
             </div>
-            
-            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 8px 0;">
-                This link will expire in 30 minutes for your security.
-            </p>
-            
-            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
-                If you didn't request a password reset, you can safely ignore this email.
-            </p>
-            
-            <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center;">
+
+            <div style="text-align: center; margin-bottom: 32px;">
+                <a href="{reset_link}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-weight: 700; font-size: 16px; box-shadow: 0 10px 15px -3px rgba(99,102,241,0.3);">Reset Password</a>
+            </div>
+
+            <div style="background: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+                <p style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #1e293b;">Having trouble with the button?</p>
+                <p style="margin: 0; font-size: 13px; color: #64748b; word-break: break-all;">Copy and paste this link into your browser:</p>
+                <p style="margin: 8px 0 0 0; font-size: 13px;"><a href="{reset_link}" style="color: #6366f1;">{reset_link}</a></p>
+            </div>
+
+            <div style="border-top: 1px solid #f1f5f9; padding-top: 24px;">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="font-size: 20px;">🛡️</div>
+                    <div>
+                        <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #1e293b;">Security Reminder</p>
+                        <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 1.5;">
+                            If you didn't request this, you can safely ignore this email. Your password will remain unchanged.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px; text-align: center;">
                 <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-                    © 2024 RESOLVIT - Civic Resolution Platform
+                    Need help? Contact our support at {SUPPORT_EMAIL}<br>
+                    © 2024 RESOLVIT - Civic Governance Platform
                 </p>
             </div>
         </div>
@@ -122,7 +137,7 @@ def send_password_reset_email(to_email: str, reset_token: str, username: str) ->
     </html>
     """
     
-    return send_email(to_email, subject, html_body)
+    return send_email(email, subject, html_body)
 
 
 def send_welcome_email(to_email: str, username: str, role: str) -> bool:

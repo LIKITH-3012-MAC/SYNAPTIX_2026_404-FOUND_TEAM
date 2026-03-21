@@ -11,9 +11,10 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr, Field
 from models import UserRegister, UserLogin, OAuthLogin, TokenResponse, UserResponse, MessageResponse
 from database import get_db
-from auth import hash_password, verify_password, create_access_token, get_current_user, create_password_reset_token, verify_password_reset_token
+from auth import hash_password, verify_password, create_access_token, get_current_user, generate_reset_token, hash_token
 from core.config import settings
-from services.email_service import send_password_reset_email
+from services.email_service import send_password_reset_email, PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+from datetime import datetime, timedelta
 from core.security import limiter
 import uuid
 import secrets
@@ -309,67 +310,124 @@ class ResetPasswordRequest(BaseModel):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(payload: ForgotPasswordRequest):
+def forgot_password(payload: ForgotPasswordRequest, request: Request):
     """
-    Request a password reset. If the email exists, send a reset link.
-    This endpoint always returns success to prevent email enumeration.
+    Request a password reset. Returns generic success to prevent enumeration.
+    Generates a secure hashed token and stores metadata (IP, UA).
     """
+    email = payload.email.strip().lower()
+    
+    with get_db() as cursor:
+        cursor.execute("SELECT id, username FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+        
+        if user:
+            user_id = user["id"]
+            # 1. Invalidate previous tokens
+            cursor.execute(
+                "UPDATE password_reset_tokens SET invalidated_at = NOW(), invalidated_reason = 'new_request' "
+                "WHERE user_id = %s AND used = FALSE AND invalidated_at IS NULL",
+                (user_id,)
+            )
+            
+            # 2. Generate raw token and hash
+            raw_token = generate_reset_token()
+            t_hash = hash_token(raw_token)
+            expires_at = datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+            
+            # 3. Store in DB
+            user_agent = request.headers.get("User-Agent")
+            requested_ip = request.client.host
+            
+            cursor.execute(
+                """
+                INSERT INTO password_reset_tokens 
+                (user_id, email_snapshot, token_hash, expires_at, requested_ip, user_agent)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (user_id, email, t_hash, expires_at, requested_ip, user_agent)
+            )
+            
+            # 4. Trigger Email
+            send_password_reset_email(email, raw_token, user["username"])
+            
+    return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+
+@router.get("/verify-reset-token", response_model=MessageResponse)
+def verify_reset_token(token: str):
+    """Verify if a reset token is valid, not expired, and not used."""
+    t_hash = hash_token(token)
+    
     with get_db() as cursor:
         cursor.execute(
-            "SELECT id, username, email FROM users WHERE email = %s",
-            (payload.email,)
+            """
+            SELECT id FROM password_reset_tokens 
+            WHERE token_hash = %s 
+              AND used = FALSE 
+              AND invalidated_at IS NULL 
+              AND expires_at > NOW()
+            """,
+            (t_hash,)
         )
-        user = cursor.fetchone()
-
-    # Always return success to prevent email enumeration
-    # If the email exists, send the reset link
-    if user:
-        reset_token = create_password_reset_token(payload.email)
-        username = user["username"]
-        
-        # Try to send the email (will work if SMTP is configured)
-        send_password_reset_email(payload.email, reset_token, username)
-    
-    return {
-        "message": "If an account with that email exists, a password reset link has been sent."
-    }
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset token."
+            )
+            
+    return {"message": "Token is valid."}
 
 
 @router.post("/reset-password", response_model=MessageResponse)
 def reset_password(payload: ResetPasswordRequest):
     """
-    Reset the password using the token sent to the user's email.
+    Reset password using valid token. Marks token as used and updates user hash.
+    Invalidates all other tokens for the same user.
     """
-    # Verify the token
-    email = verify_password_reset_token(payload.token)
+    t_hash = hash_token(payload.token)
     
-    if not email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired password reset token."
-        )
-
-    # Find the user by email
     with get_db() as cursor:
+        # 1. Verify token
         cursor.execute(
-            "SELECT id, username, email FROM users WHERE email = %s",
-            (email,)
+            """
+            SELECT id, user_id FROM password_reset_tokens 
+            WHERE token_hash = %s 
+              AND used = FALSE 
+              AND invalidated_at IS NULL 
+              AND expires_at > NOW()
+            """,
+            (t_hash,)
         )
-        user = cursor.fetchone()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found."
-        )
-
-    # Update the password with the new hashed password
-    new_hash = hash_password(payload.new_password)
-    
-    with get_db() as cursor:
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset token."
+            )
+        
+        token_id = row["id"]
+        user_id = row["user_id"]
+        
+        # 2. Update user password
+        password_hash = hash_password(payload.new_password)
         cursor.execute(
             "UPDATE users SET password_hash = %s, updated_at = NOW() WHERE id = %s",
-            (new_hash, user["id"])
+            (password_hash, user_id)
         )
-
-    return {"message": "Password has been reset successfully. You can now login with your new password."}
+        
+        # 3. Mark token as used
+        cursor.execute(
+            "UPDATE password_reset_tokens SET used = TRUE, used_at = NOW() WHERE id = %s",
+            (token_id,)
+        )
+        
+        # 4. Invalidate all other tokens for this user
+        cursor.execute(
+            "UPDATE password_reset_tokens SET invalidated_at = NOW(), invalidated_reason = 'password_changed' "
+            "WHERE user_id = %s AND id != %s AND used = FALSE AND invalidated_at IS NULL",
+            (user_id, token_id)
+        )
+        
+    return {"message": "Password has been reset successfully. You can now login."}

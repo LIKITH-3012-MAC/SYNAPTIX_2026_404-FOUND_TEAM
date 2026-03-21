@@ -246,6 +246,23 @@ def execute_schema():
             created_at     TIMESTAMPTZ DEFAULT NOW()
         );
         """,
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id            UUID REFERENCES users(id) ON DELETE CASCADE,
+            email_snapshot     VARCHAR(255) NOT NULL,
+            token_hash         VARCHAR(255) NOT NULL,
+            expires_at         TIMESTAMPTZ NOT NULL,
+            used               BOOLEAN DEFAULT FALSE,
+            used_at            TIMESTAMPTZ,
+            created_at         TIMESTAMPTZ DEFAULT NOW(),
+            requested_ip       VARCHAR(45),
+            user_agent         TEXT,
+            resend_message_id  VARCHAR(255),
+            invalidated_at     TIMESTAMPTZ,
+            invalidated_reason VARCHAR(255)
+        );
+        """,
 
         # Adjusting Constraints
         "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_issues_cluster') THEN ALTER TABLE issues ADD CONSTRAINT fk_issues_cluster FOREIGN KEY (cluster_id) REFERENCES issue_clusters(id) ON DELETE SET NULL; END IF; END $$;",

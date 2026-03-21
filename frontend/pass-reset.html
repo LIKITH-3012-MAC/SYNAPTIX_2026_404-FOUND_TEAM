@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set New Password - RESOLVIT</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body {
+            background: radial-gradient(circle at bottom left, #1e1b4b 0%, #020617 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        .reset-box {
+            width: 100%;
+            max-width: 460px;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px;
+            padding: 48px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            animation: slideUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 12px;
+            letter-spacing: -0.03em;
+        }
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.05rem;
+            margin-bottom: 36px;
+        }
+        .form-group {
+            margin-bottom: 24px;
+            position: relative;
+        }
+        .form-label {
+            display: block;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 15px 48px 15px 16px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+        .form-input:focus {
+            border-color: #6366f1;
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+        }
+        .toggle-pass {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .toggle-pass:hover {
+            color: #6366f1;
+        }
+        .strength-meter {
+            height: 4px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: flex;
+            gap: 2px;
+        }
+        .strength-segment {
+            height: 100%;
+            flex: 1;
+            transition: background 0.4s ease;
+            background: transparent;
+        }
+        .strength-text {
+            font-size: 0.75rem;
+            margin-top: 6px;
+            font-weight: 600;
+            text-align: right;
+            transition: color 0.3s;
+        }
+        .btn-reset {
+            width: 100%;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 18px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            margin-top: 12px;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.35);
+        }
+        .btn-reset:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 30px -8px rgba(99, 102, 241, 0.45);
+            filter: brightness(1.1);
+        }
+        .btn-reset:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.4);
+        }
+        .alert {
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+            display: none;
+            line-height: 1.5;
+        }
+        .alert-error {
+            background: rgba(239, 68, 68, 0.08);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 28px;
+            z-index: 50;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(99, 102, 241, 0.2);
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Success Flow */
+        .success-flow {
+            text-align: center;
+            display: none;
+        }
+        .check-circle {
+            width: 72px;
+            height: 72px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 2px solid rgba(34, 197, 94, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 28px;
+            color: #22c55e;
+            font-size: 2.5rem;
+            animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div class="reset-box">
+        <!-- Initial Loading Overlay -->
+        <div id="initial-loading" class="loading-overlay">
+            <div class="spinner"></div>
+            <p style="margin:0; font-weight:600; color:#cbd5e1;">Verifying Link Security...</p>
+        </div>
+
+        <!-- Expired/Invalid State -->
+        <div id="invalid-state" style="display:none; text-align:center;">
+            <div style="font-size:4rem; margin-bottom:24px;">⛔</div>
+            <h1>Link Expired</h1>
+            <p class="subtitle">This password reset link is invalid or has already been used. Please request a new one.</p>
+            <a href="forgot-password.html" class="btn-reset" style="text-decoration:none; display:block;">Request New Link</a>
+        </div>
+
+        <!-- Reset Form -->
+        <div id="form-state" style="display:none;">
+            <h1>New Password</h1>
+            <p class="subtitle">Secure your account with a strong, multi-character password.</p>
+
+            <div id="alert-box" class="alert alert-error"></div>
+
+            <form id="reset-form">
+                <div class="form-group">
+                    <label class="form-label">Create New Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="new-password" class="form-input" placeholder="••••••••" required>
+                        <button type="button" class="toggle-pass" onclick="togglePass('new-password')">👁️</button>
+                    </div>
+                    <div class="strength-meter">
+                        <div id="s-1" class="strength-segment"></div>
+                        <div id="s-2" class="strength-segment"></div>
+                        <div id="s-3" class="strength-segment"></div>
+                        <div id="s-4" class="strength-segment"></div>
+                    </div>
+                    <div id="strength-label" class="strength-text" style="color: #64748b;">Awaiting input...</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="confirm-password" class="form-input" placeholder="••••••••" required>
+                        <button type="button" class="toggle-pass" onclick="togglePass('confirm-password')">👁️</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-reset" id="btn-submit">Update Password</button>
+            </form>
+        </div>
+
+        <!-- Success Flow -->
+        <div id="success-flow" class="success-flow">
+            <div class="check-circle">✓</div>
+            <h1>Password Updated</h1>
+            <p class="subtitle">Your account is now secure. Use your new password to sign in to the platform.</p>
+            <a href="index.html" class="btn-reset" style="text-decoration:none; display:block;">Sign In to RESOLVIT</a>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        const initialLoading = document.getElementById('initial-loading');
+        const invalidState = document.getElementById('invalid-state');
+        const formState = document.getElementById('form-state');
+        const successFlow = document.getElementById('success-flow');
+        const resetForm = document.getElementById('reset-form');
+        const alertBox = document.getElementById('alert-box');
+        const btn = document.getElementById('btn-submit');
+        const newPassInput = document.getElementById('new-password');
+        const confirmPassInput = document.getElementById('confirm-password');
+
+        // 1. Verify Token on Load
+        window.addEventListener('load', async () => {
+            if (!token) {
+                showInvalid();
+                return;
+            }
+            try {
+                const res = await fetch(`${API.BASE_URL}/api/auth/verify-reset-token?token=${token}`);
+                if (res.ok) {
+                    showForm();
+                } else {
+                    showInvalid();
+                }
+            } catch (err) {
+                showInvalid();
+            }
+        });
+
+        function showInvalid() {
+            initialLoading.style.display = 'none';
+            invalidState.style.display = 'block';
+        }
+
+        function showForm() {
+            initialLoading.style.display = 'none';
+            formState.style.display = 'block';
+        }
+
+        // 2. Password Toggle
+        function togglePass(id) {
+            const el = document.getElementById(id);
+            const btn = el.nextElementSibling;
+            if (el.type === 'password') {
+                el.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                el.type = 'password';
+                btn.textContent = '👁️';
+            }
+        }
+
+        // 3. Strength Meter
+        newPassInput.oninput = () => {
+            const val = newPassInput.value;
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (/[A-Z]/.test(val)) score++;
+            if (/[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
+
+            const colors = ['#ef4444', '#f59e0b', '#22c55e', '#10b981'];
+            const labels = ['Weak', 'Fair', 'Strong', 'Bulletproof'];
+
+            for (let i = 1; i <= 4; i++) {
+                const seg = document.getElementById(`s-${i}`);
+                seg.style.background = i <= score ? colors[score-1] : 'rgba(255,255,255,0.05)';
+            }
+            const label = document.getElementById('strength-label');
+            if (val.length > 0) {
+                label.textContent = labels[score-1] || 'Weak';
+                label.style.color = colors[score-1] || '#64748b';
+            } else {
+                label.textContent = 'Awaiting input...';
+                label.style.color = '#64748b';
+            }
+        };
+
+        // 4. Form Submit
+        resetForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const new_password = newPassInput.value;
+            const confirm = confirmPassInput.value;
+
+            if (new_password !== confirm) {
+                showAlert('❌ Passwords do not match.');
+                return;
+            }
+
+            if (new_password.length < 8) {
+                showAlert('❌ Password must be at least 8 characters.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Updating Identity...';
+            alertBox.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API.BASE_URL}/api/auth/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, new_password })
+                });
+
+                if (res.ok) {
+                    formState.style.display = 'none';
+                    successFlow.style.display = 'block';
+                } else {
+                    const data = await res.json();
+                    showAlert(`❌ ${data.detail || 'Failed to reset password.'}`);
+                    btn.disabled = false;
+                    btn.textContent = 'Update Password';
+                }
+            } catch (err) {
+                showAlert('❌ Connection error. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Update Password';
+            }
+        };
+
+        function showAlert(msg) {
+            alertBox.textContent = msg;
+            alertBox.style.display = 'block';
+            alertBox.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+    </script>
+</body>
+</html>
