@@ -9,15 +9,18 @@ const Auth = {
     async login(email, password) {
         const data = await API.post('/api/auth/login', { email, password });
         localStorage.setItem('resolvit_token', data.access_token);
+        
+        const u = data.user || data;
+
         localStorage.setItem('resolvit_user', JSON.stringify({
-            id:            data.user_id,
-            username:      data.username,
+            id:            u.id || u.user_id || u.sub,
+            username:      u.username,
             email:         email,
-            role:          data.role,
-            department:    data.department || null,
+            role:          u.role,
+            department:    u.department || null,
             auth_provider: 'database'
         }));
-        return data;
+        return u;
     },
 
     /**
