@@ -249,11 +249,14 @@ const ResolutionHub = {
         this._setLoadingState(true);
 
         try {
-            const [issue, history, attachments] = await Promise.all([
+            const [issue, rawHistory, rawAttachments] = await Promise.all([
                 API.get(`/api/issues/${issueId}`, { signal }),
-                API.get(`/api/issues/${issueId}/history`, { signal }),
-                API.get(`/api/issues/${issueId}/attachments`, { signal }).catch(() => [])
+                API.get(`/api/issues/${issueId}/history`, { signal }).catch(() => ({ data: [] })),
+                API.get(`/api/issues/${issueId}/attachments`, { signal }).catch(() => ({ data: [] }))
             ]);
+
+            const history = Array.isArray(rawHistory) ? rawHistory : (rawHistory?.data || []);
+            const attachments = Array.isArray(rawAttachments) ? rawAttachments : (rawAttachments?.data || []);
 
             // 3. RENDER MODULES
             this._renderHub(issue, history, attachments, user);

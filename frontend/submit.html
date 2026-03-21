@@ -608,7 +608,8 @@
             };
 
             try {
-                const issue = await API.post('/api/issues', payload);
+                const response = await API.post('/api/issues', payload);
+                const issue = response.data || response;
                 if (payload.image_url) {
                     await Gamification.awardPoints('EVIDENCE_ADDED');
                 } else {

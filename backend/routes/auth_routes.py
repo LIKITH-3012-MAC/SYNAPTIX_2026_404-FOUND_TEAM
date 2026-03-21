@@ -600,3 +600,75 @@ def reset_password(payload: ResetPasswordRequest):
         )
 
     return {"success": True, "message": "Password has been reset successfully."}
+
+
+# ── Dashboard & Profile Aliases ────────────────────────────────
+
+@router.get("/profile")
+def get_user_profile(current_user: dict = Depends(get_current_user)):
+    """
+    GET /api/user/profile (alias for /api/auth/profile)
+    Returns full profile with default stats / badges for ProfileManager frontend.
+    """
+    user_data = get_me(current_user)
+    return {
+        "success": True,
+        "user": user_data,
+        "stats": {
+            "total_points": user_data.get("points_cache", 0),
+            "rank": user_data.get("rank", "Citizen"),
+            "issues_count": 0
+        },
+        "badges": []
+    }
+
+
+@router.get("/issues")
+def get_user_issues_route(current_user: dict = Depends(get_current_user)):
+    """
+    GET /api/user/issues
+    Returns issues reported by this user.
+    """
+    with get_db() as cursor:
+        cursor.execute("SELECT * FROM issues WHERE reporter_id = %s ORDER BY created_at DESC", (current_user["sub"],))
+        rows = cursor.fetchall()
+        
+    # Local import to avoid circular dependency
+    from routes.issues import _serialize_issue
+    return [ _serialize_issue(dict(r), show_email=True) for r in rows ]
+
+
+@router.get("/activity")
+def get_user_activity(current_user: dict = Depends(get_current_user)):
+    """
+    GET /api/user/activity
+    Returns recent audit logs for this user.
+    """
+    with get_db() as cursor:
+        try:
+            cursor.execute(
+                "SELECT id, issue_id, action_type AS event, points, created_at, description FROM civic_credits WHERE user_id = %s ORDER BY created_at DESC LIMIT 50", 
+                (current_user["sub"],)
+            )
+            rows = cursor.fetchall()
+        except:
+            cursor.connection.rollback()
+            try:
+                # Fallback to audit logs if civic_credits schema is different
+                cursor.execute(
+                    "SELECT id, issue_id, event_type AS event, created_at, description FROM audit_logs WHERE actor_id = %s ORDER BY created_at DESC LIMIT 50", 
+                    (current_user["sub"],)
+                )
+                rows = cursor.fetchall()
+            except:
+                rows = []
+        
+    results = []
+    for r in rows:
+        item = dict(r)
+        item["id"] = str(item["id"])
+        if item.get("issue_id"): item["issue_id"] = str(item["issue_id"])
+        if item.get("created_at") and hasattr(item["created_at"], "isoformat"):
+            item["created_at"] = item["created_at"].isoformat()
+        results.append(item)
+    return results
