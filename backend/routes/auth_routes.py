@@ -87,7 +87,7 @@ def send_signup_otp(request: Request, body: dict):
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
         
-    print(f"[EMAIL-TRACE] send-signup-otp called")
+    print(f"[OTP-TRACE] send-signup-otp called for: {email}")
     
     with get_db() as cursor:
         # Check collision
@@ -101,9 +101,9 @@ def send_signup_otp(request: Request, body: dict):
         otp_hash = hash_token(otp)
         expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
         
-        print(f"[EMAIL-TRACE] otp generated: {otp}")
-        print(f"[EMAIL-TRACE] email target: {email}")
-        print(f"[EMAIL-TRACE] resend key present: {not is_placeholder(RESEND_API_KEY)}")
+        print(f"[OTP-TRACE] OTP generated (raw hidden)")
+        print(f"[OTP-TRACE] Email target: {email}")
+        print(f"[OTP-TRACE] Resend key present: {not is_placeholder(RESEND_API_KEY)}")
 
         # Invalidate old unused codes
         cursor.execute(
@@ -116,16 +116,19 @@ def send_signup_otp(request: Request, body: dict):
         cursor.execute(
             """
             INSERT INTO email_verification_otps (email, otp_hash, expires_at, purpose, requested_ip, user_agent)
-            VALUES (%s, %s, %s, 'signup', %s, %s)
+            VALUES (%s, %s, %s, 'signup', %s, %s) RETURNING id
             """,
             (email, otp_hash, expires_at, request.client.host, request.headers.get("user-agent"))
         )
+        row = cursor.fetchone()
+        otp_record_id = row['id']
+        print(f"[OTP-TRACE] Created OTP record ID: {otp_record_id}")
         
-        print(f"[EMAIL-TRACE] sending email")
+        print(f"[EMAIL-TRACE] calling send_verification_otp_email")
         success = send_verification_otp_email(email, otp)
         
         if not success:
-            print(f"[EMAIL-FAILURE] resend error for {email}.")
+            print(f"[EMAIL-FAILURE] Resend delivery failed for {email}.")
             return {
                 "success": False,
                 "message": "Unable to deliver verification code. Please check your email address."
@@ -141,50 +144,67 @@ def send_signup_otp(request: Request, body: dict):
 def verify_signup_otp(payload: VerifyOTPRequest):
     """POST /api/auth/verify-signup-otp - Step 2: Validate OTP."""
     email = payload.email.strip().lower()
-    otp_input = payload.otp
+    otp_input = payload.otp.strip()
     
     print(f"[OTP-TRACE] verify-signup-otp called for: {email}")
     
     with get_db() as cursor:
+        # 1. Fetch the latest active row
         cursor.execute(
-            "SELECT id, otp_hash, expires_at, attempt_count, max_attempts FROM email_verification_otps "
+            "SELECT id, otp_hash, expires_at, attempt_count, max_attempts, verified, invalidated_at FROM email_verification_otps "
             "WHERE email = %s AND verified = FALSE AND invalidated_at IS NULL ORDER BY created_at DESC LIMIT 1",
             (email,)
         )
         row = cursor.fetchone()
         
         if not row:
+            print(f"[OTP-FAILURE] No active verification request found for {email}")
             return {"success": False, "message": "No active verification request found."}
         
-        # Increment attempt counter
+        otp_id = row['id']
+        print(f"[OTP-TRACE] Found active record: {otp_id}")
+        print(f"[OTP-TRACE] Attempt count: {row['attempt_count']}")
+        print(f"[OTP-TRACE] Expires at: {row['expires_at']}")
+
+        # 2. Increment attempt counter immediately
         cursor.execute(
             "UPDATE email_verification_otps SET attempt_count = attempt_count + 1 WHERE id = %s",
-            (row["id"],)
+            (otp_id,)
         )
         
         if row["attempt_count"] + 1 > row["max_attempts"]:
+            print(f"[OTP-FAILURE] Too many attempts for record: {otp_id}")
             cursor.execute(
                 "UPDATE email_verification_otps SET invalidated_at = NOW(), invalidated_reason = 'too_many_attempts' WHERE id = %s",
-                (row["id"],)
+                (otp_id,)
             )
             return {"success": False, "message": "Too many failed attempts. Please request a new code."}
         
+        # 3. Check Expiry
         if row["expires_at"] < datetime.utcnow():
+            print(f"[OTP-FAILURE] Record expired: {otp_id}")
             return {"success": False, "message": "Verification code has expired."}
 
-        # Verify SHA256 Hash
+        # 4. Hash Comparison
+        print(f"[OTP-TRACE] Comparing hashed input OTP to stored hash for: {otp_id}")
         current_hash = hash_token(otp_input)
         if current_hash != row["otp_hash"]:
+            print(f"[OTP-FAILURE] Hash mismatch for record: {otp_id}")
             return {"success": False, "message": "Invalid verification code."}
 
-        # Success!
+        # 5. Success!
+        print(f"[OTP-TRACE] OTP match success for record: {otp_id}")
         cursor.execute(
             "UPDATE email_verification_otps SET verified = TRUE, verified_at = NOW() WHERE id = %s",
-            (row["id"],)
+            (otp_id,)
         )
         
         signup_token = create_signup_token(email)
-        return {"success": True, "signup_token": signup_token, "message": "Email verified successfully."}
+        return {
+            "success": True, 
+            "signup_token": signup_token, 
+            "message": "Email verified successfully."
+        }
 
 
 @router.post("/complete-signup", status_code=201)
