@@ -274,6 +274,22 @@ def complete_signup(payload: CompleteSignupRequest):
             "message": "Unable to create account."
         }
 
+@router.get("/reset-admin-demo")
+def reset_admin_demo():
+    """
+    TEMPORARY: Restores the production admin account.
+    """
+    with get_db() as cursor:
+        pwd_hash = hash_password("Admin@123")
+        cursor.execute(
+            "UPDATE users SET password_hash = %s, auth_provider = 'database' WHERE role = 'admin'",
+            (pwd_hash,)
+        )
+    return {
+        "success": True,
+        "message": "Admin account successfully reset to Admin@123 with database auth provider."
+    }
+
 # ── Standard Auth ──────────────────────────────────────────────
 
 @router.post("/login", response_model=dict)
