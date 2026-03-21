@@ -21,6 +21,7 @@ from services.priority import calculate_priority, get_sla_hours, get_sla_expiry,
 from services.clustering import attempt_clustering
 from services.blockchain import log_event
 from services.escalation import award_credits
+from services.email_service import send_issue_update_email
 from datetime import datetime, timezone
 
 router = APIRouter()
@@ -485,6 +486,29 @@ def update_issue(
         old_value={k: str(existing.get(k, "")) for k in fields if k in existing},
         new_value={k: str(v) for k, v in fields.items()}
     )
+    
+    # ── EMAIL NOTIFICATION ──
+    try:
+        with get_db() as cursor:
+            cursor.execute(
+                "SELECT u.email, u.full_name, u.username FROM users u JOIN issues i ON i.reporter_id = u.id WHERE i.id = %s",
+                (issue_id,)
+            )
+            user = cursor.fetchone()
+            if user:
+                email_data = {**updated, "old_status": str(existing.get("status"))}
+                # Ensure dates are strings
+                for k in ["created_at", "updated_at", "resolved_at"]:
+                    if email_data.get(k) and hasattr(email_data[k], "isoformat"):
+                        email_data[k] = email_data[k].isoformat()
+                
+                send_issue_update_email(
+                    to_email=user["email"],
+                    username=user["full_name"] or user["username"],
+                    issue_data=email_data
+                )
+    except Exception as e:
+        print(f"[EMAIL ERR] {e}")
 
     return _serialize_issue(updated, show_email=True)
 
@@ -594,6 +618,36 @@ def assign_issue(issue_id: str, payload: AssignPayload, current_user: dict = Dep
                 f"Status: Assigned | Note: {payload.note or 'Assigned to an official'}"
             )
         )
+        
+    # ── EMAIL NOTIFICATION ──
+    try:
+        with get_db() as cursor:
+            cursor.execute(
+                """
+                SELECT i.*, u.email, u.full_name, u.username 
+                FROM issues i 
+                JOIN users u ON i.reporter_id = u.id 
+                WHERE i.id = %s
+                """,
+                (issue_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                issue_data = dict(row)
+                issue_data["old_status"] = str(existing["status"])
+                issue_data["note"] = payload.note
+                for k in ["created_at", "updated_at", "resolved_at"]:
+                    if issue_data.get(k) and hasattr(issue_data[k], "isoformat"):
+                        issue_data[k] = issue_data[k].isoformat()
+                
+                send_issue_update_email(
+                    to_email=issue_data["email"],
+                    username=issue_data["full_name"] or issue_data["username"],
+                    issue_data=issue_data
+                )
+    except Exception as e:
+        print(f"[EMAIL ERR] {e}")
+
     return {"message": "Issue assigned successfully"}
 
 @router.post("/{issue_id}/escalate", response_model=MessageResponse)
@@ -627,6 +681,36 @@ def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_use
                 f"Status: Escalated to Level {new_level} | Note: {note or 'Escalated by Admin'}"
             )
         )
+        
+    # ── EMAIL NOTIFICATION ──
+    try:
+        with get_db() as cursor:
+            cursor.execute(
+                """
+                SELECT i.*, u.email, u.full_name, u.username 
+                FROM issues i 
+                JOIN users u ON i.reporter_id = u.id 
+                WHERE i.id = %s
+                """,
+                (issue_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                issue_data = dict(row)
+                issue_data["old_status"] = str(existing["status"])
+                issue_data["note"] = note
+                for k in ["created_at", "updated_at", "resolved_at"]:
+                    if issue_data.get(k) and hasattr(issue_data[k], "isoformat"):
+                        issue_data[k] = issue_data[k].isoformat()
+                
+                send_issue_update_email(
+                    to_email=issue_data["email"],
+                    username=issue_data["full_name"] or issue_data["username"],
+                    issue_data=issue_data
+                )
+    except Exception as e:
+        print(f"[EMAIL ERR] {e}")
+
     return {"message": "Issue escalated successfully"}
 
 @router.post("/{issue_id}/resolve", response_model=MessageResponse)
@@ -652,6 +736,36 @@ def resolve_issue(issue_id: str, note: Optional[str] = Query(None), current_user
             description=f"Issue resolved: {issue_id}",
             cursor=cursor
         )
+        
+    # ── EMAIL NOTIFICATION ──
+    try:
+        with get_db() as cursor:
+            cursor.execute(
+                """
+                SELECT i.*, u.email, u.full_name, u.username 
+                FROM issues i 
+                JOIN users u ON i.reporter_id = u.id 
+                WHERE i.id = %s
+                """,
+                (issue_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                issue_data = dict(row)
+                issue_data["old_status"] = str(existing["status"])
+                issue_data["note"] = note
+                for k in ["created_at", "updated_at", "resolved_at"]:
+                    if issue_data.get(k) and hasattr(issue_data[k], "isoformat"):
+                        issue_data[k] = issue_data[k].isoformat()
+                
+                send_issue_update_email(
+                    to_email=issue_data["email"],
+                    username=issue_data["full_name"] or issue_data["username"],
+                    issue_data=issue_data
+                )
+    except Exception as e:
+        print(f"[EMAIL ERR] {e}")
+
     return {"message": "Issue resolved successfully"}
 
 @router.post("/{issue_id}/archive", response_model=MessageResponse)

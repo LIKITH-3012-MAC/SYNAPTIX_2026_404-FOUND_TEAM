@@ -235,6 +235,17 @@ def execute_schema():
             created_at    TIMESTAMPTZ DEFAULT NOW()
         );
         """,
+        """
+        CREATE TABLE IF NOT EXISTS email_audit_logs (
+            id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            issue_id       UUID REFERENCES issues(id) ON DELETE SET NULL,
+            email_sent     BOOLEAN DEFAULT FALSE,
+            recipient      VARCHAR(255) NOT NULL,
+            subject        TEXT NOT NULL,
+            error_message  TEXT,
+            created_at     TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
 
         # Adjusting Constraints
         "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_issues_cluster') THEN ALTER TABLE issues ADD CONSTRAINT fk_issues_cluster FOREIGN KEY (cluster_id) REFERENCES issue_clusters(id) ON DELETE SET NULL; END IF; END $$;",

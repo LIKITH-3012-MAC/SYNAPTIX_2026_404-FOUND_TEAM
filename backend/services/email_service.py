@@ -3,85 +3,79 @@ RESOLVIT - Email Service
 Handles sending emails including password reset notifications
 """
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from typing import Optional
 from datetime import datetime
 import logging
+from database import get_db
 
 logger = logging.getLogger(__name__)
 
 # Email configuration from environment
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM = os.getenv("SMTP_FROM", "RESOLVIT <noreply@resolvit.gov>")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM = os.getenv("RESEND_FROM_EMAIL", "RESOLVIT <updates@resolvit-ai.online>")
+EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
 
-# Fallback mode when SMTP is not configured
-EMAIL_ENABLED = bool(SMTP_USER and SMTP_PASSWORD)
+# Initialize Resend
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
 
 
-def send_email(to_email: str, subject: str, html_body: str, text_body: Optional[str] = None) -> bool:
+def _log_email_to_db(issue_id: Optional[str], recipient: str, subject: str, success: bool, error: Optional[str] = None):
+    """Log email attempt to the database for auditing."""
+    try:
+        with get_db() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO email_audit_logs (issue_id, email_sent, recipient, subject, error_message)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (issue_id, success, recipient, subject, error)
+            )
+    except Exception as e:
+        logger.error(f"Failed to log email to audit table: {str(e)}")
+
+
+def send_email(to_email: str, subject: str, html_body: str, issue_id: Optional[str] = None) -> bool:
     """
-    Send an email to the specified recipient.
-    
-    Args:
-        to_email: Recipient email address
-        subject: Email subject line
-        html_body: HTML content of the email
-        text_body: Plain text fallback (optionals)
-    
-    Returns:
-        True if email was sent successfully, False otherwise
+    Send an email via Resend API.
     """
-    if not EMAIL_ENABLED:
-        logger.warning(f"Email not enabled. Would send to {to_email}: {subject}")
-        # Log the email content for debugging
-        logger.debug(f"Email content: {html_body}")
+    if not EMAIL_ENABLED or not RESEND_API_KEY:
+        logger.warning(f"Email not enabled or API key missing. Would send to {to_email}: {subject}")
         return False
     
     try:
-        # Create message
-        msg = MIMEMultipart('alternative')
-        msg['From'] = SMTP_FROM
-        msg['To'] = to_email
-        msg['Subject'] = subject
+        params = {
+            "from": RESEND_FROM,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_body,
+        }
         
-        # Attach plain text and HTML parts
-        if text_body:
-            msg.attach(MIMEText(text_body, 'plain'))
-        msg.attach(MIMEText(html_body, 'html'))
+        r = resend.Emails.send(params)
+        success = bool(r.get("id"))
         
-        # Connect to SMTP server and send
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_FROM, to_email, msg.as_string())
-        
-        logger.info(f"Email sent successfully to {to_email}")
-        return True
-    
+        if success:
+            logger.info(f"Email sent successfully to {to_email} (ID: {r['id']})")
+            _log_email_to_db(issue_id, to_email, subject, True)
+            return True
+        else:
+            logger.error(f"Resend returned unexpected response: {r}")
+            _log_email_to_db(issue_id, to_email, subject, False, "Unexpected API response")
+            return False
+            
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Failed to send email to {to_email} via Resend: {error_msg}")
+        _log_email_to_db(issue_id, to_email, subject, False, error_msg)
         return False
 
 
 def send_password_reset_email(to_email: str, reset_token: str, username: str) -> bool:
     """
     Send a password reset email to the user.
-    
-    Args:
-        to_email: User's email address
-        reset_token: JWT token for password reset
-        username: User's username
-    
-    Returns:
-        True if email was sent successfully, False otherwise
     """
-    # In production, this would be your actual domain
-    reset_link = f"https://synaptix.vercel.app/reset-password.html?token={reset_token}"
+    reset_link = f"https://resolvit-ai.online/reset-password.html?token={reset_token}"
     
     # For local development
     if os.getenv("RENDER") is None:
@@ -128,37 +122,12 @@ def send_password_reset_email(to_email: str, reset_token: str, username: str) ->
     </html>
     """
     
-    text_body = f"""
-    Reset Your RESOLVIT Password
-    
-    Hi {username},
-    
-    We received a request to reset your password.
-    
-    Click the link below to create a new password:
-    {reset_link}
-    
-    This link will expire in 30 minutes for your security.
-    
-    If you didn't request a password reset, you can safely ignore this email.
-    
-    © 2024 RESOLVIT - Civic Resolution Platform
-    """
-    
-    return send_email(to_email, subject, html_body, text_body)
+    return send_email(to_email, subject, html_body)
 
 
 def send_welcome_email(to_email: str, username: str, role: str) -> bool:
     """
     Send a welcome email to new users.
-    
-    Args:
-        to_email: User's email address
-        username: User's username
-        role: User's role (citizen, authority, admin)
-    
-    Returns:
-        True if email was sent successfully, False otherwise
     """
     role_display = {
         "citizen": "Citizen",
@@ -198,7 +167,7 @@ def send_welcome_email(to_email: str, username: str, role: str) -> bool:
             </p>
             
             <div style="text-align: center;">
-                <a href="https://synaptix.vercel.app/dashboard.html" style="display: inline-block; background: #1E3A8A; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">Go to Dashboard</a>
+                <a href="https://resolvit-ai.online/dashboard.html" style="display: inline-block; background: #1E3A8A; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">Go to Dashboard</a>
             </div>
             
             <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; margin-top: 24px;">
@@ -218,17 +187,18 @@ def send_issue_update_email(to_email: str, username: str, issue_data: dict) -> b
     """
     Send an update email to the citizen about their reported issue.
     """
-    issue_id = issue_data.get("tracking_id") or issue_data.get("id", "N/A")
+    issue_id = issue_data.get("id", "N/A")
     title = issue_data.get("title", "Civic Issue")
-    status = issue_data.get("status", "updated").replace("_", " ").title()
+    prev_status = issue_data.get("old_status", "N/A").replace("_", " ").title()
+    new_status = issue_data.get("status", "N/A").replace("_", " ").title()
     category = issue_data.get("category", "General")
-    note = issue_data.get("resolution_note") or "No additional notes provided."
-    location = issue_data.get("address") or "Indexed Location"
+    note = issue_data.get("resolution_note") or issue_data.get("note") or "No additional notes provided."
+    location = issue_data.get("address") or f"{issue_data.get('latitude')}, {issue_data.get('longitude')}"
     reported_date = issue_data.get("created_at", "N/A")
     updated_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Format tracking link if possible
-    tracking_link = f"https://resolvit-ai.online/issue.html?id={issue_data.get('id')}"
+    # Format tracking link
+    tracking_link = f"https://resolvit-ai.online/dashboard"
     
     subject = f"Update on your RESOLVIT complaint - {issue_id}"
     
@@ -245,19 +215,16 @@ def send_issue_update_email(to_email: str, username: str, issue_data: dict) -> b
             <div style="text-align: center; margin-bottom: 32px;">
                 <div style="font-size: 48px; margin-bottom: 16px;">⚖️</div>
                 <h1 style="color: #6366f1; margin: 0 0 8px 0; font-size: 26px; font-weight: 800;">RESOLVIT Update</h1>
-                <p style="color: #64748b; margin: 0; font-size: 16px;">Hi {username}, there is an update on your complaint.</p>
+                <p style="color: #64748b; margin: 0; font-size: 16px;">Hello {username},</p>
+                <p style="color: #64748b; margin: 0; font-size: 16px;">Your reported issue has been updated.</p>
             </div>
             
             <div style="background: #f1f5f9; border-radius: 12px; padding: 24px; margin-bottom: 32px; border-left: 4px solid #6366f1;">
                 <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #1e293b;">Issue Summary</h2>
                 <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 6px 0; color: #64748b; width: 140px;"><strong>Tracking ID:</strong></td>
+                        <td style="padding: 6px 0; color: #64748b; width: 140px;"><strong>Issue ID:</strong></td>
                         <td style="padding: 6px 0; color: #1e293b;">{issue_id}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 6px 0; color: #64748b;"><strong>Current Status:</strong></td>
-                        <td style="padding: 6px 0;"><span style="background: #6366f1; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px;">{status}</span></td>
                     </tr>
                     <tr>
                         <td style="padding: 6px 0; color: #64748b;"><strong>Title:</strong></td>
@@ -267,30 +234,46 @@ def send_issue_update_email(to_email: str, username: str, issue_data: dict) -> b
                         <td style="padding: 6px 0; color: #64748b;"><strong>Category:</strong></td>
                         <td style="padding: 6px 0; color: #1e293b;">{category}</td>
                     </tr>
+                </table>
+            </div>
+
+            <div style="margin-bottom: 32px;">
+                <table style="width: 100%; font-size: 15px; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 6px 0; color: #64748b;"><strong>Location:</strong></td>
-                        <td style="padding: 6px 0; color: #1e293b;">{location}</td>
+                        <td style="padding: 12px; background: #fee2e2; border-radius: 8px 0 0 8px; width: 50%; text-align: center;">
+                            <div style="color: #991b1b; font-size: 12px; font-weight: 700; margin-bottom: 4px;">PREVIOUS STATUS</div>
+                            <div style="color: #b91c1c; font-weight: 800;">{prev_status}</div>
+                        </td>
+                        <td style="padding: 12px; background: #dcfce7; border-radius: 0 8px 8px 0; width: 50%; text-align: center;">
+                            <div style="color: #166534; font-size: 12px; font-weight: 700; margin-bottom: 4px;">NEW STATUS</div>
+                            <div style="color: #15803d; font-weight: 800;">{new_status}</div>
+                        </td>
                     </tr>
                 </table>
             </div>
 
             <div style="margin-bottom: 32px;">
-                <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1e293b;">Official Authority Note:</h3>
+                <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1e293b;">Admin Note:</h3>
                 <div style="background: #fdf2f2; border: 1px solid #fee2e2; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; color: #475569;">
                     {note}
                 </div>
             </div>
 
+            <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 32px; font-size: 13px;">
+                <div style="margin-bottom: 8px;"><strong style="color: #64748b;">Location:</strong> <span style="color: #1e293b;">{location}</span></div>
+                <div style="margin-bottom: 8px;"><strong style="color: #64748b;">Reported On:</strong> <span style="color: #1e293b;">{reported_date}</span></div>
+                <div><strong style="color: #64748b;">Last Updated:</strong> <span style="color: #1e293b;">{updated_date}</span></div>
+            </div>
+
             <div style="text-align: center; margin-bottom: 32px;">
-                <a href="{tracking_link}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 10px 15px -3px rgba(99,102,241,0.3);">Track Current Status</a>
+                <p style="color: #64748b; font-size: 14px; margin-bottom: 16px;">Track your issue:</p>
+                <a href="{tracking_link}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 10px 15px -3px rgba(99,102,241,0.3);">Go to dashboard</a>
             </div>
 
             <div style="border-top: 1px solid #f1f5f9; padding-top: 24px; text-align: center;">
-                <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px 0;">
-                    Reported on: {reported_date} | Updated at: {updated_date}
-                </p>
-                <p style="color: #64748b; font-size: 13px; font-weight: 600; margin: 0;">
-                    RESOLVIT Admin Control Tower
+                <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">
+                    Thank you,<br>
+                    <strong>RESOLVIT Team</strong>
                 </p>
             </div>
         </div>
@@ -301,30 +284,5 @@ def send_issue_update_email(to_email: str, username: str, issue_data: dict) -> b
     </html>
     """
     
-    text_body = f"""
-    RESOLVIT UPDATE: Complaint {issue_id}
-    
-    Hi {username},
-    
-    There is an update on your civic complaint.
-    
-    Summary:
-    - ID: {issue_id}
-    - Status: {status}
-    - Title: {title}
-    - Category: {category}
-    - Location: {location}
-    
-    Official Note:
-    {note}
-    
-    Track status here: {tracking_link}
-    
-    Reported on: {reported_date}
-    Updated at: {updated_date}
-    
-    RESOLVIT Admin Control Tower
-    """
-    
-    return send_email(to_email, subject, html_body, text_body)
+    return send_email(to_email, subject, html_body, issue_id=issue_id)
 
