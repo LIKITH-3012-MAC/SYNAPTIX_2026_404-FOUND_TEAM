@@ -137,6 +137,34 @@ def start_up():
         print(f"[DB] Schema sync failed: {e}")
 
 @app.on_event("startup")
+def validate_email_config():
+    """Aggressive production validation for Resend and Base URL."""
+    from services.email_service import (
+        RESEND_API_KEY, RESEND_FROM_EMAIL, APP_BASE_URL, 
+        EMAIL_ENABLED, is_placeholder
+    )
+    
+    print(f"[EMAIL-TRACE] Initializing Email Service...")
+    print(f"[EMAIL-TRACE] EMAIL_ENABLED: {EMAIL_ENABLED}")
+    print(f"[EMAIL-TRACE] APP_BASE_URL: {APP_BASE_URL}")
+
+    if EMAIL_ENABLED:
+        if is_placeholder(RESEND_API_KEY):
+            print("[EMAIL-FAILURE] CRITICAL: RESEND_API_KEY is missing or is a placeholder!")
+            print("[EMAIL-FAILURE] Update Render Environment Variables immediately.")
+        else:
+            print(f"[EMAIL-TRACE] RESEND_API_KEY: [CONFIGURED]")
+            
+        if not RESEND_FROM_EMAIL or "your_email" in RESEND_FROM_EMAIL:
+             print("[EMAIL-FAILURE] CRITICAL: RESEND_FROM_EMAIL is misconfigured!")
+        else:
+            print(f"[EMAIL-TRACE] SENDER: {RESEND_FROM_EMAIL}")
+
+    if "localhost" in APP_BASE_URL.lower() and os.getenv("RENDER"):
+        print("[EMAIL-FAILURE] WARNING: APP_BASE_URL is set to localhost on Render!")
+
+
+@app.on_event("startup")
 def start_scheduler():
     from services.escalation import run_escalation_check
     from services.priority import recalculate_all_priorities
