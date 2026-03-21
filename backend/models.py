@@ -213,7 +213,8 @@ class AuditLogResponse(BaseModel):
 
 
 # ── Generic Response ──────────────────────────────────────────
-class MessageResponse(BaseModel):
+class MessageResponse(BaseModel) :
+    success: bool = True
     message: str
     detail:  Optional[Any] = None
 

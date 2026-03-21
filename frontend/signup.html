@@ -534,23 +534,33 @@
             document.getElementById('success-msg').style.display = 'none';
         }
 
+        function maskEmail(email) {
+            const [local, domain] = email.split('@');
+            if (local.length <= 3) return email;
+            return `${local.substring(0, 3)}••••@${domain}`;
+        }
+
         // --- STEP 1: EMAIL ---
         document.getElementById('form-email').addEventListener('submit', async (e) => {
             e.preventDefault();
-            userEmail = document.getElementById('email').value.trim().toLowerCase();
-            
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            if (!email) return;
+
             setLoading('btn-email', true);
+            showMessage('error', '');
+
             try {
-                await safeFetch(`${BACKEND_URL}/auth/send-signup-otp`, {
+                const data = await safeFetch(`${BACKEND_URL}/auth/send-signup-otp`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: userEmail })
+                    body: JSON.stringify({ email })
                 });
                 
-                document.getElementById('display-email').textContent = userEmail;
+                userEmail = email;
+                document.getElementById('display-email').textContent = maskEmail(email);
+                
                 goToStep('otp');
                 startResendTimer();
-                // Focus first OTP field
+                showMessage('success', data.message || "Verification code sent!");
                 setTimeout(() => document.querySelectorAll('.otp-input')[0].focus(), 500);
             } catch (err) {
                 showMessage('error', err.message);

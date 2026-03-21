@@ -18,7 +18,7 @@ from auth import (
 )
 from core.config import settings
 from services.email_service import (
-    send_password_reset_email, send_signup_otp_email, 
+    send_password_reset_email, send_signup_otp_email, send_email,
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES, OTP_EXPIRE_MINUTES
 )
 from datetime import datetime, timedelta
@@ -28,6 +28,14 @@ import secrets
 from fastapi import Request
 
 router = APIRouter()
+
+# ── Signup OTP Models ──────────────────────────────────────────
+class SendOTPRequest(BaseModel):
+    email: EmailStr
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp:   str = Field(..., min_length=6, max_length=6)
 
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(payload: UserRegister):
@@ -470,50 +478,79 @@ def reset_password(payload: ResetPasswordRequest):
 
 @router.post("/send-signup-otp", response_model=MessageResponse)
 @limiter.limit("5/hour")
-def send_signup_otp(payload: SendOTPRequest, request: Request):
+def send_signup_otp(request: Request, body: dict):
     """
-    Send a 6-digit OTP to a new user for email verification.
+    Step 1 of Signup: Generate and send a 6-digit OTP to the user's email.
+    Production-grade: Only returns success if the email is actually accepted by the provider.
     """
-    email = payload.email.strip().lower()
-    
-    # 1. Check if user already exists
+    email = body.get("email", "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    print(f"[AUTH-TRACE] Requesting OTP for: {email}")
+
     with get_db() as cursor:
+        # Check if user already exists
         cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
         if cursor.fetchone():
-            return {"message": "If an account exists, you will receive a verification code. Please sign in if you already have an account."}
-        
-        # 2. Invalidate previous OTPs for this email
+            print(f"[AUTH-WARN] Signup attempt for existing user: {email}")
+            raise HTTPException(status_code=400, detail="An account with this email already exists.")
+
+        # Generate OTP
+        otp = generate_otp()
+        otp_hash = hash_token(otp)
+        expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
+
+        # Invalidate previous OTPs for this email
         cursor.execute(
-            "UPDATE email_verification_otps SET invalidated_at = NOW(), invalidated_reason = 'new_request' "
-            "WHERE email = %s AND verified = FALSE AND invalidated_at IS NULL",
+            "UPDATE email_verification_otps SET invalidated_at = NOW(), invalidated_reason = 'new_request' WHERE email = %s AND verified = FALSE AND invalidated_at IS NULL",
             (email,)
         )
-        
-        # 3. Generate OTP and hash
-        otp = generate_otp()
-        otp_h = hash_token(otp)
-        expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
-        
-        # 4. Store in DB
-        user_agent = request.headers.get("User-Agent")
-        requested_ip = request.client.host
-        
+
+        # Store in DB
         cursor.execute(
             """
-            INSERT INTO email_verification_otps 
-            (email, otp_hash, expires_at, requested_ip, user_agent, purpose)
-            VALUES (%s, %s, %s, %s, %s, 'signup')
-            RETURNING id
+            INSERT INTO email_verification_otps (email, otp_hash, expires_at, purpose, requested_ip, user_agent)
+            VALUES (%s, %s, %s, 'signup', %s, %s)
             """,
-            (email, otp_h, expires_at, requested_ip, user_agent)
+            (email, otp_hash, expires_at, request.client.host, request.headers.get("user-agent"))
         )
         
-        # 5. Send Email
+        # ── Step 5: Send Email (MUST SUCCEED) ────────────────────────
+        print(f"[AUTH-TRACE] Triggering email delivery for OTP...")
         success = send_signup_otp_email(email, otp)
+        
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to send verification email.")
-            
-    return {"message": "Verification code sent to your email."}
+            # If email fails, we don't commit the OTP to DB (transaction rolls back)
+            # and we tell the user clearly.
+            print(f"[AUTH-ERROR] Email delivery failed for {email}. Rolling back OTP.")
+            raise HTTPException(
+                status_code=500, 
+                detail="Unable to deliver verification email. Please check the email address or try again later."
+            )
+
+    return {
+        "success": True,
+        "message": "Verification code sent successfully. Please check your inbox (and spam folder)."
+    }
+
+
+@router.post("/test-email", response_model=MessageResponse)
+def test_email_delivery(body: dict):
+    """Debug endpoint to verify Resend API configuration independently."""
+    email = body.get("email", "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Target email is required")
+
+    print(f"[DEBUG-TRACE] Sending test email to: {email}")
+    
+    test_html = f"<h1>RESOLVIT Test</h1><p>This is a test email sent at {datetime.now().isoformat()} to verify API connectivity.</p>"
+    success = send_email(email, "RESOLVIT API Test", test_html)
+    
+    if success:
+        return {"success": True, "message": f"Test email sent successfully to {email}."}
+    else:
+        raise HTTPException(status_code=500, detail="Resend API test failed. Check server logs for details.")
 
 
 @router.post("/verify-signup-otp")
