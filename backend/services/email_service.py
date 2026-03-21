@@ -95,7 +95,7 @@ def send_password_reset_email(email: str, token: str, username: str) -> bool:
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 20px;">
         <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
             <div style="text-align: center; margin-bottom: 32px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+                <img src="{APP_BASE_URL}/logo.svg" alt="RESOLVIT" width="64" height="64" style="margin-bottom: 16px;">
                 <h1 style="color: #6366f1; margin: 0 0 8px 0; font-size: 26px; font-weight: 800;">Password Reset</h1>
                 <p style="color: #64748b; margin: 0; font-size: 16px;">Hello {username},</p>
             </div>
@@ -158,7 +158,7 @@ def send_signup_otp_email(email: str, otp: str) -> bool:
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 20px;">
         <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 20px; padding: 48px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; text-align: center;">
             <div style="margin-bottom: 32px;">
-                <div style="font-size: 52px; margin-bottom: 16px;">⚖️</div>
+                <img src="{APP_BASE_URL}/logo.svg" alt="RESOLVIT" width="64" height="64" style="margin-bottom: 16px;">
                 <h1 style="color: #6366f1; margin: 0 0 8px 0; font-size: 28px; font-weight: 900; letter-spacing: -0.02em;">Verify your email</h1>
                 <p style="color: #64748b; margin: 0; font-size: 16px;">Secure your RESOLVIT account</p>
             </div>
@@ -217,7 +217,7 @@ def send_welcome_email(to_email: str, username: str, role: str) -> bool:
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; padding: 20px;">
         <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <div style="text-align: center; margin-bottom: 24px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">⚖️</div>
+                <img src="{APP_BASE_URL}/logo.svg" alt="RESOLVIT" width="64" height="64" style="margin-bottom: 16px;">
                 <h1 style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 24px;">Welcome to RESOLVIT!</h1>
                 <p style="color: #64748b; margin: 0;">Hi {username}, your account has been created successfully.</p>
             </div>
@@ -282,7 +282,7 @@ def send_issue_update_email(to_email: str, username: str, issue_data: dict) -> b
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 20px;">
         <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
             <div style="text-align: center; margin-bottom: 32px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">⚖️</div>
+                <img src="{APP_BASE_URL}/logo.svg" alt="RESOLVIT" width="64" height="64" style="margin-bottom: 16px;">
                 <h1 style="color: #6366f1; margin: 0 0 8px 0; font-size: 26px; font-weight: 800;">RESOLVIT Update</h1>
                 <p style="color: #64748b; margin: 0; font-size: 16px;">Hello {username},</p>
                 <p style="color: #64748b; margin: 0; font-size: 16px;">Your reported issue has been updated.</p>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+    <title>RESOLVIT Logo</title>
+    <!-- Background Square -->
+    <rect width="512" height="512" fill="#FFFFFF" />
+    <!-- Blue 'P' / Logo Shape -->
+    <!-- Stylized 'P' with rounded top-right -->
+    <path d="M100 80 H300 C380 80 380 260 300 260 H180 V432 H100 V80 Z M180 155 V185 H280 C310 185 310 155 280 155 H180 Z" fill="#003366" />
+    <!-- Green Checkmark -->
+    <!-- Integrated checkmark that acts as the leg of an 'R' -->
+    <path d="M160 320 L240 400 L440 140 L400 110 L240 320 L200 280 Z" fill="#22B14C" />
+</svg>

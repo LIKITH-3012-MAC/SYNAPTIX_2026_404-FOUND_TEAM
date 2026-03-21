@@ -511,24 +511,18 @@ h4 {
 .nav-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: -0.04em;
   color: var(--accent);
 }
 
-.nav-logo-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), var(--blue-500));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.1rem;
-  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+.nav-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
 }
 
 .nav-links {
