@@ -68,26 +68,15 @@ const ProfileManager = {
                 await this.loadAuthorityStats();
             } else {
                 // Fetch personal issues list
-                this.user.myIssues = await API.get('/api/user/issues').catch(() => []);
+                this.user.myIssues = await API.get('/api/user/issues', options).catch(() => []);
             }
             
             // 3.5 Clear 'Decrypting Identity' placeholder (Failsafe)
             this.clearLoadingPlaceholders();
-
-            // 4. Final render sequence
-            this.renderIdentitySidebar(this.user);
-            this.renderContentArea(this.user);
-            this.renderSecuritySection(this.user);
-
-            // 5. Init Personal Impact Map
-            if (this.user.myIssues?.length > 0) {
-                this.initPersonalMap(this.user.myIssues);
-            }
-
         } catch (error) {
             console.error("[Profile] Identity Sync Failure:", error);
             this.clearLoadingPlaceholders();
-            showToast("Failed to synchronise identity dossier.", "error");
+            if (!options.silent) showToast("Failed to synchronise identity dossier.", "error");
         }
     },
 

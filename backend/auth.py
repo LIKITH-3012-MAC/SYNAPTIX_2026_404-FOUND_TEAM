@@ -17,7 +17,7 @@ ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "24"))
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = int(os.getenv("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "30"))
 OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "5"))
 SIGNUP_TOKEN_EXPIRE_MINUTES = 15
-APP_BASE_URL = os.getenv("APP_BASE_URL", "https://resolvit-ai.online")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://www.resolvit-ai.online")
 
 bearer_scheme = HTTPBearer()
 

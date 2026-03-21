@@ -299,12 +299,13 @@ async function updateIssue(id) {
 
 // ── Issues Namespace ───────────────────────────────────────────
 const Issues = {
-  list: (params) => API.getIssues(params),
-  get: (id) => API.getIssue(id),
-  update: (id, data) => API.updateIssue(id, data),
-  delete: (id) => API.deleteIssue(id),
-  upvote: (id) => API.post(`/api/credits/upvote/${id}`, {}),
+  list: (params, options) => API.getIssues(params, options),
+  get: (id, options) => API.getIssue(id, options),
+  update: (id, data, options) => API.updateIssue(id, data, options),
+  delete: (id, options) => API.deleteIssue(id, options),
+  upvote: (id, options) => API.post(`/api/credits/upvote/${id}`, {}, options),
 };
+
 
 window.Issues = Issues;
 window.getPriorityBand = getPriorityBand;

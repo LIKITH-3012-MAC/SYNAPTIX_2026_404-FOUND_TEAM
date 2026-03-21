@@ -13,18 +13,27 @@ let _offset = 0;
 
 /* ── Init ────────────────────────────────────────────────────── */
 async function initDashboard() {
-    await Promise.all([fetchSummary(), fetchIssues()]);
-    setInterval(fetchIssues, 15000);  // Live polling
+    // Authorities now see all issues, so we no longer prune filters
+    await fetchIssues();
+    await fetchSummary();
+    await initGamificationUI();
+    setInterval(() => fetchIssues({ silent: true }), 15000);  // Live polling (silent)
+    setInterval(() => fetchSummary({ silent: true }), 30000); // Summary polling (silent)
 }
 
+// Re-expose to global
+window.initDashboard = initDashboard;
+
 /* ── Platform Summary Stats ──────────────────────────────────── */
-async function fetchSummary() {
+async function fetchSummary(options = {}) {
+
     const user = Auth.getUser();
     const isOfficial = user && (user.role === 'admin' || user.role === 'authority');
     const labelPrefix = isOfficial ? 'Global' : 'My';
 
     try {
-        const data = await API.get('/api/metrics/summary');
+        const data = await API.get('/api/metrics/summary', options);
+
         document.getElementById('summary-stats').innerHTML = `
       <div class="metric-card">
         <div class="metric-value" id="s-total">0</div>
@@ -160,10 +169,12 @@ function renderIssues() {
     }
 }
 
-async function fetchIssues() {
+async function fetchIssues(options = {}) {
+
     const sortBy = document.getElementById('sort-select')?.value || 'priority_score';
     try {
-        const issues = await Issues.list({ sort_by: sortBy, limit: 1000 });
+        const issues = await Issues.list({ sort_by: sortBy, limit: 1000 }, options);
+
         _allIssues = issues;
         // Don't reset _offset to 0 during background silent polling to prevent scroll jump
         renderIssues();
@@ -231,13 +242,8 @@ async function initGamificationUI() {
 }
 
 /* ── Initialization ────────────────────────────────────────────── */
-async function initDashboard() {
-    // Authorities now see all issues, so we no longer prune filters
-    await fetchIssues();
-    await fetchSummary();
-    await initGamificationUI();
-    setInterval(fetchIssues, 15000);  // Live polling restored
-}
+// Duplicate initDashboard removed (moved to top for clarity)
+
 
 
 // Re-expose to global

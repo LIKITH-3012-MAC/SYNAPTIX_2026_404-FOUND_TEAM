@@ -40,6 +40,9 @@ const API = {
     };
     if (body) fetchOptions.body = JSON.stringify(body);
 
+    const isSilent = !!options.silent;
+
+
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const timeoutPromise = new Promise((_, reject) => {
@@ -52,10 +55,11 @@ const API = {
         if (response.status === 401 && !path.includes("/api/auth/login")) {
           localStorage.removeItem("resolvit_token");
           localStorage.removeItem("resolvit_user");
-          showToast("⚠️ Session expired. Please login again.", "error");
+          if (!isSilent) showToast("⚠️ Session expired. Please login again.", "error");
         }
 
         const data = await response.json().catch(() => ({}));
+
 
         if (!response.ok) {
           let msg = `Request failed (${response.status})`;
@@ -106,14 +110,31 @@ const API = {
   async checkHealth() {
     try {
       const resp = await fetch(`${BASE_URL}/api/health`, { cache: 'no-store' });
-      if (!resp.ok) { this.status = 'waking'; this._emitStatus(); return; }
+      if (!resp.ok) { 
+        if (this.status !== 'waking') {
+            console.log("[API] Backend is waking up (Render cold start)...");
+            this.status = 'waking'; 
+            this._emitStatus(); 
+        }
+        return; 
+      }
       const data = await resp.json();
-      this.status = (data.status === 'online' || data.status === 'RESOLVIT API running') ? 'online' : 'waking';
+      const prevStatus = this.status;
+      this.status = (data.status === 'online' || data.status === 'RESOLVIT API running' || data.success) ? 'online' : 'waking';
+      if (prevStatus !== 'online' && this.status === 'online') {
+          console.log("[API] Connection verified. System online.");
+      }
     } catch (e) {
-      this.status = BASE_URL.includes('localhost') ? 'offline' : 'waking';
+      if (this.status !== 'waking' && !BASE_URL.includes('localhost')) {
+          console.warn("[API] Connection interrupted. Backend may be offline or waking.");
+          this.status = 'waking';
+      } else if (BASE_URL.includes('localhost')) {
+          this.status = 'offline';
+      }
     }
     this._emitStatus();
   },
+
 
   get: (path, options) => API._fetch("GET", path, null, 3, options),
   post: (path, body, options) => API._fetch("POST", path, body, 3, options),
