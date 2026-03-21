@@ -25,18 +25,19 @@ const Auth0Integration = {
   get config() {
     const c = window.AUTH0_CONFIG || {};
     
-    // STRATEGY: Always use current origin for redirectUri to ensure localStorage/Session sharing
-    // This fixes the "Callback URL mismatch" and "Missing state/nonce" errors.
-    const currentOrigin = window.location.origin.replace(/\/$/, "");
+    // CRITICAL FIX: To prevent "Invalid State" errors from cross-subdomain local storage mismatches
+    // we MUST use the exact running origin for the redirect callback, as long as it's whitelisted in Auth0.
+    const cand = window.location.origin.replace(/\/$/, "");
 
-    console.log("[Auth0] Initializing with Origin:", currentOrigin);
+    // Auth0 Callback Mismatch Debugging
+    console.log("[Auth0] Config Origin:", location.origin);
+    console.log("[Auth0] Config RedirectURI:", cand);
 
     return {
       domain: c.domain || "resolvit-ai.us.auth0.com",
       clientId: c.clientId || "wBl9vRriwj4qiDMAQeyPzDAxFF5O3tvI",
-      redirectUri: currentOrigin,
-      cacheLocation: "localstorage",
-      useRefreshTokens: true // Highly recommended for SPA reliability
+      redirectUri: cand,
+      cacheLocation: "localstorage"
     };
   },
 
@@ -61,19 +62,16 @@ const Auth0Integration = {
       }
 
       const conf = this.config;
-      console.log("[Auth0] Client creation start...");
 
       this._client = await factory({
         domain: conf.domain,
         clientId: conf.clientId,
         cacheLocation: conf.cacheLocation,
-        useRefreshTokens: conf.useRefreshTokens,
         authorizationParams: {
           redirect_uri: conf.redirectUri
         }
       });
 
-      console.log("[Auth0] Client creation success.");
       return this._client;
     })();
 
@@ -86,62 +84,43 @@ const Auth0Integration = {
     this._bootPromise = (async () => {
       const client = await this.init();
 
-      // Detection: Are we returning from an Auth0 redirect?
       const params = new URLSearchParams(window.location.search);
       const isCallback = params.has("code") && params.has("state");
 
       try {
         if (isCallback) {
-          console.log("[Auth0] Detected callback. Verifying session...");
-          
-          try {
-            await client.handleRedirectCallback();
-            console.log("[Auth0] Callback verified successfully.");
-          } catch (callbackErr) {
-            console.error("[Auth0] Callback verification failed:", callbackErr);
-            throw new Error(`Session verification failed: ${callbackErr.message}`);
-          }
+          console.log("[Auth0] Handling redirect callback...");
+          await client.handleRedirectCallback();
 
-          // CLEANUP: Remove code and state from URL immediately to prevent re-processing on refresh
-          const cleanUrl = window.location.pathname + window.location.hash;
-          window.history.replaceState({}, document.title, cleanUrl);
+          // Clean callback params immediately
+          window.history.replaceState({}, document.title, window.location.pathname);
 
           const user = await client.getUser();
           if (user) {
-            console.log("[Auth0] User profile fetched for sync:", user.email || user.nickname);
             await this.syncWithBackend(user, false);
           }
         } else {
-          // Regular page load
           const isAuthenticated = await client.isAuthenticated();
           if (isAuthenticated) {
             const user = await client.getUser();
             if (user) {
               const hasLocalSession = !!localStorage.getItem("resolvit_user");
               if (!hasLocalSession) {
-                console.log("[Auth0] Restoring missing local session for authenticated user...");
+                console.log("[Auth0] Restoring missing local session...");
                 await this.syncWithBackend(user, true);
               } else {
                 this.refreshNavbarOnly();
               }
             }
           } else {
-            // Not authenticated in Auth0, check if we have a stale local session
-            // (In strict mode, we might want to clear local if Auth0 says no, 
-            // but for now we allow database-only logins to coexist)
             this.refreshNavbarOnly();
           }
         }
       } catch (err) {
-        console.error("[Auth0] Boot process intercepted error:", err);
-        
-        // Ensure URL is cleaned even on error if it was a callback
-        if (isCallback) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
+        console.error("[Auth0] Boot/callback error:", err);
+        window.history.replaceState({}, document.title, window.location.pathname);
         if (typeof showToast === "function") {
-          showToast(`❌ Authentication Sync Failed: ${err.message}`, "error");
+          showToast(`❌ Login failed: ${err.message}`, "error");
         }
       }
     })();
@@ -151,14 +130,15 @@ const Auth0Integration = {
 
   async syncWithBackend(auth0User, silent = false) {
     const provider = this.detectProvider(auth0User);
-    
-    // Prioritize dynamically detected BASE_URL from api.js
-    const backendBase = window.BASE_URL || "https://synaptix-2026-404-found-team.onrender.com";
+    const backendBase =
+      typeof BASE_URL !== "undefined"
+        ? BASE_URL
+        : (window.BASE_URL || "https://synaptix-2026-404-found-team.onrender.com");
 
     const payload = {
       email:
         auth0User.email ||
-        `${auth0User.nickname || auth0User.sub.split("|").pop()}@oauth.resolvit.internal`,
+        `${auth0User.nickname || auth0User.sub.split("|").pop()}@oauth.resolvit-ai.online`,
       name:
         auth0User.name ||
         auth0User.nickname ||
@@ -168,8 +148,6 @@ const Auth0Integration = {
       picture: auth0User.picture || ""
     };
 
-    console.log(`[Auth0] Syncing with Backend (${backendBase})...`, payload);
-
     const res = await fetch(`${backendBase}/api/auth/oauth-login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -177,11 +155,10 @@ const Auth0Integration = {
     });
 
     if (!res.ok) {
-      let msg = `Backend error ${res.status}`;
+      let msg = `Backend responded ${res.status}`;
       try {
         const data = await res.json();
-        msg = data.detail || data.message || msg;
-        console.error("[Auth0] Backend Sync Detailed Error:", data);
+        msg = data.detail || msg;
       } catch (_) {}
       throw new Error(msg);
     }
