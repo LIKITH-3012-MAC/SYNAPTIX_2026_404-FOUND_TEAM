@@ -1,4 +1,4 @@
-oo<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1140,7 +1140,38 @@ oo<!DOCTYPE html>
     }
 
     // ── Guest Banner Visibility ───────────────────────────────────
-     ──────────────────────────────────────────────────────
+    function updateGuestBanner() {
+      const user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
+      const banner = document.getElementById('guest-login-banner');
+      if (!banner) return;
+
+      if (!user) {
+        banner.style.display = '';
+        // Update CTA to encourage login for guests
+        const ctaButtons = document.getElementById('cta-buttons');
+        if (ctaButtons) {
+          ctaButtons.innerHTML = `
+            <button class="btn btn-primary btn-xl" onclick="Auth.showModal('login')" style="margin-bottom:12px;">
+              🔐 Sign In to Report Issues
+            </button>
+            <div style="margin-top:8px;">
+              <button class="btn btn-outline" onclick="Auth.showModal('register')" style="font-size:0.9rem;">
+                ✨ Create Free Account
+              </button>
+            </div>
+          `;
+        }
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
+    // ── Auth Navigation Update ────────────────────────────────────
+    function updateNavAuth() {
+      if (typeof Auth !== 'undefined' && Auth.updateNavbar) Auth.updateNavbar();
+    }
+
+    // ── Init ──────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
       // 1. Update navbar based on auth state
       if (typeof Auth !== 'undefined' && Auth.updateNavbar) {
