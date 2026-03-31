@@ -525,7 +525,7 @@
                     data = JSON.parse(text);
                 } catch (e) {
                     console.error('[RESOLVIT] Pipeline Error (Raw Response):', text);
-                    throw new Error(`Server at ${API_BASE_URL} responded with invalid data. The backend might be starting up or experiencing an internal error.`);
+                    throw new Error(` server buzyyyy,please try again,after a couple of min ,team-resolvit-ai`);
                 }
 
                 if (!response.ok || (data && data.success === false)) {
@@ -541,7 +541,7 @@
                     throw new Error('Connection timed out. The backend gateway may be waking up. Please try once more.');
                 }
                 if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
-                    throw new Error(`Failed to contact server at ${API_BASE_URL}. This is usually a CORS block or the backend is sleeping on Render's free tier. Please wait 10 seconds and try again.`);
+                    throw new Error(`Failed to contact , Please wait 10 seconds and try again.`);
                 }
                 throw err;
             }
