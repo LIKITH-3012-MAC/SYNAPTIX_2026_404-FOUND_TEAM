@@ -8,7 +8,7 @@ PATCH  /api/issues/{id}      - Update issue (auth/admin only); awards credits on
 DELETE /api/issues/{id}      - Delete issue (admin only)
 """
 import uuid
-from fastapi import APIRouter, HTTPException, Depends, Query, Request, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, UploadFile, File, BackgroundTasks
 import json
 import os
 import shutil
@@ -372,6 +372,7 @@ def get_issue(
 def update_issue(
     issue_id: str,
     payload: IssueUpdate,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
     """Update issue fields. Awards +50 credits to reporter on resolution.
@@ -527,6 +528,7 @@ def update_issue(
                         email_data[k] = email_data[k].isoformat()
                 
                 send_issue_update_email(
+                    background_tasks=background_tasks,
                     to_email=user["email"],
                     username=user["full_name"] or user["username"],
                     issue_data=email_data
@@ -622,7 +624,7 @@ class AssignPayload(BaseModel):
     note: Optional[str] = None
 
 @router.post("/{issue_id}/assign", response_model=MessageResponse)
-def assign_issue(issue_id: str, payload: AssignPayload, current_user: dict = Depends(require_roles("admin", "authority"))):
+def assign_issue(issue_id: str, payload: AssignPayload, background_tasks: BackgroundTasks, current_user: dict = Depends(require_roles("admin", "authority"))):
     """Assign issue to a specific authority."""
     with get_db() as cursor:
         cursor.execute("SELECT status, assigned_authority_id, reporter_id FROM issues WHERE id = %s", (issue_id,))
@@ -675,6 +677,7 @@ def assign_issue(issue_id: str, payload: AssignPayload, current_user: dict = Dep
                         issue_data[k] = issue_data[k].isoformat()
                 
                 send_issue_update_email(
+                    background_tasks=background_tasks,
                     to_email=issue_data["email"],
                     username=issue_data["full_name"] or issue_data["username"],
                     issue_data=issue_data
@@ -688,7 +691,7 @@ def assign_issue(issue_id: str, payload: AssignPayload, current_user: dict = Dep
     }
 
 @router.post("/{issue_id}/escalate", response_model=MessageResponse)
-def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
+def escalate_issue(issue_id: str, background_tasks: BackgroundTasks, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
     """Escalate an issue."""
     with get_db() as cursor:
         cursor.execute("SELECT status, escalation_level, reporter_id FROM issues WHERE id = %s", (issue_id,))
@@ -741,6 +744,7 @@ def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_use
                         issue_data[k] = issue_data[k].isoformat()
                 
                 send_issue_update_email(
+                    background_tasks=background_tasks,
                     to_email=issue_data["email"],
                     username=issue_data["full_name"] or issue_data["username"],
                     issue_data=issue_data
@@ -754,7 +758,7 @@ def escalate_issue(issue_id: str, note: Optional[str] = Query(None), current_use
     }
 
 @router.post("/{issue_id}/resolve", response_model=MessageResponse)
-def resolve_issue(issue_id: str, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
+def resolve_issue(issue_id: str, background_tasks: BackgroundTasks, note: Optional[str] = Query(None), current_user: dict = Depends(require_roles("admin", "authority"))):
     """Resolve an issue."""
     with get_db() as cursor:
         cursor.execute("SELECT status, reporter_id FROM issues WHERE id = %s", (issue_id,))
@@ -799,6 +803,7 @@ def resolve_issue(issue_id: str, note: Optional[str] = Query(None), current_user
                         issue_data[k] = issue_data[k].isoformat()
                 
                 send_issue_update_email(
+                    background_tasks=background_tasks,
                     to_email=issue_data["email"],
                     username=issue_data["full_name"] or issue_data["username"],
                     issue_data=issue_data

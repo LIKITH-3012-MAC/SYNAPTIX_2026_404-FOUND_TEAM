@@ -249,16 +249,27 @@ def execute_schema():
             id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
             issue_id       UUID REFERENCES issues(id) ON DELETE SET NULL,
             email_sent     BOOLEAN DEFAULT FALSE,
+            status         VARCHAR(32) DEFAULT 'pending',
             recipient      VARCHAR(255) NOT NULL,
             subject        TEXT NOT NULL,
+            template_name  VARCHAR(64),
+            retry_count    INTEGER DEFAULT 0,
             error_message  TEXT,
             response_body  TEXT,
+            resend_message_id VARCHAR(255),
+            failed_at      TIMESTAMPTZ,
             created_at     TIMESTAMPTZ DEFAULT NOW()
         );
         """,
+        "ALTER TABLE email_audit_logs ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'pending';",
+        "ALTER TABLE email_audit_logs ADD COLUMN IF NOT EXISTS template_name VARCHAR(64);",
+        "ALTER TABLE email_audit_logs ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;",
+        "ALTER TABLE email_audit_logs ADD COLUMN IF NOT EXISTS resend_message_id VARCHAR(255);",
+        "ALTER TABLE email_audit_logs ADD COLUMN IF NOT EXISTS failed_at TIMESTAMPTZ;",
         "ALTER TABLE email_audit_logs ADD COLUMN IF NOT EXISTS response_body TEXT;",
         """
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
+
             id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
             user_id            UUID REFERENCES users(id) ON DELETE CASCADE,
             email_snapshot     VARCHAR(255) NOT NULL,
@@ -293,6 +304,145 @@ def execute_schema():
             invalidated_reason VARCHAR(255)
         );
         """,
+
+        # ─── RESOLVIT CARE EXTENSIONS ──────────────────────────────────────────
+        """
+        CREATE TABLE IF NOT EXISTS ngos (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            name VARCHAR(255) NOT NULL,
+            slug VARCHAR(255) UNIQUE NOT NULL,
+            description TEXT,
+            specialization VARCHAR(128),
+            contact_name VARCHAR(255),
+            contact_email VARCHAR(255),
+            contact_phone VARCHAR(32),
+            operating_region VARCHAR(128),
+            district VARCHAR(128),
+            address TEXT,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_by_admin_id UUID REFERENCES users(id),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS ngo_operators (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            ngo_id UUID NOT NULL REFERENCES ngos(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role_within_ngo VARCHAR(64) DEFAULT 'member',
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(ngo_id, user_id)
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS volunteers (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            ngo_id UUID REFERENCES ngos(id) ON DELETE SET NULL,
+            full_name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            phone VARCHAR(32),
+            skills TEXT,
+            languages VARCHAR(255),
+            availability_status VARCHAR(64) DEFAULT 'available',
+            current_region VARCHAR(128),
+            is_verified BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS reports (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            complaint_code VARCHAR(32) UNIQUE NOT NULL,
+            user_id UUID NOT NULL REFERENCES users(id),
+            title VARCHAR(255) NOT NULL,
+            description TEXT NOT NULL,
+            category VARCHAR(64) NOT NULL,
+            subcategory VARCHAR(64),
+            location_text TEXT,
+            district VARCHAR(128),
+            ward VARCHAR(128),
+            latitude FLOAT,
+            longitude FLOAT,
+            urgency_score INTEGER,
+            severity_level INTEGER,
+            status VARCHAR(64) DEFAULT 'submitted',
+            assigned_ngo_id UUID REFERENCES ngos(id) ON DELETE SET NULL,
+            assigned_admin_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            resolution_summary TEXT,
+            latest_public_update TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            resolved_at TIMESTAMPTZ,
+            closed_at TIMESTAMPTZ
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS report_status_history (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            report_id UUID NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+            old_status VARCHAR(64),
+            new_status VARCHAR(64) NOT NULL,
+            changed_by_user_id UUID REFERENCES users(id),
+            changed_by_role VARCHAR(64),
+            change_reason TEXT,
+            note TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS report_notes (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            report_id UUID NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+            author_user_id UUID NOT NULL REFERENCES users(id),
+            author_role VARCHAR(64) NOT NULL,
+            note_type VARCHAR(64) DEFAULT 'general',
+            visibility_scope VARCHAR(64) DEFAULT 'internal',
+            body TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS ngo_assignment_log (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            report_id UUID NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+            ngo_id UUID NOT NULL REFERENCES ngos(id),
+            assigned_by_admin_id UUID REFERENCES users(id),
+            assignment_reason TEXT,
+            assigned_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS care_email_dispatch_log (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            report_id UUID REFERENCES reports(id) ON DELETE SET NULL,
+            recipient_email VARCHAR(255) NOT NULL,
+            recipient_type VARCHAR(64),
+            template_name VARCHAR(64),
+            subject TEXT NOT NULL,
+            body_snapshot TEXT,
+            dispatch_status VARCHAR(64) DEFAULT 'pending',
+            provider_message_id VARCHAR(255),
+            sent_by_admin_id UUID REFERENCES users(id),
+            triggered_by_system BOOLEAN DEFAULT FALSE,
+            sent_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS care_audit_log (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            actor_user_id UUID REFERENCES users(id),
+            actor_role VARCHAR(64),
+            action_type VARCHAR(128) NOT NULL,
+            entity_type VARCHAR(64) NOT NULL,
+            entity_id UUID,
+            metadata_json JSONB,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        # ─── END RESOLVIT CARE EXTENSIONS ──────────────────────────────────────
 
         # Adjusting Constraints
         "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_issues_cluster') THEN ALTER TABLE issues ADD CONSTRAINT fk_issues_cluster FOREIGN KEY (cluster_id) REFERENCES issue_clusters(id) ON DELETE SET NULL; END IF; END $$;",

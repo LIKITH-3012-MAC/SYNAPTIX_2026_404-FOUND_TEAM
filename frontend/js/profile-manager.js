@@ -75,11 +75,14 @@ const ProfileManager = {
             } else if (this.user.role === 'authority') {
                 await this.loadAuthorityStats();
             } else {
-                // Fetch real citizen stats and issues
+                // Fetch real citizen stats and unified history
                 console.log("[Profile] Loading Citizen Stats...");
                 await this.loadCitizenStats();
-                console.log("[Profile] Fetching My Issues...");
-                this.user.myIssues = await API.get('/api/user/issues').catch(() => []);
+                
+                console.log("[Profile] Fetching Unified Activity History...");
+                const historyResponse = await API.get('/api/user/history').catch(() => ({ data: [] }));
+                this.user.myIssues = historyResponse.data || [];
+                
                 console.log("[Profile] Initializing Personal Map...");
                 this.initPersonalMap(this.user.myIssues);
             }
@@ -220,18 +223,19 @@ const ProfileManager = {
         const container = document.getElementById('profile-stats-section');
         if (!container) return;
 
-        const stats = user.stats || { total_points: 0, issues_count: 0, rank: '?' };
-        const myIssues = user.myIssues || [];
+        const stats = user.stats || { total_points: 0, issues_count: 0, resolved_count: 0, active_count: 0 };
         
-        const solvedCount = myIssues.filter(i => i.status === 'resolved').length;
-        const activeCount = myIssues.filter(i => i.status !== 'resolved').length;
+        // Use backend provided counts if available, otherwise fallback to local calculation
+        const reportedCount = stats.issues_count || 0;
+        const solvedCount = stats.resolved_count !== undefined ? stats.resolved_count : (user.myIssues || []).filter(i => i.status === 'resolved').length;
+        const activeCount = stats.active_count !== undefined ? stats.active_count : (user.myIssues || []).filter(i => i.status !== 'resolved').length;
 
         container.innerHTML = `
             <div class="power-stat-grid">
                 <div class="power-stat-card">
                     <div class="stat-icon-wrapper" style="color:#00CFFF;">🚩</div>
                     <div class="stat-main-info">
-                        <span class="stat-value-elite" data-target="${stats.issues_count || 0}">0</span>
+                        <span class="stat-value-elite" data-target="${reportedCount}">0</span>
                         <span class="stat-label-elite">Reports Filed</span>
                     </div>
                 </div>
@@ -378,13 +382,10 @@ const ProfileManager = {
     async loadCitizenStats() {
         try {
             const credits = await API.get("/api/credits/me").catch(() => ({}));
-            const issues = await API.get("/api/issues").catch(() => []);
-            const myIssues = issues.filter(i => i.reporter_id === this.user.id || i.reporter_name === this.user.username);
-            this.user.myIssues = myIssues;
             this.user.stats = {
-                total_points: credits.total_points || 0,
-                rank: credits.rank || '#1',
-                issues_count: myIssues.length
+                ...this.user.stats,
+                total_points: credits.total_points || this.user.stats?.total_points || 0,
+                rank: credits.rank || this.user.stats?.rank || '#1'
             };
         } catch (err) {
             console.error("[Profile] Failed to load citizen stats:", err);

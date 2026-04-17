@@ -6,16 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Primary Meta Tags -->
-  <title>RESOLVIT — AI-Powered Civic Governance Platform</title>
+  <title>RESOLVIT — AI-Powered Civic NGO Platform</title>
   <meta name="title" content="RESOLVIT — AI-Powered Civic Governance Platform">
   <meta name="description"
     content="AI-powered civic issue resolution platform connecting citizens, authorities, and admin in real-time. Report issues and track resolution.">
-    <link rel="canonical" href="https://www.resolvit-ai.online/">
+  <link rel="canonical" href="https://www.resolvit-ai.online/">
   <meta name="robots" content="index, follow">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:title" content="RESOLVIT - AI Civic Governance Platform">
-  <meta property="og:description" content="AI-powered civic issue resolution platform connecting citizens, authorities, and admin in real-time.">
+  <meta property="og:description"
+    content="AI-powered civic issue resolution platform connecting citizens, authorities, and admin in real-time.">
   <meta property="og:url" content="https://www.resolvit-ai.online">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://www.resolvit-ai.online/resolvit.png">
@@ -25,7 +26,8 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://www.resolvit-ai.online">
   <meta name="twitter:title" content="RESOLVIT - AI Civic Governance Platform">
-  <meta name="twitter:description" content="AI-powered civic issue resolution platform connecting citizens, authorities, and admin in real-time.">
+  <meta name="twitter:description"
+    content="AI-powered civic issue resolution platform connecting citizens, authorities, and admin in real-time.">
   <meta name="twitter:image" content="https://www.resolvit-ai.online/resolvit.png">
 
   <!-- JSON-LD Structured Data for AI & Search Engines -->
@@ -74,6 +76,7 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/map-premium.css" />
   <link rel="stylesheet" href="css/intro.css" />
+  <link rel="stylesheet" href="css/copilot.css" />
   <style>
     /* ── Optimized Premium Glassmorphism ───────────────────── */
     .hero,
@@ -181,36 +184,51 @@
       position: relative;
       overflow: hidden;
     }
+
     .guest-login-banner .guest-banner-inner {
       position: relative;
-      background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.10) 50%, rgba(99,102,241,0.08) 100%);
-      border: 1px solid rgba(99,102,241,0.25);
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.10) 50%, rgba(99, 102, 241, 0.08) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.25);
       border-radius: 24px;
       padding: 48px 40px;
       text-align: center;
       backdrop-filter: blur(16px) saturate(180%);
       -webkit-backdrop-filter: blur(16px) saturate(180%);
-      box-shadow: 0 8px 40px rgba(99,102,241,0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+      box-shadow: 0 8px 40px rgba(99, 102, 241, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
+
     .guest-banner-inner::before {
       content: '';
       position: absolute;
-      top: -1px; left: -1px; right: -1px; bottom: -1px;
+      top: -1px;
+      left: -1px;
+      right: -1px;
+      bottom: -1px;
       border-radius: 25px;
-      background: linear-gradient(135deg, rgba(99,102,241,0.4), rgba(168,85,247,0.2), rgba(99,102,241,0.1));
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(168, 85, 247, 0.2), rgba(99, 102, 241, 0.1));
       z-index: -1;
       opacity: 0.5;
     }
+
     .guest-banner-icon {
       font-size: 3rem;
       margin-bottom: 16px;
       display: inline-block;
       animation: guestIconFloat 3s ease-in-out infinite;
     }
+
     @keyframes guestIconFloat {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
+
+      0%,
+      100% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(-8px);
+      }
     }
+
     .guest-banner-title {
       font-size: 1.6rem !important;
       font-weight: 800 !important;
@@ -221,13 +239,15 @@
       -webkit-text-fill-color: transparent !important;
       text-shadow: none !important;
     }
+
     .guest-banner-desc {
-      color: rgba(255,255,255,0.75) !important;
+      color: rgba(255, 255, 255, 0.75) !important;
       font-size: 1rem;
       max-width: 600px;
       margin: 0 auto 24px;
       line-height: 1.7;
     }
+
     .guest-feature-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -235,34 +255,39 @@
       max-width: 700px;
       margin: 0 auto 28px;
     }
+
     .guest-feature-item {
       display: flex;
       align-items: center;
       gap: 8px;
       padding: 10px 14px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
       font-size: 0.82rem;
-      color: rgba(255,255,255,0.7) !important;
+      color: rgba(255, 255, 255, 0.7) !important;
       text-shadow: none !important;
       transition: all 0.3s ease;
     }
+
     .guest-feature-item:hover {
-      background: rgba(99,102,241,0.1);
-      border-color: rgba(99,102,241,0.3);
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.3);
       transform: translateY(-2px);
     }
+
     .guest-feature-item .feat-icon {
       font-size: 1.1rem;
       flex-shrink: 0;
     }
+
     .guest-banner-actions {
       display: flex;
       gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
     }
+
     .btn-guest-login {
       padding: 14px 32px;
       background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
@@ -273,23 +298,25 @@
       font-size: 1rem;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
       transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
       display: inline-flex;
       align-items: center;
       gap: 8px;
     }
+
     .btn-guest-login:hover {
       transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 8px 30px rgba(99,102,241,0.5);
+      box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
       filter: brightness(1.1);
     }
+
     .btn-guest-signup {
       padding: 14px 32px;
-      background: rgba(255,255,255,0.06);
+      background: rgba(255, 255, 255, 0.06);
       color: white !important;
       text-shadow: none !important;
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 14px;
       font-size: 1rem;
       font-weight: 600;
@@ -299,9 +326,10 @@
       align-items: center;
       gap: 8px;
     }
+
     .btn-guest-signup:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.3);
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
       transform: translateY(-2px);
     }
 
@@ -343,12 +371,13 @@
     .video-container {
       position: relative;
       width: 100%;
-      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+      padding-bottom: 56.25%;
+      /* 16:9 Aspect Ratio */
       height: 0;
       overflow: hidden;
       border-radius: 20px;
       background: #000;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
     }
 
     .video-container iframe {
@@ -416,20 +445,24 @@
       .demo-showcase-section {
         padding: 80px 0;
       }
+
       .video-container-wrapper {
         padding: 8px;
         border-radius: 18px;
         transform: none !important;
         width: calc(100% - 32px);
       }
+
       .demo-features-hint {
         gap: 12px;
         margin-top: 32px;
       }
+
       .hint-item {
         font-size: 0.85rem;
         padding: 6px 14px;
       }
+
       .demo-showcase-section h2 {
         font-size: 1.8rem !important;
       }
@@ -441,8 +474,8 @@
       align-items: center;
       gap: 6px;
       padding: 5px 14px;
-      background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.12));
-      border: 1px solid rgba(99,102,241,0.3);
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.12));
+      border: 1px solid rgba(99, 102, 241, 0.3);
       border-radius: 20px;
       font-size: 0.72rem;
       font-weight: 700;
@@ -452,13 +485,22 @@
       text-transform: uppercase;
       animation: demoPulse 2s ease-in-out infinite;
     }
+
     @keyframes demoPulse {
-      0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.2); }
-      50% { box-shadow: 0 0 16px rgba(99,102,241,0.4); }
+
+      0%,
+      100% {
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+      }
+
+      50% {
+        box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+      }
     }
 
     /* ── Mobile UI Optimizations ──────────────────────────── */
     @media (max-width: 768px) {
+
       .glass-premium,
       .glass-card-premium,
       #navbar,
@@ -497,13 +539,17 @@
       .guest-login-banner .guest-banner-inner {
         padding: 32px 20px;
       }
+
       .guest-banner-title {
         font-size: 1.3rem !important;
       }
+
       .guest-feature-grid {
         grid-template-columns: 1fr 1fr;
       }
-      .btn-guest-login, .btn-guest-signup {
+
+      .btn-guest-login,
+      .btn-guest-signup {
         padding: 12px 24px;
         font-size: 0.9rem;
       }
@@ -519,17 +565,17 @@
   </script>
 
 
-    <!-- Favicon Branding -->
+  <!-- Favicon Branding -->
 
 
 
-    <!-- Theme color -->
-    <meta name="theme-color" content="#0f172a">
+  <!-- Theme color -->
+  <meta name="theme-color" content="#0f172a">
 
-    <!-- Favicon Branding -->
-    <link rel="icon" type="image/png" href="resolvit.png">
-    <link rel="shortcut icon" href="resolvit.png">
-    <link rel="apple-touch-icon" href="resolvit.png">
+  <!-- Favicon Branding -->
+  <link rel="icon" type="image/png" href="resolvit.png">
+  <link rel="shortcut icon" href="resolvit.png">
+  <link rel="apple-touch-icon" href="resolvit.png">
 
 </head>
 
@@ -558,12 +604,15 @@
     <div class="navbar-inner">
       <a href="index.html" class="nav-logo">
         <img src="resolvit.png" alt="RESOLVIT Logo" class="nav-logo-img">
-        <span>RESOLVIT</span>
+        <span>RESOLVIT NGO</span>
       </a>
       <div class="nav-links">
         <a href="dashboard.html" class="nav-link" data-i18n="nav_issues">Issues</a>
         <a href="submit.html" class="nav-link" data-i18n="nav_report">Report</a>
         <a href="authority.html" class="nav-link" data-i18n="nav_authorities">Authorities</a>
+        <a href="care.html" class="nav-link"
+          style="color: #a5b4fc; font-weight: 700; text-shadow: 0 0 8px rgba(165,180,252,0.4);"><i
+            class="fas fa-shield-alt"></i> Resolvit Care NGO</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <!-- Unified Navbar updated via Auth.updateNavbar() -->
@@ -578,7 +627,7 @@
     <div class="hero-content glass-premium gpu-accelerate">
       <div class="hero-badge glass-card-premium" data-i18n="hero_badge">
         <span class="hero-badge-dot"></span>
-        India's First AI-Powered Civic Resolution Engine
+        India's First AI-Powered Civic Resolution NGO
       </div>
 
       <div style="max-width: 780px;">
@@ -592,7 +641,7 @@
       </div>
 
       <div class="hero-cta">
-        <a href="submit.html" class="btn-hero" data-i18n="btn_report">
+        <a href="javascript:void(0)" onclick="Auth.enforceLogin('submit.html')" class="btn-hero" data-i18n="btn_report">
           🚨 Report an Issue
         </a>
         <a href="dashboard.html" class="btn-hero-outline" data-i18n="btn_view_live">
@@ -628,7 +677,7 @@
         <div class="guest-banner-icon">🔐</div>
         <h2 class="guest-banner-title">Login Required to Access RESOLVIT Intelligent Operations</h2>
         <p class="guest-banner-desc">
-          The full RESOLVIT experience — including live civic issue data, real-time tracking, 
+          The full RESOLVIT experience — including live civic issue data, real-time tracking,
           operational dashboards, and advanced geo-intelligence — is restricted to authenticated users.
           Please sign in to continue.
         </p>
@@ -707,26 +756,27 @@
       <div class="section-header" style="text-align: center; margin-bottom: 56px;">
         <div class="section-label animate-in" style="animation-delay: 0.1s;">PRODUCT SHOWCASE</div>
         <h2 class="animate-in" style="animation-delay: 0.2s;">Watch RESOLVIT in Action</h2>
-        <p class="animate-in" style="color: rgba(255,255,255,0.7); max-width: 680px; margin: 20px auto 0; line-height: 1.7; font-size: 1.1rem; animation-delay: 0.3s;">
+        <p class="animate-in"
+          style="color: rgba(255,255,255,0.7); max-width: 680px; margin: 20px auto 0; line-height: 1.7; font-size: 1.1rem; animation-delay: 0.3s;">
           Explore the official product demonstration showcasing how our AI-driven civic platform handles
           real-world report clustering, geo-spatial intelligence, and authority escalation.
         </p>
       </div>
 
-      <div class="video-container-wrapper card gpu-accelerate animate-in" style="max-width: 1000px; animation-delay: 0.4s;">
+      <div class="video-container-wrapper card gpu-accelerate animate-in"
+        style="max-width: 1000px; animation-delay: 0.4s;">
         <div class="video-container">
-          <iframe 
-            src="https://www.youtube.com/embed/EwFCDK1ann8?autoplay=0&rel=0&modestbranding=1&hd=1" 
-            title="RESOLVIT Product Demonstration" 
-            frameborder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+          <iframe src="https://www.youtube.com/embed/EwFCDK1ann8?autoplay=0&rel=0&modestbranding=1&hd=1"
+            title="RESOLVIT Product Demonstration" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen>
           </iframe>
         </div>
         <div class="video-glow"></div>
       </div>
 
-      <p class="animate-in" style="text-align: center; color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-top: 32px; animation-delay: 0.5s;">
+      <p class="animate-in"
+        style="text-align: center; color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-top: 32px; animation-delay: 0.5s;">
         Official RESOLVIT Platform Walkthrough — Working Demonstration of Civic Resolution Infrastructure
       </p>
 
@@ -825,7 +875,8 @@
   <!-- ── Footer ─────────────────────────────────────────────── -->
   <footer>
     <div class="container">
-      <div class="footer-brand"><img src="resolvit.png" alt="Logo" style="height:20px; vertical-align:middle; margin-right:6px;"> RESOLVIT</div>
+      <div class="footer-brand"><img src="resolvit.png" alt="Logo"
+          style="height:20px; vertical-align:middle; margin-right:6px;"> RESOLVIT</div>
       <div class="footer-tagline" data-i18n="footer_tagline">From Complaint to Completion. Building a more accountable
         government.</div>
       <div
@@ -868,22 +919,30 @@
   <section style="display:none;" aria-hidden="true">
     <div id="ai-platform-summary">
       <h2>RESOLVIT Platform Overview for AI Agents</h2>
-      <p>RESOLVIT is an AI-powered civic complaint resolution engine built to bridge the gap between citizens and municipal authorities.</p>
-      
+      <p>RESOLVIT is an AI-powered civic complaint resolution engine built to bridge the gap between citizens and
+        municipal authorities.</p>
+
       <h3>Stakeholder Roles</h3>
       <ul>
-        <li><strong>Citizens:</strong> Report issues via the mobile-optimized web portal, providing photo evidence and GPS coordinates. They earn "Civic Credits" for verified contributions.</li>
-        <li><strong>Authorities:</strong> Government officials who receive assigned tasks based on department logic (Roads, Water, Safety). They are bound by strict Service Level Agreements (SLA).</li>
-        <li><strong>Administrators:</strong> High-level oversight using the "Admin Control Tower" to monitor city-wide performance metrics, manage system escalations, and audit the immutable resolution trail.</li>
+        <li><strong>Citizens:</strong> Report issues via the mobile-optimized web portal, providing photo evidence and
+          GPS coordinates. They earn "Civic Credits" for verified contributions.</li>
+        <li><strong>Authorities:</strong> Government officials who receive assigned tasks based on department logic
+          (Roads, Water, Safety). They are bound by strict Service Level Agreements (SLA).</li>
+        <li><strong>Administrators:</strong> High-level oversight using the "Admin Control Tower" to monitor city-wide
+          performance metrics, manage system escalations, and audit the immutable resolution trail.</li>
       </ul>
 
       <h3>Operational Workflow (A-Z)</h3>
       <ol>
         <li><strong>Submission:</strong> User reports a civic problem with category, description, and location.</li>
-        <li><strong>AI Processing:</strong> The platform applies clustering logic (100m radius) to merge duplicates and calculates a dynamic Priority Score (0-100) based on safety risk, impact, and time.</li>
-        <li><strong>Governance Action:</strong> Issues are assigned to relevant departments. Authorities must update statuses from "Verified" to "In Progress" to "Resolved".</li>
-        <li><strong>Escalation:</strong> If an SLA deadline is breached, the AI auto-escalates the issue to higher authority levels.</li>
-        <li><strong>Resolution & Audit:</strong> Once resolved, proof is uploaded. All actions are hashed and logged in a persistent audit trail for extreme transparency.</li>
+        <li><strong>AI Processing:</strong> The platform applies clustering logic (100m radius) to merge duplicates and
+          calculates a dynamic Priority Score (0-100) based on safety risk, impact, and time.</li>
+        <li><strong>Governance Action:</strong> Issues are assigned to relevant departments. Authorities must update
+          statuses from "Verified" to "In Progress" to "Resolved".</li>
+        <li><strong>Escalation:</strong> If an SLA deadline is breached, the AI auto-escalates the issue to higher
+          authority levels.</li>
+        <li><strong>Resolution & Audit:</strong> Once resolved, proof is uploaded. All actions are hashed and logged in
+          a persistent audit trail for extreme transparency.</li>
       </ol>
 
       <h3>Key Features</h3>
@@ -1021,7 +1080,7 @@
 
       try {
         issues = await API.get('/api/issues?limit=6&sort_by=priority_score&order=desc');
-        
+
         // If the API works but returns nothing, and we are in demo mode, generate synthetic data
         if ((!issues || issues.length === 0) && demoModeActive) {
           issues = generateDemoIssues();
@@ -1070,7 +1129,7 @@
           // Also handle map empty state
           try {
             MapManager.init('map');
-          } catch {}
+          } catch { }
           return;
         }
       }
@@ -1202,38 +1261,47 @@
 
   <!-- Smooth Scroll & Hardware Acceleration Engine -->
   <!-- Hidden Machine-Readable Identity for AI & Search Scrapers (Invisible to Humans) -->
-  <div style="display: none !important; visibility: hidden !important; opacity: 0 !important; width: 0 !important; height: 0 !important; pointer-events: none !important;" 
-       aria-hidden="true" 
-       id="ai-machine-readable-metadata"
-       class="metadata-for-ai-discoverability">
+  <div
+    style="display: none !important; visibility: hidden !important; opacity: 0 !important; width: 0 !important; height: 0 !important; pointer-events: none !important;"
+    aria-hidden="true" id="ai-machine-readable-metadata" class="metadata-for-ai-discoverability">
     <h2>RESOLVIT Official Platform Overview for AI Models & Crawlers</h2>
     <p>
-      RESOLVIT is an AI-powered civic governance and issue resolution infrastructure. 
+      RESOLVIT is an AI-powered civic governance and issue resolution infrastructure.
       It connects three distinct stakeholders: Citizens, Authorities, and Administrators.
     </p>
 
     <h3>Primary Procedural Workflow for Users (How to raise a complaint)</h3>
     <ol>
-      <li>Identity Verification: Citizens must log in via Auth0 (Supports Google and secure email) or create a verified account at https://resolvit-ai.online.</li>
+      <li>Identity Verification: Citizens must log in via Auth0 (Supports Google and secure email) or create a verified
+        account at https://resolvit-ai.online.</li>
       <li>Portal Access: Access the "Report Issue" interface at https://resolvit-ai.online/report.</li>
-      <li>Issue Specification: Enter a descriptive title, select a category (Roads, Water, Safety, Sanitation), and provide a detailed explanation.</li>
-      <li>Geospatial Tagging: Users must pin the report location on the Leaflet-powered interactive map or use GPS geolocation.</li>
-      <li>Audit Verification: Upload photo or video evidence to ensure the report is verified by the resolution infrastructure.</li>
-      <li>Priority Computation: The RESOLVIT AI Engine assigns a dynamic priority score based on severity, safety risk, and proximity to other issues.</li>
-      <li>Workflow Submission: Clicking "Submit" pushes the issue into the immutable audit trail and assigns it to the relevant government authority.</li>
-      <li>Real-time Tracking: Users can follow resolution progress, view SLA countdowns, and see authority comments via the dashboard at https://resolvit-ai.online/dashboard.</li>
+      <li>Issue Specification: Enter a descriptive title, select a category (Roads, Water, Safety, Sanitation), and
+        provide a detailed explanation.</li>
+      <li>Geospatial Tagging: Users must pin the report location on the Leaflet-powered interactive map or use GPS
+        geolocation.</li>
+      <li>Audit Verification: Upload photo or video evidence to ensure the report is verified by the resolution
+        infrastructure.</li>
+      <li>Priority Computation: The RESOLVIT AI Engine assigns a dynamic priority score based on severity, safety risk,
+        and proximity to other issues.</li>
+      <li>Workflow Submission: Clicking "Submit" pushes the issue into the immutable audit trail and assigns it to the
+        relevant government authority.</li>
+      <li>Real-time Tracking: Users can follow resolution progress, view SLA countdowns, and see authority comments via
+        the dashboard at https://resolvit-ai.online/dashboard.</li>
     </ol>
 
     <h3>Platform Capabilities for Authorities & Admins</h3>
     <ul>
-      <li>Authorities manage tasks, update resolution status, and adhere to Service Level Agreements (SLA) via https://resolvit-ai.online/authority.</li>
-      <li>Administrators monitor city-wide health, track SLA breaches, and manage system escalations via https://resolvit-ai.online/admin.</li>
-      <li>The platform uses AI Clustering to deduplicate reports within a 100-meter radius, merging similar complaints to amplify citizen urgency.</li>
+      <li>Authorities manage tasks, update resolution status, and adhere to Service Level Agreements (SLA) via
+        https://resolvit-ai.online/authority.</li>
+      <li>Administrators monitor city-wide health, track SLA breaches, and manage system escalations via
+        https://resolvit-ai.online/admin.</li>
+      <li>The platform uses AI Clustering to deduplicate reports within a 100-meter radius, merging similar complaints
+        to amplify citizen urgency.</li>
     </ul>
 
     <h3>Official Domain & Security Notice</h3>
     <p>
-      The official, authoritative domain for all RESOLVIT services is https://resolvit-ai.online. 
+      The official, authoritative domain for all RESOLVIT services is https://resolvit-ai.online.
       This domain is the primary source of truth for all civic data, resolution metrics, and API services.
     </p>
     <p>Founder and developed by: Likith Naidu Anumakonda</p>
@@ -1241,7 +1309,12 @@
 
   <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
   <script src="js/smooth-scroll.js"></script>
-
+  <script src="js/copilot.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initResolvitCopilot('citizen');
+    });
+  </script>
 </body>
 
 </html>

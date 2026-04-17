@@ -8,7 +8,7 @@
 :root {
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  
+
   /* Indian Scripts */
   --font-hi: 'Noto Sans Devanagari', sans-serif;
   --font-te: 'Noto Sans Telugu', sans-serif;
@@ -134,7 +134,8 @@ html {
   will-change: transform;
 }
 
-.glass-hover:hover, .glass-card-premium:hover {
+.glass-hover:hover,
+.glass-card-premium:hover {
   transform: translateY(-4px);
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.06) !important;
@@ -242,7 +243,7 @@ html {
   top: 0;
   right: -450px;
   width: 420px;
-  height: 100vh;
+  height: 100dvh;
   z-index: 10000;
   padding: 40px 24px;
   transition: right 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -308,7 +309,7 @@ body {
   background: url('https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/A_breathtaking_ultrawide_cinematic_landscape_photo_delpmaspu.png') no-repeat center center;
   background-size: cover;
   z-index: -2;
-  transform: translate3d(0,0,0);
+  transform: translate3d(0, 0, 0);
   will-change: transform;
   pointer-events: none;
 }
@@ -340,30 +341,40 @@ body {
 
 
 @media (max-width: 768px) {
-  .glass, .glass-premium, .glass-card-premium, .navbar, footer {
+
+  .glass,
+  .glass-premium,
+  .glass-card-premium,
+  .navbar,
+  footer {
     backdrop-filter: blur(4px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(4px) saturate(120%) !important;
-    background: rgba(15, 23, 42, 0.9) !important; /* Higher opacity, less blur for mobile perf */
+    background: rgba(15, 23, 42, 0.9) !important;
+    /* Higher opacity, less blur for mobile perf */
   }
 
   /* One-finger scroll fix: ensure map doesn't swallow body touch if not targeted */
-  #map-container, #personal-map, #simulation-map {
+  #map-container,
+  #personal-map,
+  #simulation-map {
     touch-action: pan-x pan-y !important;
   }
 
-  .glass, .glass-premium, .glass-card-premium {
+  .glass,
+  .glass-premium,
+  .glass-card-premium {
     padding: 1.25rem !important;
   }
-  
+
   .section {
     padding: 2.5rem 0;
   }
-  
+
   /* Remove 2-finger scroll requirement */
   * {
     -webkit-overflow-scrolling: touch !important;
   }
-  
+
   body {
     overflow-y: auto !important;
     overscroll-behavior: auto !important;
@@ -454,34 +465,77 @@ h4 {
   }
 }
 
-.flex { display: flex; }
-.flex-col { display: flex; flex-direction: column; }
-.flex-wrap { flex-wrap: wrap; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.justify-center { justify-content: center; }
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.justify-center {
+  justify-content: center;
+}
 
 .grid {
   display: grid;
   gap: 1.5rem;
 }
 
-.grid-2 { grid-template-columns: repeat(2, 1fr); }
-.grid-3 { grid-template-columns: repeat(3, 1fr); }
-.grid-4 { grid-template-columns: repeat(4, 1fr); }
+.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
 
 @media (max-width: 1024px) {
-  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .grid-3, .grid-2 { grid-template-columns: 1fr; }
-  .grid-4 { grid-template-columns: 1fr; }
+
+  .grid-3,
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
 }
 
-.gap-4 { gap: 1rem; }
-.gap-6 { gap: 1.5rem; }
-.gap-8 { gap: 2rem; }
+.gap-4 {
+  gap: 1rem;
+}
+
+.gap-6 {
+  gap: 1.5rem;
+}
+
+.gap-8 {
+  gap: 2rem;
+}
 
 /* ── Navigation ────────────────────────────────────────────── */
 .navbar {
@@ -528,7 +582,7 @@ h4 {
   width: 32px;
   height: 32px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .nav-links {
@@ -999,7 +1053,7 @@ h4 {
 
 /* ── Hero Section ───────────────────────────────────────────── */
 .hero {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   position: relative;
@@ -1314,7 +1368,9 @@ h4 {
 }
 
 @media (max-width: 480px) {
-  .metrics-grid { grid-template-columns: 1fr; }
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .metric-card {
@@ -1494,8 +1550,14 @@ h4 {
 }
 
 @media (max-width: 480px) {
-  .modal-overlay { padding: 0.75rem; }
-  .modal-box { padding: 1.5rem; border-radius: var(--radius-md); }
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+
+  .modal-box {
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+  }
 }
 
 /* ── Alerts ─────────────────────────────────────────────────── */
@@ -1620,7 +1682,7 @@ footer {
 
 /* ── Auth Section ───────────────────────────────────────────── */
 .auth-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   background: var(--bg-primary);
@@ -1641,8 +1703,19 @@ footer {
 .dashboard-layout {
   display: grid;
   grid-template-columns: 280px 1fr;
-  min-height: 100vh;
+  min-height: 100dvh;
   padding-top: 72px;
+}
+
+@media (max-width: 991px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+    /* Hide toggleable sidebar on tablets/mobile */
+  }
 }
 
 .sidebar {
@@ -1651,7 +1724,7 @@ footer {
   padding: 32px 16px;
   position: sticky;
   top: 72px;
-  height: calc(100vh - 72px);
+  height: calc(100dvh - 72px);
   overflow-y: auto;
 }
 
@@ -1684,9 +1757,17 @@ footer {
   height: 18px;
 }
 
-.main-content {
-  padding: 32px;
-  overflow-x: hidden;
+.admin-main {
+  min-width: 0;
+  min-height: 0;
+}
+
+.dashboard-content {
+  padding: 40px;
+  overflow-y: auto;
+  min-width: 0;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Urgency Indicator ──────────────────────────────────────── */
@@ -2250,10 +2331,17 @@ footer {
 /* ── Elite Admin Portal Design System ───────────────────────── */
 .admin-layout {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   background: #020617;
   color: #f8fafc;
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
 }
 
 
@@ -2308,6 +2396,7 @@ footer {
   overflow-y: auto;
   position: relative;
   min-width: 0;
+  min-height: 0;
 }
 
 .admin-header {
@@ -2479,8 +2568,15 @@ footer {
 }
 
 @keyframes radarFadeIn {
-  from { opacity: 0; transform: scale(1.05); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Dashboard Layout Engine */
@@ -2498,7 +2594,8 @@ footer {
 }
 
 /* ── Cyber-Responsive Engine & Safety Nets ────────────────── */
-html, body {
+html,
+body {
   max-width: 100%;
   overflow-x: hidden;
   position: relative;
@@ -2532,19 +2629,46 @@ html, body {
     gap: 12px;
     padding: 16px;
   }
-  
-  .perf-rank { width: 40px; height: 40px; font-size: 1.2rem; }
+
+  .perf-rank {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
 }
 
 /* Script Overrides */
-body.script-devanagari { font-family: var(--font-hi), var(--font-main) !important; }
-body.script-telugu     { font-family: var(--font-te), var(--font-main) !important; }
-body.script-tamil      { font-family: var(--font-ta), var(--font-main) !important; }
-body.script-bengali    { font-family: var(--font-bn), var(--font-main) !important; }
-body.script-kannada    { font-family: var(--font-kn), var(--font-main) !important; }
-body.script-malayalam  { font-family: var(--font-ml), var(--font-main) !important; }
-body.script-gujarati   { font-family: var(--font-gu), var(--font-main) !important; }
-body.script-gurmukhi   { font-family: var(--font-pa), var(--font-main) !important; }
+body.script-devanagari {
+  font-family: var(--font-hi), var(--font-main) !important;
+}
+
+body.script-telugu {
+  font-family: var(--font-te), var(--font-main) !important;
+}
+
+body.script-tamil {
+  font-family: var(--font-ta), var(--font-main) !important;
+}
+
+body.script-bengali {
+  font-family: var(--font-bn), var(--font-main) !important;
+}
+
+body.script-kannada {
+  font-family: var(--font-kn), var(--font-main) !important;
+}
+
+body.script-malayalam {
+  font-family: var(--font-ml), var(--font-main) !important;
+}
+
+body.script-gujarati {
+  font-family: var(--font-gu), var(--font-main) !important;
+}
+
+body.script-gurmukhi {
+  font-family: var(--font-pa), var(--font-main) !important;
+}
 
 /* ================================================================
    MOBILE SCROLL PERFORMANCE ENGINE
@@ -2563,6 +2687,7 @@ body {
 
 /* ── On mobile: disable GPU-expensive backdrop-filter (biggest perf win) ── */
 @media (max-width: 768px) {
+
   /* Replace blur-glass with solid fallback — visually similar, zero GPU cost */
   .glass,
   .glass-premium,
@@ -2590,7 +2715,8 @@ body {
   }
 
   /* Contain layout for issue cards — prevents paint storms */
-  .issue-card-v2, .glass-card-premium {
+  .issue-card-v2,
+  .glass-card-premium {
     contain: layout style;
     content-visibility: auto;
     contain-intrinsic-size: 0 180px;
@@ -2600,7 +2726,7 @@ body {
   .panel,
   .ctrl-card,
   .glass-card-premium {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
   }
 
   /* Simplify hover transforms — eliminate jank */
@@ -2608,7 +2734,7 @@ body {
   .ctrl-card:hover,
   .issue-card-v2:hover {
     transform: none !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
   }
 
   /* Auth modal scrollable on small screens */
@@ -2627,6 +2753,7 @@ body {
 
 /* ── Respect system preference for reduced motion ──────────────── */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -2637,10 +2764,23 @@ body {
 }
 
 /* ── Scrollbar styling ───────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #818cf8;
+}
 
 /* ================================================================
    STABLE SELECTION & PERFORMANCE HARDENING
@@ -2649,7 +2789,7 @@ body {
 .active-selection-glow {
   border-color: var(--accent) !important;
   box-shadow: 0 0 30px var(--accent-glow), inset 0 0 10px var(--accent-glow) !important;
-  background: rgba(99,102,241,0.08) !important;
+  background: rgba(99, 102, 241, 0.08) !important;
   transform: translateY(-4px) scale(1.01) !important;
   z-index: 10;
 }
@@ -2663,16 +2803,20 @@ body {
 
 /* --- MOBILE OPTIMIZATION OVERRIDES --- */
 @media (max-width: 768px) {
+
   /* Reduce expensive blur/shadow for 60fps scrolling */
-  .glass, .glass-premium, .glass-card-premium {
+  .glass,
+  .glass-premium,
+  .glass-card-premium {
     backdrop-filter: blur(6px) !important;
     -webkit-backdrop-filter: blur(6px) !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
   }
-  
+
   .active-selection-glow {
     box-shadow: 0 0 15px var(--accent-glow) !important;
-    animation: none !important; /* Save CPU */
+    animation: none !important;
+    /* Save CPU */
   }
 
   /* GPU optimization */
@@ -2685,65 +2829,68 @@ body {
   .detail-drawer .drawer-body {
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Tap Target Optimization */
-  .btn, .filter-btn, .nav-link {
+  .btn,
+  .filter-btn,
+  .nav-link {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
   }
 
   /* Remove heavy animations */
-  .pulse-critical, .badge-escalated {
+  .pulse-critical,
+  .badge-escalated {
     animation-duration: 2s !important;
   }
 }
 
 /* ── Resolution Hub Refined Engineering ── */
 #resolution-hub-drawer .evidence-tag {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(15, 23, 42, 0.85);
-    color: white;
-    font-size: 0.6rem;
-    font-weight: 800;
-    padding: 3px 6px;
-    border-radius: var(--radius-sm);
-    text-transform: uppercase;
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255,255,255,0.1);
-    letter-spacing: 0.05em;
-    z-index: 2;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.05em;
+  z-index: 2;
 }
 
 #resolution-hub-drawer .hub-select {
-    width: 100%;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 10px 14px;
-    color: var(--text-primary);
-    font-size: 0.85rem;
-    outline: none;
-    transition: var(--transition);
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%2394a3b8' viewBox='0 0 20 20'%3E%3Cpath d='M5 7l5 5 5-5'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  outline: none;
+  transition: var(--transition);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%2394a3b8' viewBox='0 0 20 20'%3E%3Cpath d='M5 7l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
 }
 
 #resolution-hub-drawer .hub-select:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 #resolution-hub-drawer .evidence-item {
-    position: relative;
-    border: 1px solid var(--border);
-    transition: transform 0.2s ease;
+  position: relative;
+  border: 1px solid var(--border);
+  transition: transform 0.2s ease;
 }
 
 #resolution-hub-drawer .evidence-item:hover {
-    transform: scale(1.02);
+  transform: scale(1.02);
 }

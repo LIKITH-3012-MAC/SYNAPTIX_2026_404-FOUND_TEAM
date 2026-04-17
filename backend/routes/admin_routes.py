@@ -2,7 +2,7 @@
 RESOLVIT - Admin Routes
 Specialized operations for managing citizens and authorities.
 """
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 import json
 from typing import Optional, List, Any
 from datetime import datetime
@@ -10,7 +10,7 @@ import logging
 from models import UserResponse, MessageResponse, DataResponse
 from database import get_db
 from auth import require_roles
-from services.email_service import send_issue_update_email
+from services.email_service import send_issue_update_email, get_email_health_stats, dispatch_email_task
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -213,6 +213,15 @@ def get_admin_stats_full(current_admin: dict = Depends(require_roles("admin"))):
         }
     }
 
+
+@router.get("/email-health", response_model=DataResponse[dict])
+def get_email_health(current_admin: dict = Depends(require_roles("admin"))):
+    """Retrieves real-time email delivery statistics and health metrics."""
+    return {
+        "success": True,
+        "data": get_email_health_stats()
+    }
+
 @router.get("/authorities", response_model=DataResponse[List[dict]])
 def list_authorities():
     """Directory of all active authorities/departments."""
@@ -370,7 +379,7 @@ def get_admin_anomalies(current_admin: dict = Depends(require_roles("admin"))):
 
 
 @router.post("/issues/{issue_id}/email", response_model=MessageResponse)
-def email_citizen(issue_id: str, current_admin: dict = Depends(require_roles("admin", "authority"))):
+def email_citizen(issue_id: str, background_tasks: BackgroundTasks, current_admin: dict = Depends(require_roles("admin", "authority"))):
     """Trigger a status update email to the reporter."""
     with get_db() as cursor:
         # Fetch issue and reporter email
@@ -397,12 +406,9 @@ def email_citizen(issue_id: str, current_admin: dict = Depends(require_roles("ad
     to_email = issue_data["reporter_email"]
     username = issue_data["reporter_name"] or issue_data["reporter_username"]
     
-    success = send_issue_update_email(to_email, username, issue_data)
+    send_issue_update_email(background_tasks, to_email, username, issue_data)
     
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to send email. Ensure SMTP is configured.")
-        
-    # Log the email action
+    # Log the email action in admin audit (actual dispatch status logged in email_audit_logs)
     with get_db() as cursor:
         cursor.execute(
             "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, new_value) VALUES (%s, 'issue', %s, 'email_sent', %s)",

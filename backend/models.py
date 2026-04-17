@@ -11,9 +11,10 @@ from enum import Enum
 
 # ── Enums ─────────────────────────────────────────────────────
 class UserRole(str, Enum):
-    citizen   = "citizen"
-    authority = "authority"
-    admin     = "admin"
+    citizen      = "citizen"
+    authority    = "authority"
+    admin        = "admin"
+    ngo_operator = "ngo_operator"
 
 class IssueCategory(str, Enum):
     Roads       = "Roads"
@@ -33,6 +34,17 @@ class IssueStatus(str, Enum):
     escalated   = "escalated"
     resolved    = "resolved"
     archived    = "archived"
+
+class ReportStatus(str, Enum):
+    submitted            = "submitted"
+    under_review         = "under_review"
+    clarification_needed = "clarification_needed"
+    ngo_assigned         = "ngo_assigned"
+    in_progress          = "in_progress"
+    awaiting_admin_review = "awaiting_admin_review"
+    resolved             = "resolved"
+    closed               = "closed"
+    rejected             = "rejected"
 
 
 # ── Auth Schemas ──────────────────────────────────────────────
@@ -233,3 +245,127 @@ class AppFeedbackCreate(BaseModel):
     ux_rating:         int = Field(..., ge=1, le=5)
     experience_rating: int = Field(..., ge=1, le=5)
     comment:           Optional[str] = None
+
+
+# ── Resolvit Care Schemas ─────────────────────────────────────
+class NGOCreate(BaseModel):
+    name:             str = Field(..., min_length=3)
+    slug:             str = Field(..., min_length=3)
+    description:      Optional[str] = None
+    specialization:   Optional[str] = None
+    contact_name:     Optional[str] = None
+    contact_email:    Optional[EmailStr] = None
+    contact_phone:    Optional[str] = None
+    operating_region: Optional[str] = None
+    district:         Optional[str] = None
+    address:          Optional[str] = None
+    is_active:        bool = True
+
+class NGOUpdate(BaseModel):
+    name:             Optional[str] = None
+    slug:             Optional[str] = None
+    description:      Optional[str] = None
+    specialization:   Optional[str] = None
+    contact_name:     Optional[str] = None
+    contact_email:    Optional[EmailStr] = None
+    contact_phone:    Optional[str] = None
+    operating_region: Optional[str] = None
+    district:         Optional[str] = None
+    address:          Optional[str] = None
+    is_active:        Optional[bool] = None
+
+class NGOResponse(BaseModel):
+    id:               str
+    name:             str
+    slug:             str
+    description:      Optional[str]
+    specialization:   Optional[str]
+    contact_name:     Optional[str]
+    contact_email:    Optional[str]
+    contact_phone:    Optional[str]
+    operating_region: Optional[str]
+    district:         Optional[str]
+    address:          Optional[str]
+    is_active:        bool
+    created_by_admin_id: Optional[str] = None
+    officer_count:    Optional[int] = 0
+    created_at:       datetime
+    updated_at:       datetime
+
+class ReportCreate(BaseModel):
+    title:         str = Field(..., min_length=5)
+    description:   str = Field(..., min_length=10)
+    category:      str
+    subcategory:   Optional[str] = None
+    location_text: Optional[str] = None
+    district:      Optional[str] = None
+    ward:          Optional[str] = None
+    latitude:      Optional[float] = None
+    longitude:     Optional[float] = None
+    urgency_score: Optional[int] = 3
+    severity_level: Optional[int] = 3
+
+class ReportResponse(BaseModel):
+    id:             str
+    complaint_code: str
+    user_id:        str
+    title:          str
+    description:    str
+    category:       str
+    subcategory:    Optional[str]
+    location_text:  Optional[str]
+    district:       Optional[str]
+    ward:           Optional[str]
+    latitude:       Optional[float]
+    longitude:      Optional[float]
+    urgency_score:  Optional[int]
+    severity_level: Optional[int]
+    status:         str
+    assigned_ngo_id: Optional[str]
+    assigned_admin_id: Optional[str]
+    resolution_summary: Optional[str]
+    latest_public_update: Optional[str]
+    created_at:     datetime
+    updated_at:     datetime
+    resolved_at:    Optional[datetime]
+    closed_at:      Optional[datetime]
+
+class ReportStatusUpdate(BaseModel):
+    status:        ReportStatus
+    change_reason: Optional[str] = None
+    note:          Optional[str] = None
+
+class ReportAssignNGO(BaseModel):
+    ngo_id:            str
+    assignment_reason: Optional[str] = None
+
+class ReportDispatchEmail(BaseModel):
+    subject: str
+    body:    str
+
+class ReportNoteCreate(BaseModel):
+    note_type:        Optional[str] = "general"
+    visibility_scope: Optional[str] = "internal"
+    body:             str
+
+class ReportResolve(BaseModel):
+    resolution_summary: str
+    send_email:         bool = True
+
+
+class NGOOperatorCreate(BaseModel):
+    ngo_id:          str
+    user_id:         str
+    role_within_ngo: Optional[str] = "member"
+
+
+class NGOOperatorResponse(BaseModel):
+    id:              str
+    ngo_id:          str
+    user_id:         str
+    username:        Optional[str] = None
+    email:           Optional[str] = None
+    full_name:       Optional[str] = None
+    role_within_ngo: str
+    is_active:       bool
+    created_at:      datetime

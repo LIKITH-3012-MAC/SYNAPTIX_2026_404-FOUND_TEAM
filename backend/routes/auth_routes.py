@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Query, BackgroundTasks
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timedelta, timezone
 import os
@@ -68,7 +68,7 @@ def test_email_delivery(body: dict):
 # ── Step 1: Send OTP ───────────────────────────────────────────
 @router.post("/send-signup-otp", response_model=MessageResponse)
 @limiter.limit("5/hour")
-def send_signup_otp(request: Request, body: SendOTPRequest):
+def send_signup_otp(request: Request, body: SendOTPRequest, background_tasks: BackgroundTasks):
     """
     POST /api/auth/send-signup-otp
     1. Normalize Email
@@ -109,18 +109,11 @@ def send_signup_otp(request: Request, body: SendOTPRequest):
         otp_record_id = cursor.fetchone()['id']
         print(f"[EMAIL-TRACE] otp generated and row {otp_record_id} inserted")
 
-        # Send Email
-        print(f"[EMAIL-TRACE] resend send started")
-        success = send_verification_otp_email(email, otp)
+        # Send Email (Non-blocking)
+        print(f"[EMAIL-TRACE] resend send scheduled")
+        send_verification_otp_email(background_tasks, email, otp)
         
-        if not success:
-            print(f"[EMAIL-FAILURE] resend failure for {email}")
-            return {
-                "success": False,
-                "message": "Email delivery failed. Please check your email address."
-            }
-        
-        print(f"[EMAIL-TRACE] resend success")
+        print(f"[EMAIL-TRACE] request accepted")
         return {
             "success": True,
             "message": "Verification code sent successfully to your email."
@@ -128,12 +121,12 @@ def send_signup_otp(request: Request, body: SendOTPRequest):
 
 
 @router.post("/register", response_model=MessageResponse)
-def register_legacy_alias(request: Request, body: SendOTPRequest):
+def register_legacy_alias(request: Request, body: SendOTPRequest, background_tasks: BackgroundTasks):
     """
     POST /api/auth/register
     Legacy alias for send-signup-otp to maintain frontend compatibility.
     """
-    return send_signup_otp(request, body)
+    return send_signup_otp(request, body, background_tasks)
 
 # ── Step 2: Verify OTP ─────────────────────────────────────────
 @router.post("/verify-signup-otp")
@@ -467,7 +460,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(payload: ForgotPasswordRequest):
+def forgot_password(payload: ForgotPasswordRequest, background_tasks: BackgroundTasks):
     """
     POST /api/auth/forgot-password
     1. Check user exists
@@ -531,10 +524,11 @@ def forgot_password(payload: ForgotPasswordRequest):
         </body>
         </html>
         """
-        success = send_email(email, "Reset Your RESOLVIT Password", html)
+        # Dispatch via Background Task
+        background_tasks.add_task(dispatch_email_task, email, "Reset Your RESOLVIT Password", html, template_name="forgot_password")
         
         return {
-            "success": success,
+            "success": True,
             "message": "If an account exists, a reset link has been sent."
         }
 
@@ -607,16 +601,25 @@ def reset_password(payload: ResetPasswordRequest):
 @router.get("/profile")
 def get_user_profile(current_user: dict = Depends(get_current_user)):
     """
-    GET /api/user/profile (alias for /api/auth/profile)
-    Returns full profile with default stats / badges for ProfileManager frontend.
+    GET /api/user/profile
+    Returns full profile with aggregated stats from both main platform and care module.
     """
     user_data = get_me(current_user)
     user_id = current_user["sub"]
     
     with get_db() as cursor:
-        cursor.execute("SELECT COUNT(*) FROM issues WHERE reporter_id = %s", (user_id,))
-        count_data = cursor.fetchone()
-        issues_count = count_data[0] if count_data else 0
+        # 1. Count from main 'issues' table
+        cursor.execute("SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'resolved') FROM issues WHERE reporter_id = %s", (user_id,))
+        issues_data = cursor.fetchone()
+        
+        # 2. Count from 'reports' (Care module) table
+        # Note: reports table uses 'user_id' whereas issues uses 'reporter_id'
+        cursor.execute("SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'resolved') FROM reports WHERE user_id = %s", (user_id,))
+        reports_data = cursor.fetchone()
+
+        total_issues = (issues_data[0] if issues_data else 0) + (reports_data[0] if reports_data else 0)
+        total_resolved = (issues_data[1] if issues_data else 0) + (reports_data[1] if reports_data else 0)
+        active_ops = total_issues - total_resolved
 
     return {
         "success": True,
@@ -624,9 +627,45 @@ def get_user_profile(current_user: dict = Depends(get_current_user)):
         "stats": {
             "total_points": user_data.get("points_cache", 0),
             "rank": user_data.get("rank", "Citizen"),
-            "issues_count": issues_count
+            "issues_count": total_issues,
+            "resolved_count": total_resolved,
+            "active_count": active_ops
         },
         "badges": []
+    }
+
+
+@router.get("/history")
+def get_user_history(current_user: dict = Depends(get_current_user)):
+    """
+    GET /api/user/history
+    Returns a unified timeline of activity from both Issues and Reports.
+    """
+    user_id = current_user["sub"]
+    
+    query = """
+    (SELECT id, title, category, status, created_at, 'issue' as type FROM issues WHERE reporter_id = %s)
+    UNION ALL
+    (SELECT id, title, category, status, created_at, 'report' as type FROM reports WHERE user_id = %s)
+    ORDER BY created_at DESC
+    LIMIT 20
+    """
+    
+    with get_db() as cursor:
+        cursor.execute(query, (user_id, user_id))
+        rows = cursor.fetchall()
+        
+    results = []
+    for r in rows:
+        item = dict(r)
+        item["id"] = str(item["id"])
+        if item.get("created_at") and hasattr(item["created_at"], "isoformat"):
+            item["created_at"] = item["created_at"].isoformat()
+        results.append(item)
+        
+    return {
+        "success": True,
+        "data": results
     }
 
 

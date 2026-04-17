@@ -454,6 +454,8 @@
             <a class="sidebar-link" onclick="showPanel('anomaly-panel');closeSidebar()">🔍 Anomaly Board</a>
             <a class="sidebar-link" href="intelligence.html">🛰️ Elite Urban Intelligence</a>
             <a class="sidebar-link" onclick="showPanel('users-panel');closeSidebar()">👥 Citizen Management</a>
+            <a class="sidebar-link" onclick="showPanel('ngo-panel');closeSidebar()">🏢 NGO Management</a>
+            <a class="sidebar-link" onclick="showPanel('care-reports-panel');closeSidebar()">🏥 Care Operations</a>
             <a class="sidebar-link" onclick="showPanel('audit-panel');closeSidebar()">📜 System Audit Log</a>
             <div class="sidebar-sep"></div>
             <a class="sidebar-link" onclick="enterRadarMode()">🌌 Civic Radar Mode</a>
@@ -567,6 +569,80 @@
                 </div>
             </div>
 
+            <!-- NGO Management Panel -->
+            <div class="panel hidden" id="ngo-panel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div>
+                        <h3>🏢 NGO Management</h3>
+                        <p style="color:#64748b;font-size:0.85rem;">Manage humanitarian organizations and recruit NGO officers.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="CareAdmin.openCreateNGOModal()">+ Create NGO</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="esc-table">
+                        <thead>
+                            <tr>
+                                <th>Organization</th>
+                                <th>Contact</th>
+                                <th>Specialization</th>
+                                <th>Officers</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ngo-tbody">
+                            <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">Loading NGOs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="sidebar-sep" style="margin:30px 0;"></div>
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3>👥 NGO Officers</h3>
+                    <button class="btn btn-outline" onclick="CareAdmin.openRecruitOfficerModal()">+ Recruit Officer</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="esc-table">
+                        <thead>
+                            <tr>
+                                <th>Officer</th>
+                                <th>Organization</th>
+                                <th>Internal Role</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="officer-tbody">
+                            <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">Loading officers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Care Reports (Global Oversight) Panel -->
+            <div class="panel hidden" id="care-reports-panel">
+                <h3>🏥 Global Care Operations</h3>
+                <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">Oversight of all humanitarian social response complaints.</p>
+                <div style="overflow-x:auto;">
+                    <table class="esc-table">
+                        <thead>
+                            <tr>
+                                <th>Report</th>
+                                <th>Category</th>
+                                <th>Urgency</th>
+                                <th>Assigned NGO</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="care-reports-tbody">
+                            <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">Loading reports...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Audit Panel -->
             <div class="panel hidden" id="audit-panel">
                 <h3>📜 System Audit Log</h3>
@@ -657,6 +733,7 @@
             <script src="js/map_intelligence.js"></script>
             <script src="js/detail-manager.js"></script>
             <script src="js/simulation.js"></script>
+            <script src="js/care-admin.js"></script>
 
             <script>
                 // ── Mobile Sidebar Toggle ──────────────────────────
@@ -1015,7 +1092,7 @@
                     } catch (e) { showToast(e.message, "error"); }
                 }
 
-                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel", "audit-panel"];
+                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel", "ngo-panel", "care-reports-panel", "audit-panel"];
                 const panelTitles = {
                     "heatmap-panel":     ["🗺️ City Heatmap",                "Urban nodes pulse with severity. Hover for full intelligence."],
                     "governance-panel":  ["📊 Governance Health Index",      "Real-time city governance score across 5 dimensions."],
@@ -1025,6 +1102,8 @@
                     "analytics-panel":   ["📡 Civic Engagement Analytics",   "Participation metrics and issue category distribution."],
                     "anomaly-panel":     ["🔍 Anomaly Board",                 "Detected performance anomalies and suspicious officer patterns."],
                     "users-panel":       ["👥 Citizen Management",           "Review citizen reputation, trust scores, and access rights."],
+                    "ngo-panel":         ["🏢 NGO Management",               "Manage humanitarian organizations and recruit NGO officers."],
+                    "care-reports-panel":["🏥 Global Care Operations",        "Oversight of all humanitarian social response complaints."],
                     "audit-panel":       ["📜 System Audit Log",             "Immutable record of system state changes and admin actions."]
                 };
 

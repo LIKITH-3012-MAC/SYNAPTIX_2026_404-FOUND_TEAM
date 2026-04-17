@@ -106,6 +106,22 @@ const Auth = {
         return true;
     },
 
+    /**
+     * Enforce login by showing modal if not logged in.
+     */
+    enforceLogin(actionFnOrUrl) {
+        if (!this.getUser()) {
+            this.showModal('login');
+            return false;
+        }
+        if (typeof actionFnOrUrl === 'string') {
+            window.location.href = actionFnOrUrl;
+        } else if (typeof actionFnOrUrl === 'function') {
+            actionFnOrUrl();
+        }
+        return true;
+    },
+
     requireRole(roleOrRoles, redirectTo = 'index.html') {
         const user = this.getUser();
         const allowed = Array.isArray(roleOrRoles) ? roleOrRoles.map(r => r.toLowerCase()) : [roleOrRoles.toLowerCase()];
@@ -305,7 +321,7 @@ const Auth = {
                     ${langSelector}
                     ${themeToggle}
                     <button class="btn btn-outline btn-sm" onclick="Auth.showModal('login')" data-i18n="nav_login">Login</button>
-                    <a href="submit.html" class="btn btn-primary btn-sm" data-i18n="nav_report">Report Issue</a>
+                    <a href="javascript:void(0)" onclick="Auth.enforceLogin('submit.html')" class="btn btn-primary btn-sm" data-i18n="nav_report">Report Issue</a>
                 </div>
             `;
         } else {

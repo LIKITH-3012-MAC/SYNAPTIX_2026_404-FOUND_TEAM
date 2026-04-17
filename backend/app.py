@@ -36,6 +36,9 @@ from routes.simulation import router as simulation_router
 from routes.export_routes import router as export_router
 from routes.feedback_routes import router as feedback_router
 from routes.image_routes import router as image_router
+from routes.chat import router as chat_router
+from routes.ngo_routes import router as ngo_router
+from routes.care_reports import router as care_reports_router
 from database import execute_schema
 
 # -----------------------------
@@ -133,6 +136,9 @@ app.include_router(credits_router,    prefix="/api/credits",    tags=["Credits"]
 app.include_router(simulation_router, prefix="/api/simulation", tags=["Demo/Simulation"])
 app.include_router(feedback_router,   prefix="/api/feedback",   tags=["Feedback"])
 app.include_router(image_router,      prefix="/api/images",     tags=["Images"])
+app.include_router(chat_router,       prefix="/api/chat",       tags=["Chatbot"])
+app.include_router(ngo_router,        prefix="/api",            tags=["NGOs"])
+app.include_router(care_reports_router, prefix="/api/care",       tags=["Care Reports"])
 
 # -----------------------------
 # Health Check
