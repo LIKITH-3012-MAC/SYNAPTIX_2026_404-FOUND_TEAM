@@ -162,10 +162,17 @@ async def stream_groq_chat(messages: list, role: str = "citizen"):
                 "sources": sources
             }
 
-    except Exception as e:
-        print(f"[AI Copilot Error] {e}")
+    except httpx.HTTPStatusError as e:
+        print(f"[AI Copilot API Error] Status: {e.response.status_code} | Body: {e.response.text}")
         return {
-            "text": "The neural link encountered an anomaly while consulting the inference engine. Please try again.",
+            "text": "The inference engine returned an authorization or capacity error. Verification required.",
+            "action": "NONE",
+            "sources": []
+        }
+    except Exception as e:
+        print(f"[AI Copilot System Error] {type(e).__name__}: {e}")
+        return {
+            "text": "The neural link encountered a system-level anomaly. Please check engine connectivity.",
             "action": "NONE",
             "sources": []
         }

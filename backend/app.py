@@ -62,7 +62,14 @@ async def lifespan(app: FastAPI):
     else:
         print("[EMAIL-TRACE] Email system ready")
 
-    # 3. Start Scheduler
+    # 3. Validate AI Config
+    from services.ai_service import GROQ_API_KEY
+    if not GROQ_API_KEY:
+        print("[AI-ERROR] Groq API Key is MISSING from environment variables.")
+    else:
+        print(f"[AI-TRACE] Groq API Key detected (Length: {len(GROQ_API_KEY)}). Ready.")
+
+    # 4. Start Scheduler
     from services.escalation import run_escalation_check
     from services.priority import recalculate_all_priorities
     from services.pressure import recalculate_all_pressure_scores, run_anomaly_detection
