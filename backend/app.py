@@ -39,6 +39,7 @@ from routes.image_routes import router as image_router
 from routes.chat import router as chat_router
 from routes.ngo_routes import router as ngo_router
 from routes.care_reports import router as care_reports_router
+from routes.twitter_auth import router as twitter_router
 from database import execute_schema
 
 # -----------------------------
@@ -155,6 +156,7 @@ app.include_router(image_router,      prefix="/api/images",     tags=["Images"])
 app.include_router(chat_router,       prefix="/api",            tags=["Chatbot"])
 app.include_router(ngo_router,        prefix="/api",            tags=["NGOs"])
 app.include_router(care_reports_router, prefix="/api/care",       tags=["Care Reports"])
+app.include_router(twitter_router,    prefix="/api/auth/twitter", tags=["Twitter Auth"])
 
 # -----------------------------
 # Health Check

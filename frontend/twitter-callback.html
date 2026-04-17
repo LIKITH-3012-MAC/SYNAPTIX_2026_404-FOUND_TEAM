@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifying X Login | RESOLVIT</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/intro.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+        }
+
+        .auth-container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .loader {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #1da1f2;
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 10px; }
+        p { color: rgba(255, 255, 255, 0.6); font-size: 1rem; line-height: 1.5; }
+
+        .error-state { display: none; }
+        .error-message { color: #f87171; margin-top: 20px; font-weight: 600; }
+        .retry-btn {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .retry-btn:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <!-- Success/Processing State -->
+        <div id="processing-state">
+            <div class="loader"></div>
+            <h1>Syncing Intelligence...</h1>
+            <p>Finalizing your X identity sync with the RESOLVIT network. This should only take a moment.</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="error-state">
+            <div style="font-size: 50px; margin-bottom: 20px;">⚠️</div>
+            <h1>Authentication Failed</h1>
+            <p id="error-text" class="error-message">Unable to verify your X credentials.</p>
+            <a href="index.html" class="retry-btn">Return to Login</a>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        async function handleCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+
+            if (error) {
+                showError(`Twitter Error: ${error}`);
+                return;
+            }
+
+            if (!code) {
+                showError("Authorization code missing from Twitter redirect.");
+                return;
+            }
+
+            // PKCE Verification
+            const codeVerifier = localStorage.getItem('twitter_pkce_verifier');
+            if (!codeVerifier) {
+                showError("Session expired. Please try logging in again.");
+                return;
+            }
+
+            try {
+                // Sync with Backend
+                const response = await fetch('/api/auth/twitter/callback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code: code,
+                        code_verifier: codeVerifier
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.detail || data.message || "Backend synchronization failed.");
+                }
+
+                // Success! Store token and user
+                localStorage.setItem('resolvit_token', data.access_token);
+                localStorage.setItem('resolvit_user', JSON.stringify(data.user));
+                
+                // Cleanup
+                localStorage.removeItem('twitter_pkce_verifier');
+
+                // Redirect
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+
+            } catch (err) {
+                console.error("[Twitter-Callback] Error:", err);
+                showError(err.message);
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('processing-state').style.display = 'none';
+            document.getElementById('error-state').style.display = 'block';
+            document.getElementById('error-text').innerText = msg;
+        }
+
+        window.onload = handleCallback;
+    </script>
+</body>
+</html>

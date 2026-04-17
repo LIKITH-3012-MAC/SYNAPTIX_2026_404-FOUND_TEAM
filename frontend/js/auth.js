@@ -410,14 +410,37 @@ Auth._twitterLogin = async function(e) {
     if (btn) { btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
 
     try {
-        await loginWithTwitter(e);
-        // If we reach here the redirect happened — do nothing.
+        if (typeof PKCE === 'undefined') {
+            throw new Error('PKCE utilities not loaded');
+        }
+
+        // 1. Generate PKCE
+        const verifier = PKCE.generateVerifier();
+        const challenge = await PKCE.generateChallenge(verifier);
+        
+        // 2. Store verifier for callback
+        localStorage.setItem('twitter_pkce_verifier', verifier);
+        
+        // 3. Get Authorize Params from backend
+        const config = await API.get('/api/auth/twitter/authorize');
+        
+        // 4. Construct Twitter URL & Redirect
+        const params = new URLSearchParams({
+            response_type: 'code',
+            client_id: config.client_id,
+            redirect_uri: config.redirect_uri,
+            scope: config.scope,
+            state: config.state,
+            code_challenge: challenge,
+            code_challenge_method: 'S256'
+        });
+        
+        window.location.href = `${config.url}?${params.toString()}`;
     } catch (err) {
-        // Redirect did not happen — connection likely not configured
-        console.warn('[Auth] Twitter login unavailable:', err.message);
+        console.error('[Auth] Twitter login failed:', err);
         if (btn) { btn.innerHTML = orig; btn.disabled = false; }
         if (typeof showToast === 'function') {
-            showToast('ℹ️ Twitter login is not yet configured. Please use Google or GitHub.', 'info');
+            showToast('❌ Twitter login failed. Please use Google or GitHub.', 'error');
         }
     }
 };

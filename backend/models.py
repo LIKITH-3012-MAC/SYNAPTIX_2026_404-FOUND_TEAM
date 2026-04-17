@@ -91,7 +91,7 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id:              str
     username:        str
-    email:           str
+    email:           Optional[str] = None
     role:            str
     full_name:       Optional[str]
     department:      Optional[str]

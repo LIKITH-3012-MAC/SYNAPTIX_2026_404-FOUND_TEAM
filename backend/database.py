@@ -444,6 +444,14 @@ def execute_schema():
         """,
         # ─── END RESOLVIT CARE EXTENSIONS ──────────────────────────────────────
 
+        # User Table Extensions for Direct Twitter
+        "ALTER TABLE users ALTER COLUMN email DROP NOT NULL;",
+        "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_user_id VARCHAR(255);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS twitter_access_token_encrypted TEXT;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS twitter_refresh_token_encrypted TEXT;",
+        "CREATE INDEX IF NOT EXISTS idx_users_provider_id ON users(auth_provider, provider_user_id);",
+
         # Adjusting Constraints
         "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_issues_cluster') THEN ALTER TABLE issues ADD CONSTRAINT fk_issues_cluster FOREIGN KEY (cluster_id) REFERENCES issue_clusters(id) ON DELETE SET NULL; END IF; END $$;",
     ]
