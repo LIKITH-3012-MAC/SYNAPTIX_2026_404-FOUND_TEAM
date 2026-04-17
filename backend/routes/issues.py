@@ -17,10 +17,11 @@ from typing import Optional
 from models import IssueCreate, IssueUpdate, IssueResponse, MessageResponse, DataResponse
 from database import get_db
 from auth import get_current_user, require_roles
-from services.priority import calculate_priority, get_sla_hours, get_sla_expiry, predict_sla_breach_risk
+from services.priority import calculate_priority, predict_sla_breach_risk
 from services.clustering import attempt_clustering
 from services.blockchain import log_event
 from services.escalation import award_credits
+from services.workflow_engine import WorkflowEngine
 from services.email_service import send_issue_update_email
 from datetime import datetime, timezone
 
@@ -143,104 +144,26 @@ def create_issue(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Create a new civic issue. Triggers:
-    1. SLA calculation (per category)
-    2. Priority score calculation
-    3. AI clustering check
-    4. Civic credits (+10 to reporter)
-    5. Blockchain audit log
+    Create a new civic issue using the production-grade WorkflowEngine.
     """
-    issue_id = str(uuid.uuid4())
-    reporter_id = current_user["sub"]
-    category = payload.category.value
-    now = datetime.now(timezone.utc)
-
-    # Step 1: SLA calculation
-    sla_hours = get_sla_hours(category)
-    sla_expires_at = get_sla_expiry(category, now)
-
-    # Step 2: Priority score
-    priority_score = calculate_priority(
-        impact_scale=payload.impact_scale,
-        urgency=payload.urgency,
-        created_at=now,
-        safety_risk_probability=payload.safety_risk_probability,
-        report_count=1,
-        upvotes=0,
-        escalation_level=0,
-    )
-
-    with get_db() as cursor:
-        cursor.execute(
-            """
-            INSERT INTO issues
-                (id, title, description, category, latitude, longitude,
-                 urgency, impact_scale, image_url, status, priority_score,
-                 safety_risk_probability, sla_hours, sla_expires_at,
-                 upvotes, report_count, escalation_level,
-                 reporter_id, created_at, updated_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'reported',%s,%s,%s,%s,0,1,0,%s,NOW(),NOW())
-            RETURNING *
-            """,
-            (
-                issue_id, payload.title, payload.description, category,
-                payload.latitude, payload.longitude, payload.urgency,
-                payload.impact_scale, payload.image_url,
-                priority_score, payload.safety_risk_probability,
-                sla_hours, sla_expires_at,
-                reporter_id
-            )
-        )
-        issue = dict(cursor.fetchone())
-
-        # Step 3: Register primary evidence in attachments table
-        if payload.image_url:
-            cursor.execute(
-                """
-                INSERT INTO issue_attachments (issue_id, file_url, file_name, file_type, uploaded_by)
-                VALUES (%s, %s, %s, 'photo', %s)
-                """,
-                (issue_id, payload.image_url, "primary_evidence.jpg", reporter_id)
-            )
-
-        # Step 4: Award +10 civic credits to reporter
-        award_credits(
-            user_id=reporter_id,
-            issue_id=issue_id,
-            action_type="report_issue",
-            points=10,
-            description=f"Reported civic issue: {payload.title[:60]}",
-            cursor=cursor
-        )
-
-    # Step 3: AI Clustering
-    if payload.latitude and payload.longitude:
-        cluster_id = attempt_clustering(
-            issue_id=issue_id,
-            title=payload.title,
-            category=category,
-            latitude=payload.latitude,
-            longitude=payload.longitude
-        )
-        if cluster_id:
-            issue["cluster_id"] = cluster_id
-            issue["status"] = "clustered"
-
-    # Step 5: Blockchain audit log
-    log_event(
-        issue_id=issue_id,
-        event_type="created",
-        actor_id=reporter_id,
-        new_value={
-            "title": payload.title,
-            "category": category,
-            "urgency": payload.urgency,
-            "priority_score": priority_score,
-            "sla_hours": sla_hours,
-        },
-        title=payload.title,
-        description=payload.description
-    )
+    try:
+        reporter_id = current_user["sub"]
+        
+        # Enforce default source
+        if not payload.source or payload.source == "web":
+            payload.source = "web"
+            
+        issue_data = WorkflowEngine.process_new_issue(payload, reporter_id)
+        
+        return {
+            "success": True,
+            "message": "Issue created successfully via production pipeline",
+            "data": _serialize_issue(issue_data, show_email=True)
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {
         "success": True,

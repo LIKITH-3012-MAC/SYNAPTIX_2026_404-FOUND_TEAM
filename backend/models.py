@@ -110,14 +110,17 @@ class IssueCreate(BaseModel):
     description: str = Field(..., min_length=20)
     category:    IssueCategory
     subcategory: Optional[str] = None
-    latitude:    float = Field(..., ge=-90, le=90)
-    longitude:   float = Field(..., ge=-180, le=180)
+    latitude:    Optional[float] = Field(None, ge=-90, le=90)
+    longitude:   Optional[float] = Field(None, ge=-180, le=180)
+    location_text: Optional[str] = None
     address:     Optional[str] = None
     urgency:     int = Field(3, ge=1, le=5)
     severity:    int = Field(3, ge=1, le=5)
     impact_scale: int = Field(1, ge=1)
     image_url:   Optional[str] = None
     safety_risk_probability: float = Field(0.1, ge=0.0, le=1.0)
+    source:      str = "web"
+    user_id:     Optional[str] = None
 
 
 class IssueUpdate(BaseModel):

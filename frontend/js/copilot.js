@@ -1,7 +1,23 @@
 /**
- * RESOLVIT AI COPILOT
- * Core Logic Engine - Frontend UI handler pointing to Python Backend
+ * RESOLVIT AI COPILOT v2 (Production Engine)
+ * Rebuilt as a state-driven, AI-integrated workflow system.
  */
+
+const COPILOT_STATES = {
+    INIT: 'INIT',
+    COLLECT_TITLE: 'COLLECT_TITLE',
+    COLLECT_CATEGORY: 'COLLECT_CATEGORY',
+    COLLECT_DESCRIPTION: 'COLLECT_DESCRIPTION',
+    COLLECT_SEVERITY: 'COLLECT_SEVERITY',
+    COLLECT_PEOPLE: 'COLLECT_PEOPLE',
+    COLLECT_LOCATION: 'COLLECT_LOCATION',
+    COLLECT_EVIDENCE: 'COLLECT_EVIDENCE',
+    PREVIEW: 'PREVIEW',
+    CONFIRM: 'CONFIRM',
+    SUBMITTING: 'SUBMITTING',
+    SUCCESS: 'SUCCESS',
+    ERROR: 'ERROR'
+};
 
 class ResolvitCopilot {
     constructor(config = {}) {
@@ -14,8 +30,24 @@ class ResolvitCopilot {
         this.isOpen = false;
         this.isTyping = false;
 
+        // Complaint State Machine
+        this.state = COPILOT_STATES.INIT;
+        this.issueDraft = {
+            title: '',
+            category: '',
+            description: '',
+            urgency: 3,
+            impact_scale: 1,
+            location_text: '',
+            latitude: null,
+            longitude: null,
+            image_url: '',
+            source: 'copilot_chat'
+        };
+
         this.initDOM();
         this.bindEvents();
+        this.recoverDraft();
     }
 
     getNeuralIcon(sizeClass = '') {
@@ -44,7 +76,7 @@ class ResolvitCopilot {
                         </div>
                         <div class="copilot-title-container">
                             <span class="copilot-title">Resolvit AI Copilot</span>
-                            <span class="copilot-status"><div class="copilot-status-dot"></div> Operational • Role: ${this.role.toUpperCase()}</span>
+                            <span class="copilot-status"><div class="copilot-status-dot"></div> Production Engine • Role: ${this.role.toUpperCase()}</span>
                         </div>
                     </div>
                     <button id="copilot-close" class="copilot-btn" style="color:white;"><i class="fas fa-times"></i></button>
@@ -55,7 +87,8 @@ class ResolvitCopilot {
                         <div class="ai-avatar"><i class="fas fa-robot"></i></div>
                         <div class="msg-bubble">
                             <p>Hello! I am your <strong>Resolvit AI Copilot</strong>.</p>
-                            <p>I can help you report an issue intelligently. What would you like to do?</p>
+                            <p>I was developed by <strong>Likith Naidu Anumakonda</strong> for the RESOLVIT platform.</p>
+                            <p>I can help you report civic issues intelligently. What's on your mind?</p>
                         </div>
                     </div>
                 </div>
@@ -66,15 +99,15 @@ class ResolvitCopilot {
                     </div>
                     
                     <div class="copilot-input-wrapper">
-                        <button class="copilot-btn" title="Attach Document"><i class="fas fa-paperclip"></i></button>
-                        <input type="text" id="copilot-input" class="copilot-input" placeholder="Ask Copilot or declare an issue..." autocomplete="off">
-                        <button class="copilot-btn" title="Voice Input"><i class="fas fa-microphone"></i></button>
+                        <button class="copilot-btn" id="copilot-attach" title="Attach Evidence"><i class="fas fa-camera"></i></button>
+                        <input type="text" id="copilot-input" class="copilot-input" placeholder="Ask anything or report an issue..." autocomplete="off">
+                        <button class="copilot-btn" id="copilot-voice" title="Voice Input"><i class="fas fa-microphone"></i></button>
                         <button id="copilot-send" class="copilot-btn copilot-send-btn"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>
         `;
-        // Only inject if it doesn't exist
+        
         if (!document.getElementById('copilot-launcher')) {
             document.body.insertAdjacentHTML('beforeend', copilotHTML);
         }
@@ -97,27 +130,30 @@ class ResolvitCopilot {
             if (e.key === 'Enter') this.handleSend();
         });
 
-        // Delegate clicks for suggestion chips
         this.suggestContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('copilot-suggestion-chip')) {
                 this.input.value = e.target.innerText;
                 this.handleSend();
             }
         });
+
+        // Auth resume listener
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'resolvit_token' && e.newValue && this.state === COPILOT_STATES.CONFIRM) {
+                this.handleSend(); // Resume flow
+            }
+        });
     }
 
     getSuggestions() {
-        if (this.role === 'citizen' || this.role === 'user') {
+        if (this.state === COPILOT_STATES.INIT) {
             return `
-                <div class="copilot-suggestion-chip">Raise an issue</div>
-                <div class="copilot-suggestion-chip">How do I report a problem?</div>
-                <div class="copilot-suggestion-chip">What category fits my issue?</div>
+                <div class="copilot-suggestion-chip">Report an issue</div>
+                <div class="copilot-suggestion-chip">Check map clusters</div>
+                <div class="copilot-suggestion-chip">Who built you?</div>
             `;
         }
-        return `
-            <div class="copilot-suggestion-chip">Summarize urgent cases</div>
-            <div class="copilot-suggestion-chip">What supplies should I carry?</div>
-        `;
+        return '';
     }
 
     togglePanel() {
@@ -134,36 +170,306 @@ class ResolvitCopilot {
 
     async handleSend() {
         const text = this.input.value.trim();
-        if (!text || this.isTyping) return;
+        if (!text && this.state !== COPILOT_STATES.CONFIRM) return;
 
-        this.input.value = '';
-        this.appendMessage('user', text);
-        this.chatHistory.push({ role: "user", content: text });
+        if (text) {
+            this.input.value = '';
+            this.appendMessage('user', text);
+            this.chatHistory.push({ role: "user", content: text });
+        }
 
         this.showTyping();
 
         try {
-            const data = await this.callBackendCopilot();
-            this.removeTyping();
-
-            // Append standard AI reply with sources
-            this.appendMessage('ai', data.text, data.sources);
-            this.chatHistory.push({ role: "assistant", content: data.text });
-
-            // Handle INTENT actions
-            if (data.action === "SHOW_INTAKE_FORM") {
-                this.handleIntakeIntent();
-            }
-
+            await this.processState(text);
         } catch (error) {
-            console.error("AI Copilot Error:", error);
+            console.error("Copilot Error:", error);
+            this.appendMessage('ai', "Neural link encountered a system-level anomaly. Please try again.");
+        } finally {
             this.removeTyping();
-            this.appendMessage('ai', "Neural link disconnected. Check connection.");
         }
     }
 
-    handleIntakeIntent() {
-        this.renderMiniForm();
+    async processState(input) {
+        // AI INTENT DETECTION (Simplified for now, can use backend)
+        if (this.state === COPILOT_STATES.INIT) {
+            if (input.toLowerCase().includes('report') || input.toLowerCase().includes('issue') || input.toLowerCase().includes('problem')) {
+                this.state = COPILOT_STATES.COLLECT_TITLE;
+                this.appendMessage('ai', "🚀 **Excellent.** Let's build a structured report.\n\nWhat is the **main title** of this incident? (Keep it short and descriptive)");
+                return;
+            }
+            if (input.toLowerCase().includes('who built you') || input.toLowerCase().includes('creator')) {
+                this.appendMessage('ai', "I was developed by **Likith Naidu Anumakonda** for the RESOLVIT platform. My purpose is to bridge the gap between citizens and authorities through AI.");
+                return;
+            }
+            
+            // Standard Chat
+            const data = await this.callBackendCopilot();
+            this.appendMessage('ai', data.text, data.sources);
+            return;
+        }
+
+        switch (this.state) {
+            case COPILOT_STATES.COLLECT_TITLE:
+                this.issueDraft.title = input;
+                this.state = COPILOT_STATES.COLLECT_CATEGORY;
+                this.appendMessage('ai', `✅ **Title Captured.**\n\nWhat **category** does this fall into? (Roads, Water, Sanitation, Safety, Electricity, Other)`);
+                this.renderCategoryPicker();
+                break;
+
+            case COPILOT_STATES.COLLECT_CATEGORY:
+                this.issueDraft.category = input;
+                this.state = COPILOT_STATES.COLLECT_DESCRIPTION;
+                this.appendMessage('ai', "🔍 **Classification noted.**\n\nPlease provide a **detailed description** of what's happening. The more detail, the higher the priority score.");
+                break;
+
+            case COPILOT_STATES.COLLECT_DESCRIPTION:
+                this.issueDraft.description = input;
+                this.state = COPILOT_STATES.COLLECT_LOCATION;
+                this.appendMessage('ai', "📍 **Awaiting Geospatial Focus.**\n\nWhere is this happening? You can share your **GPS Location** for 100% precision, or type the area name.");
+                this.renderLocationPicker();
+                break;
+
+            case COPILOT_STATES.COLLECT_LOCATION:
+                if (input) this.issueDraft.location_text = input;
+                this.state = COPILOT_STATES.COLLECT_SEVERITY;
+                this.appendMessage('ai', "⚠️ **Impact Assessment.**\n\nOn a scale of 1-5, how **urgent** is this? (1: Low, 5: Critical)");
+                this.renderSeveritySlider();
+                break;
+
+            case COPILOT_STATES.COLLECT_SEVERITY:
+                this.issueDraft.urgency = parseInt(input) || 3;
+                this.state = COPILOT_STATES.PREVIEW;
+                this.renderPreview();
+                break;
+
+            case COPILOT_STATES.PREVIEW:
+                if (input.toLowerCase().includes('confirm') || input.toLowerCase().includes('submit')) {
+                    this.submitComplaint();
+                } else if (input.toLowerCase().includes('edit')) {
+                    this.state = COPILOT_STATES.COLLECT_TITLE;
+                    this.appendMessage('ai', "Restarting flow. What's the new title?");
+                }
+                break;
+        }
+
+        this.saveDraft();
+    }
+
+    renderCategoryPicker() {
+        const categories = ['Roads', 'Water', 'Sanitation', 'Safety', 'Electricity', 'Other'];
+        const chipContainer = document.createElement('div');
+        chipContainer.className = 'msg-container msg-ai';
+        let html = '<div class="ai-avatar"><i class="fas fa-robot"></i></div><div class="msg-bubble category-picker"><div class="chip-grid">';
+        categories.forEach(cat => {
+            html += `<button class="category-chip" onclick="window.resolvitCopilotInstance.setCategory('${cat}')">${cat}</button>`;
+        });
+        html += '</div></div>';
+        chipContainer.innerHTML = html;
+        this.messagesDiv.appendChild(chipContainer);
+        this.scrollToBottom();
+    }
+
+    setCategory(cat) {
+        this.input.value = cat;
+        this.handleSend();
+    }
+
+    renderLocationPicker() {
+        const container = document.createElement('div');
+        container.className = 'msg-container msg-ai';
+        container.innerHTML = `
+            <div class="ai-avatar"><i class="fas fa-robot"></i></div>
+            <div class="msg-bubble location-picker">
+                <button class="copilot-card-btn gps-btn" onclick="window.resolvitCopilotInstance.captureGPS()">
+                    <i class="fas fa-location-arrow"></i> Use Live GPS
+                </button>
+                <div style="margin-top:10px; font-size: 0.75rem; color: #94a3b8; text-align:center;">OR Type Area Name Below</div>
+            </div>
+        `;
+        this.messagesDiv.appendChild(container);
+        this.scrollToBottom();
+    }
+
+    async captureGPS() {
+        if (!navigator.geolocation) {
+            this.appendMessage('ai', "Geolocation is not supported by your browser.");
+            return;
+        }
+
+        this.appendMessage('ai', "🛰️ **Interfacing with orbital satellites...**");
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                this.issueDraft.latitude = pos.coords.latitude;
+                this.issueDraft.longitude = pos.coords.longitude;
+                this.issueDraft.location_text = "GPS Coordinate Sync Success";
+                this.appendMessage('ai', `✅ **GPS Locked:** ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+                this.handleSend();
+            },
+            (err) => {
+                this.appendMessage('ai', "⚠️ **Signal Lost.** Please enter the location manually.");
+            }
+        );
+    }
+
+    renderSeveritySlider() {
+        const container = document.createElement('div');
+        container.className = 'msg-container msg-ai';
+        container.innerHTML = `
+            <div class="ai-avatar"><i class="fas fa-robot"></i></div>
+            <div class="msg-bubble severity-picker">
+                <input type="range" min="1" max="5" step="1" id="severity-range" value="3" list="sev-marks" style="width:100%;">
+                <datalist id="sev-marks"><option value="1"><option value="2"><option value="3"><option value="4"><option value="5"></datalist>
+                <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-top:5px; color:#94a3b8;">
+                    <span>Routine</span>
+                    <span>Critical</span>
+                </div>
+                <button class="copilot-card-btn primary" style="margin-top:15px; width:100%;" onclick="window.resolvitCopilotInstance.setSeverity()">Set Urgency</button>
+            </div>
+        `;
+        this.messagesDiv.appendChild(container);
+        this.scrollToBottom();
+    }
+
+    setSeverity() {
+        const val = document.getElementById('severity-range').value;
+        this.input.value = val;
+        this.handleSend();
+    }
+
+    renderPreview() {
+        const d = this.issueDraft;
+        const container = document.createElement('div');
+        container.className = 'msg-container msg-ai';
+        container.innerHTML = `
+            <div class="ai-avatar"><i class="fas fa-robot"></i></div>
+            <div class="msg-bubble preview-card glass-card">
+                <div class="preview-header"><i class="fas fa-clipboard-check"></i> Report Summary</div>
+                <div class="preview-item"><strong>Title:</strong> ${d.title}</div>
+                <div class="preview-item"><strong>Category:</strong> ${d.category}</div>
+                <div class="preview-item"><strong>Description:</strong> ${d.description}</div>
+                <div class="preview-item"><strong>Location:</strong> ${d.location_text} ${d.latitude ? '🛰️' : '✍️'}</div>
+                <div class="preview-item"><strong>Urgency:</strong> Level ${d.urgency}</div>
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="copilot-card-btn primary" style="flex:2;" onclick="window.resolvitCopilotInstance.submitComplaint()">Confirm & Submit</button>
+                    <button class="copilot-card-btn secondary" style="flex:1;" onclick="window.resolvitCopilotInstance.editComplaint()">Edit</button>
+                </div>
+            </div>
+        `;
+        this.messagesDiv.appendChild(container);
+        this.scrollToBottom();
+    }
+
+    editComplaint() {
+        this.input.value = "edit";
+        this.handleSend();
+    }
+
+    async submitComplaint() {
+        // AUTH GATE
+        const token = localStorage.getItem('resolvit_token');
+        if (!token) {
+            this.state = COPILOT_STATES.CONFIRM;
+            this.saveDraft();
+            this.renderAuthGate();
+            return;
+        }
+
+        this.showTyping();
+        try {
+            const response = await fetch(this.intakeUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(this.issueDraft)
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                this.state = COPILOT_STATES.SUCCESS;
+                this.clearDraft();
+                this.renderSuccess(data.data);
+            } else {
+                this.appendMessage('ai', `Error: ${data.detail || 'Failed to submit'}`);
+            }
+        } catch (err) {
+            this.appendMessage('ai', "Network error. Please try again.");
+        } finally {
+            this.removeTyping();
+        }
+    }
+
+    renderAuthGate() {
+        const container = document.createElement('div');
+        container.className = 'msg-container msg-ai';
+        container.innerHTML = `
+            <div class="ai-avatar"><i class="fas fa-robot"></i></div>
+            <div class="msg-bubble auth-gate-card">
+                <div style="font-size: 2rem; color: #f59e0b; margin-bottom: 8px;"><i class="fas fa-user-shield"></i></div>
+                <h3 style="margin:0 0 8px 0; color:white;">Identity Verification</h3>
+                <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;">Your report is ready. **Login required** to submit to the official pipeline.</p>
+                <div style="display:flex; gap:10px; width: 100%;">
+                    <button class="copilot-card-btn primary" onclick="if(window.Auth) Auth.showModal('login')">Open Login Modal</button>
+                </div>
+            </div>
+        `;
+        this.messagesDiv.appendChild(container);
+        this.scrollToBottom();
+    }
+
+    renderSuccess(issue) {
+        const container = document.createElement('div');
+        container.className = 'msg-container msg-ai';
+        container.innerHTML = `
+            <div class="ai-avatar"><i class="fas fa-robot"></i></div>
+            <div class="msg-bubble success-card">
+                <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                <h3 style="margin:5px 0; color:#10b981;">Report Validated</h3>
+                <p style="font-size:0.8rem; margin-bottom:15px;">Your issue is now part of the **${issue.status.toUpperCase()}** cluster.</p>
+                
+                <div class="success-details">
+                    <div class="detail-row"><span>Tracking ID:</span> <strong>${issue.id.slice(0,8)}</strong></div>
+                    <div class="detail-row"><span>Priority Score:</span> <strong>${issue.priority_score.toFixed(1)}</strong></div>
+                    <div class="detail-row"><span>SLA Duration:</span> <strong>${issue.sla_hours} Hours</strong></div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
+                    <button class="copilot-card-btn" onclick="window.location.href='dashboard.html'">Track Progress</button>
+                    <button class="copilot-card-btn" onclick="window.location.href='index.html?open_map=${issue.id}'">View on Map</button>
+                </div>
+            </div>
+        `;
+        this.messagesDiv.appendChild(container);
+        this.scrollToBottom();
+        this.state = COPILOT_STATES.INIT;
+    }
+
+    saveDraft() {
+        localStorage.setItem('copilot_draft', JSON.stringify({
+            state: this.state,
+            draft: this.issueDraft
+        }));
+    }
+
+    recoverDraft() {
+        try {
+            const raw = localStorage.getItem('copilot_draft');
+            if (raw) {
+                const saved = JSON.parse(raw);
+                if (saved.state !== COPILOT_STATES.INIT && saved.state !== COPILOT_STATES.SUCCESS) {
+                    this.state = saved.state;
+                    this.issueDraft = saved.draft;
+                    this.appendMessage('ai', "👋 **Welcome back.** I recovered your previous report draft. Shall we continue?");
+                    this.renderPreview();
+                }
+            }
+        } catch (e) {}
+    }
+
+    clearDraft() {
+        localStorage.removeItem('copilot_draft');
     }
 
     appendMessage(sender, text, sources = []) {
@@ -174,49 +480,17 @@ class ResolvitCopilot {
         if (sender === 'ai') {
             let ragChips = '';
             if (sources.length > 0) {
-                ragChips = '<div class="rag-sources">';
-                sources.forEach(src => {
-                    ragChips += `<div class="rag-chip"><i class="fas fa-database"></i> ${src}</div>`;
-                });
-                ragChips += '</div>';
+                ragChips = '<div class="rag-sources">' + sources.map(src => `<div class="rag-chip"><i class="fas fa-database"></i> ${src}</div>`).join('') + '</div>';
             }
 
-            // Parse Markdown Elements
-            let lines = text.split('\n');
-            let parsedHtml = '';
-            let inList = false;
-
-            for (let line of lines) {
-                line = line.trim();
-                if (!line) { parsedHtml += '<br>'; continue; }
-
-                // Bold
-                line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-                // Headings
-                if (line.startsWith('### ')) {
-                    line = `<h4>${line.substring(4)}</h4>`;
-                } else if (line.startsWith('## ')) {
-                    line = `<h3>${line.substring(3)}</h3>`;
-                } else if (line.startsWith('# ')) {
-                    line = `<h2>${line.substring(2)}</h2>`;
-                }
-                
-                // Lists (Bullet and Numbered)
-                if (line.match(/^(\d+\.|-|\*)\s+(.*)/)) {
-                    if (!inList) { parsedHtml += '<ul>'; inList = true; }
-                    let content = line.replace(/^(\d+\.|-|\*)\s+/, '');
-                    parsedHtml += `<li>${content}</li>`;
-                } else {
-                    if (inList) { parsedHtml += '</ul>'; inList = false; }
-                    if (!line.startsWith('<h')) {
-                        parsedHtml += `<p>${line}</p>`;
-                    } else {
-                        parsedHtml += line;
-                    }
-                }
-            }
-            if (inList) parsedHtml += '</ul>';
+            // Simple Markdown Support
+            let parsedHtml = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^### (.*)/gm, '<h4>$1</h4>')
+                .replace(/^## (.*)/gm, '<h3>$1</h3>')
+                .replace(/^# (.*)/gm, '<h2>$1</h2>')
+                .replace(/\n\n/g, '<br>')
+                .replace(/\n/g, '<br>');
 
             innerHTML = `
                 <div class="ai-avatar"><i class="fas fa-robot"></i></div>
@@ -232,149 +506,6 @@ class ResolvitCopilot {
         this.scrollToBottom();
     }
 
-    renderAuthGate() {
-        const container = document.createElement('div');
-        container.className = 'msg-container msg-ai';
-        container.innerHTML = `
-            <div class="ai-avatar"><i class="fas fa-robot"></i></div>
-            <div class="msg-bubble auth-gate-card">
-                <div style="font-size: 2rem; color: #ef4444; margin-bottom: 8px;"><i class="fas fa-lock"></i></div>
-                <h3 style="margin:0 0 8px 0; color:white;">Authentication Required</h3>
-                <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;">You need to be logged in before submitting a complaint. Please log in first, then continue.</p>
-                <div style="display:flex; gap:10px; width: 100%;">
-                    <button class="copilot-card-btn primary" onclick="window.location.href='login.html'">Login</button>
-                    <button class="copilot-card-btn secondary" onclick="window.location.href='signup.html'">Sign Up</button>
-                </div>
-            </div>
-        `;
-        this.messagesDiv.appendChild(container);
-        this.scrollToBottom();
-    }
-
-    renderMiniForm() {
-        const container = document.createElement('div');
-        container.className = 'msg-container msg-ai';
-        const formId = "copilot-form-" + Date.now();
-
-        // Load preserved draft if any
-        let draft = {};
-        try {
-            const saved = localStorage.getItem('copilot_draft');
-            if (saved) draft = JSON.parse(saved);
-        } catch(e) {}
-
-        container.innerHTML = `
-            <div class="ai-avatar"><i class="fas fa-robot"></i></div>
-            <div class="msg-bubble mini-form-card">
-                <div class="mini-form-header">
-                    <i class="fas fa-file-signature"></i> 
-                    <span>Structured Incident Report</span>
-                </div>
-                <form id="${formId}" class="copilot-mini-form" onsubmit="event.preventDefault(); window.resolvitCopilotInstance.submitMiniForm('${formId}')">
-                    <div class="form-group">
-                        <label>Issue Title</label>
-                        <input type="text" name="title" required placeholder="E.g., Pothole on High Street" value="${draft.title || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Category</label>
-                        <select name="category" required>
-                            <option value="">Select Category...</option>
-                            <option value="roads" ${draft.category==='roads'?'selected':''}>Roads & Infrastructure</option>
-                            <option value="sanitation" ${draft.category==='sanitation'?'selected':''}>Sanitation</option>
-                            <option value="water" ${draft.category==='water'?'selected':''}>Water Supply</option>
-                            <option value="safety" ${draft.category==='safety'?'selected':''}>Public Safety</option>
-                            <option value="other" ${draft.category==='other'?'selected':''}>Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Location (Area/Landmark)</label>
-                        <input type="text" name="location" required placeholder="Enter precise location..." value="${draft.location || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea name="description" required placeholder="Provide details...">${draft.description || ''}</textarea>
-                    </div>
-                    <div style="display:flex; gap:12px;">
-                        <div class="form-group" style="flex:1;">
-                            <label>Severity (1-5)</label>
-                            <input type="number" name="urgency" min="1" max="5" value="${draft.urgency || 3}" required>
-                        </div>
-                        <div class="form-group" style="flex:1;">
-                            <label>People Affected</label>
-                            <input type="number" name="impact_scale" placeholder="Optional" value="${draft.impact_scale || ''}">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Photo Evidence (Optional URL)</label>
-                        <input type="text" name="image_url" placeholder="https://..." value="${draft.image_url || ''}">
-                    </div>
-                    <div style="margin-top:16px;">
-                        <button type="submit" class="copilot-submit-btn">Submit to Blockchain Audit Trail</button>
-                    </div>
-                </form>
-            </div>
-        `;
-        this.messagesDiv.appendChild(container);
-        this.scrollToBottom();
-    }
-
-    async submitMiniForm(formId) {
-        const formEl = document.getElementById(formId);
-        if (!formEl) return;
-
-        const formData = new FormData(formEl);
-        
-        const token = localStorage.getItem('resolvit_token') || localStorage.getItem('token');
-        if (!token) {
-            // Preserve drafting state locally
-            const draftObj = Object.fromEntries(formData.entries());
-            localStorage.setItem('copilot_draft', JSON.stringify(draftObj));
-            
-            // Show Elite Auth gate
-            this.renderAuthGate();
-            return;
-        }
-
-        const payload = {
-            title: formData.get('title'),
-            category: formData.get('category'),
-            description: formData.get('description'),
-            urgency: parseInt(formData.get('urgency')) || 3,
-            impact_scale: parseInt(formData.get('impact_scale')) || 2, 
-            safety_risk_probability: 0.1, 
-            location: formData.get('location'),
-            image_url: formData.get('image_url')
-        };
-
-        // Clear preserved draft upon proceeding with submission
-        localStorage.removeItem('copilot_draft');
-
-        formEl.innerHTML = '<div style="color:#10b981; font-weight:bold; text-align:center;"><i class="fas fa-spinner fa-spin"></i> Submitting to backend...</div>';
-
-        try {
-            const response = await fetch(this.intakeUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                formEl.innerHTML = `<div style="color:#a5b4fc; font-weight:bold; text-align:center;"><i class="fas fa-check-circle"></i> Issue Logged Successfully! Tracking ID: ${data.data.id}</div>`;
-                this.appendMessage('ai', `Your issue has been successfully routed to the authorities with Priority Score: **${data.data.priority_score.toFixed(1)}**! You can track this in your dashboard.`);
-            } else {
-                formEl.innerHTML = `<div style="color:#f87171; text-align:center;">Failed: ${data.detail || 'Unknown error'}</div>`;
-            }
-
-        } catch (err) {
-            formEl.innerHTML = `<div style="color:#f87171; text-align:center;">Network error.</div>`;
-        }
-    }
-
     showTyping() {
         this.isTyping = true;
         const container = document.createElement('div');
@@ -382,12 +513,8 @@ class ResolvitCopilot {
         container.id = 'typing-indicator-container';
         container.innerHTML = `
             <div class="ai-avatar"><i class="fas fa-robot"></i></div>
-            <div class="msg-bubble">
-                <div class="typing-indicator">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
+            <div class="msg-bubble typing-bubble">
+                <div class="typing-indicator"><span></span><span></span><span></span></div>
             </div>
         `;
         this.messagesDiv.appendChild(container);
@@ -400,45 +527,27 @@ class ResolvitCopilot {
         if (el) el.remove();
     }
 
-    scrollToBottom(force = false) {
+    scrollToBottom() {
         if (!this.messagesDiv) return;
-
-        // Intelligent Auto-scroll calculation
-        // Check if the user is currently at or near the bottom (within ~150px)
-        const isNearBottom = this.messagesDiv.scrollHeight - this.messagesDiv.scrollTop - this.messagesDiv.clientHeight < 150;
-        
-        if (force || isNearBottom) {
-            this.messagesDiv.scrollTo({
-                top: this.messagesDiv.scrollHeight,
-                behavior: 'smooth'
-            });
-        }
+        this.messagesDiv.scrollTo({
+            top: this.messagesDiv.scrollHeight,
+            behavior: 'smooth'
+        });
     }
 
     async callBackendCopilot() {
-        const payload = {
-            messages: this.chatHistory,
-            user_role: this.role
-        };
-
+        const payload = { messages: this.chatHistory, user_role: this.role };
         const response = await fetch(this.apiUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data; // { text: "...", action: "...", sources: [...] }
+        if (!response.ok) throw new Error("API Failure");
+        return await response.json();
     }
 }
 
-// Global initialization explicitly attached to window
+// Global initialization
 window.initResolvitCopilot = function (role = 'citizen') {
     if (!window.resolvitCopilotInstance) {
         window.resolvitCopilotInstance = new ResolvitCopilot({ role: role });
