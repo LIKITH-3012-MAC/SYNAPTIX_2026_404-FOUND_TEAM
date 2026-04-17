@@ -50,7 +50,7 @@ class ChatIntakeRequest(BaseModel):
 # Endpoints
 # -----------------------------
 
-@router.post("", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse)
 async def process_chat(payload: ChatRequest):
     """
     Standard AI Copilot conversation endpoint.
@@ -65,7 +65,7 @@ async def process_chat(payload: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/complaint-intake", status_code=201, response_model=DataResponse[IssueResponse])
+@router.post("/chat/complaint-intake", status_code=201, response_model=DataResponse[IssueResponse])
 def chat_complaint_intake(
     payload: ChatIntakeRequest,
     current_user: dict = Depends(get_current_user)

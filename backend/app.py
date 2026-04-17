@@ -82,6 +82,15 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     print("[Scheduler] Started successfully")
 
+    # 5. Route Registry Trace (Production Debug)
+    print("\n[ROUTING-AUDIT] Registered Endpoints:")
+    for route in app.routes:
+        methods = ", ".join(getattr(route, "methods", []))
+        path = getattr(route, "path", "")
+        if "/api/chat" in path:
+            print(f"  {methods.ljust(8)} {path}")
+    print("[ROUTING-AUDIT] End of Registry Trace\n")
+
     yield
     
     # --- SHUTDOWN ---
@@ -143,7 +152,7 @@ app.include_router(credits_router,    prefix="/api/credits",    tags=["Credits"]
 app.include_router(simulation_router, prefix="/api/simulation", tags=["Demo/Simulation"])
 app.include_router(feedback_router,   prefix="/api/feedback",   tags=["Feedback"])
 app.include_router(image_router,      prefix="/api/images",     tags=["Images"])
-app.include_router(chat_router,       prefix="/api/chat",       tags=["Chatbot"])
+app.include_router(chat_router,       prefix="/api",            tags=["Chatbot"])
 app.include_router(ngo_router,        prefix="/api",            tags=["NGOs"])
 app.include_router(care_reports_router, prefix="/api/care",       tags=["Care Reports"])
 
