@@ -19,7 +19,7 @@ SLA per category:
   Roads       → 72h
   Sanitation  → 72h
   Environment → 72h
-  Other       → 48h
+  Other       ->48h
 """
 from datetime import datetime, timezone, timedelta
 from database import get_db
