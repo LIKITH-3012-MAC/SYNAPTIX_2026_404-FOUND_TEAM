@@ -8,7 +8,6 @@
 :root {
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-
   /* Indian Scripts */
   --font-hi: 'Noto Sans Devanagari', sans-serif;
   --font-te: 'Noto Sans Telugu', sans-serif;
