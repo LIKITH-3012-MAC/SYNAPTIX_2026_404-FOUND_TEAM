@@ -19,6 +19,8 @@ const COPILOT_STATES = {
     ERROR: 'ERROR'
 };
 
+const VALID_CATEGORIES = ['Roads', 'Water', 'Sanitation', 'Safety', 'Electricity', 'Environment', 'Other'];
+
 class ResolvitCopilot {
     constructor(config = {}) {
         const baseUrl = window.BASE_URL || '';
@@ -137,12 +139,35 @@ class ResolvitCopilot {
             }
         });
 
-        // Auth resume listener
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'resolvit_token' && e.newValue && this.state === COPILOT_STATES.CONFIRM) {
-                this.handleSend(); // Resume flow
+        // Auth resume listener — same-tab custom event (primary)
+        window.addEventListener('resolvit-auth-success', () => {
+            if (this.state === COPILOT_STATES.CONFIRM) {
+                this.appendMessage('ai', '✅ **Identity verified.** Submitting your report now...');
+                this.submitComplaint();
             }
         });
+
+        // Auth resume listener — cross-tab fallback via storage event
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'resolvit_token' && e.newValue && this.state === COPILOT_STATES.CONFIRM) {
+                this.appendMessage('ai', '✅ **Identity verified.** Submitting your report now...');
+                this.submitComplaint();
+            }
+        });
+
+        // Resume after redirect-based login (e.g. returnTo=chatbot-report)
+        if (window.location.search.includes('returnTo=chatbot-report') || sessionStorage.getItem('copilot_login_pending')) {
+            sessionStorage.removeItem('copilot_login_pending');
+            const token = localStorage.getItem('resolvit_token');
+            if (token) {
+                setTimeout(() => {
+                    if (this.state === COPILOT_STATES.CONFIRM || this.state === COPILOT_STATES.PREVIEW) {
+                        this.appendMessage('ai', '✅ **Welcome back!** Submitting your saved report...');
+                        this.submitComplaint();
+                    }
+                }, 800);
+            }
+        }
     }
 
     getSuggestions() {
@@ -154,6 +179,12 @@ class ResolvitCopilot {
             `;
         }
         return '';
+    }
+
+    updateSuggestions() {
+        if (this.suggestContainer) {
+            this.suggestContainer.innerHTML = this.getSuggestions();
+        }
     }
 
     togglePanel() {
@@ -195,7 +226,8 @@ class ResolvitCopilot {
         if (this.state === COPILOT_STATES.INIT) {
             if (input.toLowerCase().includes('report') || input.toLowerCase().includes('issue') || input.toLowerCase().includes('problem')) {
                 this.state = COPILOT_STATES.COLLECT_TITLE;
-                this.appendMessage('ai', "🚀 **Excellent.** Let's build a structured report.\n\nWhat is the **main title** of this incident? (Keep it short and descriptive)");
+                this.updateSuggestions();
+                this.appendMessage('ai', "🚀 **Excellent.** Let's build a structured report.\n\nWhat is the **main title** of this incident? (Keep it short and descriptive, at least 10 characters)");
                 return;
             }
             if (input.toLowerCase().includes('who built you') || input.toLowerCase().includes('creator')) {
@@ -211,21 +243,40 @@ class ResolvitCopilot {
 
         switch (this.state) {
             case COPILOT_STATES.COLLECT_TITLE:
+                if (input.length < 10) {
+                    this.appendMessage('ai', '⚠️ Title must be at least **10 characters**. Please provide a more descriptive title.');
+                    return;
+                }
                 this.issueDraft.title = input;
                 this.state = COPILOT_STATES.COLLECT_CATEGORY;
+                this.updateSuggestions();
                 this.appendMessage('ai', `✅ **Title Captured.**\n\nWhat **category** does this fall into? (Roads, Water, Sanitation, Safety, Electricity, Other)`);
                 this.renderCategoryPicker();
                 break;
 
-            case COPILOT_STATES.COLLECT_CATEGORY:
-                this.issueDraft.category = input;
+            case COPILOT_STATES.COLLECT_CATEGORY: {
+                // Validate category against allowed values
+                const matchedCat = VALID_CATEGORIES.find(c => c.toLowerCase() === input.toLowerCase());
+                if (!matchedCat) {
+                    this.appendMessage('ai', `⚠️ "${input}" is not a valid category. Please choose one of:\n**${VALID_CATEGORIES.join(', ')}**`);
+                    this.renderCategoryPicker();
+                    return; // Do NOT advance state or save draft
+                }
+                this.issueDraft.category = matchedCat;
                 this.state = COPILOT_STATES.COLLECT_DESCRIPTION;
-                this.appendMessage('ai', "🔍 **Classification noted.**\n\nPlease provide a **detailed description** of what's happening. The more detail, the higher the priority score.");
+                this.updateSuggestions();
+                this.appendMessage('ai', "🔍 **Classification noted.**\n\nPlease provide a **detailed description** of what's happening (at least 20 characters). The more detail, the higher the priority score.");
                 break;
+            }
 
             case COPILOT_STATES.COLLECT_DESCRIPTION:
+                if (input.length < 20) {
+                    this.appendMessage('ai', '⚠️ Description must be at least **20 characters**. Please provide more detail about the issue.');
+                    return;
+                }
                 this.issueDraft.description = input;
                 this.state = COPILOT_STATES.COLLECT_LOCATION;
+                this.updateSuggestions();
                 this.appendMessage('ai', "📍 **Awaiting Geospatial Focus.**\n\nWhere is this happening? You can share your **GPS Location** for 100% precision, or type the area name.");
                 this.renderLocationPicker();
                 break;
@@ -233,13 +284,15 @@ class ResolvitCopilot {
             case COPILOT_STATES.COLLECT_LOCATION:
                 if (input) this.issueDraft.location_text = input;
                 this.state = COPILOT_STATES.COLLECT_SEVERITY;
+                this.updateSuggestions();
                 this.appendMessage('ai', "⚠️ **Impact Assessment.**\n\nOn a scale of 1-5, how **urgent** is this? (1: Low, 5: Critical)");
                 this.renderSeveritySlider();
                 break;
 
             case COPILOT_STATES.COLLECT_SEVERITY:
-                this.issueDraft.urgency = parseInt(input) || 3;
+                this.issueDraft.urgency = Math.max(1, Math.min(5, parseInt(input) || 3));
                 this.state = COPILOT_STATES.PREVIEW;
+                this.updateSuggestions();
                 this.renderPreview();
                 break;
 
@@ -248,6 +301,7 @@ class ResolvitCopilot {
                     this.submitComplaint();
                 } else if (input.toLowerCase().includes('edit')) {
                     this.state = COPILOT_STATES.COLLECT_TITLE;
+                    this.updateSuggestions();
                     this.appendMessage('ai', "Restarting flow. What's the new title?");
                 }
                 break;
@@ -365,6 +419,47 @@ class ResolvitCopilot {
         this.handleSend();
     }
 
+    /**
+     * Parse backend error responses into a human-readable string.
+     * Handles Pydantic validation error arrays, string details, and unknown shapes.
+     */
+    _parseErrorDetail(detail) {
+        if (!detail) return null;
+        if (typeof detail === 'string') return detail;
+        if (Array.isArray(detail)) {
+            // Pydantic validation errors: [{loc:[...], msg:"...", type:"..."}]
+            const msgs = detail.map(e => {
+                if (typeof e === 'string') return e;
+                if (e && typeof e === 'object') {
+                    const field = Array.isArray(e.loc) ? e.loc.filter(l => l !== 'body').join('.') : '';
+                    const msg = e.msg || 'invalid';
+                    return field ? `${field}: ${msg}` : msg;
+                }
+                return String(e);
+            });
+            return msgs.join('\n');
+        }
+        if (typeof detail === 'object') {
+            return detail.msg || detail.message || JSON.stringify(detail);
+        }
+        return String(detail);
+    }
+
+    /**
+     * Validate the issue draft before submitting to the backend.
+     * Returns null if valid, or an error message string if invalid.
+     */
+    _validateDraft() {
+        const d = this.issueDraft;
+        const errors = [];
+        if (!d.title || d.title.length < 10) errors.push('Title must be at least 10 characters');
+        if (!d.category || !VALID_CATEGORIES.includes(d.category)) errors.push(`Category must be one of: ${VALID_CATEGORIES.join(', ')}`);
+        if (!d.description || d.description.length < 20) errors.push('Description must be at least 20 characters');
+        const urg = parseInt(d.urgency);
+        if (isNaN(urg) || urg < 1 || urg > 5) errors.push('Urgency must be a number from 1 to 5');
+        return errors.length > 0 ? errors.join('\n') : null;
+    }
+
     async submitComplaint() {
         // AUTH GATE
         const token = localStorage.getItem('resolvit_token');
@@ -375,6 +470,16 @@ class ResolvitCopilot {
             return;
         }
 
+        // PRE-SUBMIT VALIDATION
+        const validationError = this._validateDraft();
+        if (validationError) {
+            this.appendMessage('ai', `⚠️ **Payload validation failed:**\n${validationError}\n\nPlease edit the report and fix these fields.`);
+            this.state = COPILOT_STATES.PREVIEW;
+            this.renderPreview();
+            return;
+        }
+
+        this.state = COPILOT_STATES.SUBMITTING;
         this.showTyping();
         try {
             const response = await fetch(this.intakeUrl, {
@@ -386,16 +491,43 @@ class ResolvitCopilot {
                 body: JSON.stringify(this.issueDraft)
             });
 
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (_) {
+                data = {};
+            }
+
             if (response.ok) {
                 this.state = COPILOT_STATES.SUCCESS;
                 this.clearDraft();
+                this.updateSuggestions();
                 this.renderSuccess(data.data);
             } else {
-                this.appendMessage('ai', `Error: ${data.detail || 'Failed to submit'}`);
+                // Handle specific error codes
+                this.state = COPILOT_STATES.PREVIEW;
+                if (response.status === 401) {
+                    // Token expired — clear stale token and re-trigger auth gate
+                    localStorage.removeItem('resolvit_token');
+                    this.appendMessage('ai', '⚠️ **Session expired.** Please log in again to submit your report.');
+                    this.state = COPILOT_STATES.CONFIRM;
+                    this.saveDraft();
+                    this.renderAuthGate();
+                } else {
+                    // Safely parse error — never render raw objects
+                    const errMsg = this._parseErrorDetail(data.detail)
+                                || data.message
+                                || 'Submission failed. Please check the complaint details and try again.';
+                    this.appendMessage('ai', `❌ **Submission Error:**\n${errMsg}`);
+                    this.saveDraft();
+                    this.renderPreview();
+                }
             }
         } catch (err) {
-            this.appendMessage('ai', "Network error. Please try again.");
+            this.state = COPILOT_STATES.PREVIEW;
+            this.appendMessage('ai', '⚠️ **Network error.** Your draft is saved. Please check your connection and try again.');
+            this.saveDraft();
+            this.renderPreview();
         } finally {
             this.removeTyping();
         }
@@ -409,17 +541,34 @@ class ResolvitCopilot {
             <div class="msg-bubble auth-gate-card">
                 <div style="font-size: 2rem; color: #f59e0b; margin-bottom: 8px;"><i class="fas fa-user-shield"></i></div>
                 <h3 style="margin:0 0 8px 0; color:white;">Identity Verification</h3>
-                <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;">Your report is ready. **Login required** to submit to the official pipeline.</p>
+                <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;">Your report is ready. <strong>Login required</strong> to submit to the official pipeline.</p>
                 <div style="display:flex; gap:10px; width: 100%;">
-                    <button class="copilot-card-btn primary" onclick="if(window.Auth) Auth.showModal('login')">Open Login Modal</button>
+                    <button class="copilot-card-btn primary" id="copilot-login-btn">Open Login Modal</button>
                 </div>
             </div>
         `;
         this.messagesDiv.appendChild(container);
+
+        // Bind login button with copilot-aware flow
+        container.querySelector('#copilot-login-btn').addEventListener('click', () => {
+            this.saveDraft();
+            if (window.Auth && typeof Auth.showModal === 'function') {
+                // Set flag so auth.js knows NOT to redirect after login
+                Auth._copilotPendingLogin = true;
+                Auth.showModal('login');
+            } else {
+                // Fallback: redirect to login page with returnTo param
+                sessionStorage.setItem('copilot_login_pending', 'true');
+                window.location.href = 'index.html?returnTo=chatbot-report';
+            }
+        });
+
         this.scrollToBottom();
     }
 
     renderSuccess(issue) {
+        this.state = COPILOT_STATES.INIT;
+        this.updateSuggestions();
         const container = document.createElement('div');
         container.className = 'msg-container msg-ai';
         container.innerHTML = `
@@ -443,7 +592,6 @@ class ResolvitCopilot {
         `;
         this.messagesDiv.appendChild(container);
         this.scrollToBottom();
-        this.state = COPILOT_STATES.INIT;
     }
 
     saveDraft() {

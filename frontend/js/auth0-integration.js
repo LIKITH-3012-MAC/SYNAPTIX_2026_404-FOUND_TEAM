@@ -196,6 +196,17 @@ const Auth0Integration = {
       showToast(`✅ Welcome back, ${data.username}!`, "success");
     }
 
+    // Check if login was triggered from copilot (OAuth redirect flow)
+    const copilotPending = sessionStorage.getItem('copilot_login_pending');
+    if (copilotPending) {
+      sessionStorage.removeItem('copilot_login_pending');
+      // Fire event after a short delay so copilot can initialize and recover draft
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('resolvit-auth-success'));
+      }, 500);
+      return data;
+    }
+
     if (!silent) {
       setTimeout(() => {
         if (data.role === "admin") {
@@ -237,6 +248,12 @@ const Auth0Integration = {
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = "⏳ Connecting...";
+      }
+
+      // Preserve copilot pending state across OAuth redirect
+      if (window.Auth && Auth._copilotPendingLogin) {
+        sessionStorage.setItem('copilot_login_pending', 'true');
+        Auth._copilotPendingLogin = false;
       }
 
       const client = await this.init();

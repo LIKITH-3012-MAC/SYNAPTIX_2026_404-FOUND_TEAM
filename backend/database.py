@@ -122,6 +122,12 @@ def execute_schema():
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS points_cache INTEGER DEFAULT 0;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS district VARCHAR(128);",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS rank VARCHAR(32) DEFAULT 'New Citizen';",
+
+        # Welcome Email Tracking
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_email_sent BOOLEAN DEFAULT FALSE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_email_sent_at TIMESTAMPTZ;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_email_message_id TEXT;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_email_status VARCHAR(32) DEFAULT 'pending';",
         
         # New Tables
         """

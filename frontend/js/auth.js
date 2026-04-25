@@ -214,7 +214,15 @@ const Auth = {
                     this.hideModal();
                     showToast(`✅ Welcome back, ${u.username}!`, 'success');
 
-                    // Role-based redirect
+                    // If login was triggered from copilot, resume complaint flow instead of redirecting
+                    if (this._copilotPendingLogin) {
+                        this._copilotPendingLogin = false;
+                        this.updateNavbar();
+                        window.dispatchEvent(new CustomEvent('resolvit-auth-success'));
+                        return;
+                    }
+
+                    // Role-based redirect (normal login flow)
                     setTimeout(() => {
                         if (u.role === 'admin') window.location.href = 'admin.html';
                         else if (u.role === 'authority') window.location.href = 'authority.html';
@@ -434,6 +442,12 @@ Auth._twitterLogin = async function(e) {
             code_challenge: challenge,
             code_challenge_method: 'S256'
         });
+        
+        // Preserve copilot pending state across OAuth redirect
+        if (Auth._copilotPendingLogin) {
+            sessionStorage.setItem('copilot_login_pending', 'true');
+            Auth._copilotPendingLogin = false;
+        }
         
         window.location.href = `${config.url}?${params.toString()}`;
     } catch (err) {

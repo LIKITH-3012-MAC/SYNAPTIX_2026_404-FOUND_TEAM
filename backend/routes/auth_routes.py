@@ -13,6 +13,7 @@ from auth import (
 )
 from services.email_service import (
     send_verification_otp_email, send_email, is_placeholder,
+    dispatch_email_task, trigger_welcome_email,
     RESEND_API_KEY, RESEND_FROM_EMAIL
 )
 from core.security import limiter
@@ -198,12 +199,13 @@ def verify_signup_otp(payload: VerifyOTPRequest):
 
 # ── Step 3: Complete Signup ────────────────────────────────────
 @router.post("/complete-signup", status_code=200)
-def complete_signup(payload: CompleteSignupRequest):
+def complete_signup(payload: CompleteSignupRequest, background_tasks: BackgroundTasks):
     """
     POST /api/auth/complete-signup
     1. Validate Signup Token
     2. Confirm OTP Verification State
     3. Create Actual User
+    4. Trigger Welcome Email (non-blocking)
     """
     print(f"[SIGNUP-TRACE] complete-signup called")
     print(f"[SIGNUP-TRACE] signup token received")
@@ -254,6 +256,9 @@ def complete_signup(payload: CompleteSignupRequest):
             # The context manager automatically commits if no exception is raised
             print(f"[SIGNUP-TRACE] db commit success")
             
+        # Trigger welcome email (non-blocking background task)
+        trigger_welcome_email(background_tasks, str(user_id), email, payload.full_name or payload.username, "database")
+
         print(f"[SIGNUP-TRACE] returning success response")
         return {
             "success": True,
@@ -349,14 +354,16 @@ def login(request: Request, payload: UserLogin):
 
 
 @router.post("/oauth-login", response_model=dict)
-def oauth_login(payload: OAuthLogin):
+def oauth_login(payload: OAuthLogin, background_tasks: BackgroundTasks):
     """
     POST /api/auth/oauth-login
     Syncs Auth0 (Google/GitHub/Twitter) users with the local database.
+    Triggers welcome email on first-time user creation only.
     """
     email = payload.email.strip().lower()
     print(f"[AUTH-TRACE] OAuth login attempt for: {email} (Provider: {payload.provider})")
 
+    is_new_user = False
     with get_db() as cursor:
         # 1. Try to find by provider_id
         cursor.execute(
@@ -382,6 +389,7 @@ def oauth_login(payload: OAuthLogin):
                 print(f"[AUTH-TRACE] Linked existing user {email} to OAuth {payload.provider}")
             else:
                 # 3. Create new OAuth user
+                is_new_user = True
                 username = payload.name.replace(" ", "_").lower()[:60]
                 # Ensure unique username
                 cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
@@ -408,6 +416,16 @@ def oauth_login(payload: OAuthLogin):
         email=user["email"],
         department=user.get("department")
     )
+
+    # Trigger welcome email for NEW users only (non-blocking)
+    if is_new_user:
+        trigger_welcome_email(
+            background_tasks,
+            str(user["id"]),
+            email,
+            payload.name or user["username"],
+            payload.provider
+        )
 
     return {
         "success": True,
@@ -472,7 +490,7 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
     print(f"[AUTH-TRACE] Forgot password requested for: {email}")
 
     with get_db() as cursor:
-        cursor.execute("SELECT id, full_name, username FROM users WHERE email = %s AND auth_provider = 'database'", (email,))
+        cursor.execute("SELECT id, full_name, username FROM users WHERE email = %s AND password_hash IS NOT NULL", (email,))
         user = cursor.fetchone()
         
         if not user:
