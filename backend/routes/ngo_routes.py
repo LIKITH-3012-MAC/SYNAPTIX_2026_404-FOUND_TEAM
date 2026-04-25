@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from models import NGOCreate, NGOUpdate, NGOResponse, UserResponse, UserRole, NGOOperatorCreate, NGOOperatorResponse
-from auth import require_roles as require_role, get_current_user
+from auth import require_roles, get_current_user
 from database import get_db
 
 router = APIRouter()
 
 @router.get("/admin/ngos", response_model=List[NGOResponse])
-def admin_list_ngos(current_user: UserResponse = Depends(require_role([UserRole.admin]))):
+def admin_list_ngos(current_user: dict = Depends(require_roles("admin"))):
     try:
         with get_db() as cursor:
             cursor.execute("""
@@ -36,7 +36,7 @@ def public_list_ngos():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/admin/ngos", response_model=NGOResponse)
-def create_ngo(payload: NGOCreate, current_user: UserResponse = Depends(require_role([UserRole.admin]))):
+def create_ngo(payload: NGOCreate, current_user: dict = Depends(require_roles("admin"))):
     try:
         with get_db() as cursor:
             cursor.execute(
@@ -45,14 +45,14 @@ def create_ngo(payload: NGOCreate, current_user: UserResponse = Depends(require_
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *;
                 """,
-                (payload.name, payload.slug, payload.description, payload.specialization, payload.contact_name, payload.contact_email, payload.contact_phone, payload.operating_region, payload.district, payload.address, payload.is_active, current_user.id)
+                (payload.name, payload.slug, payload.description, payload.specialization, payload.contact_name, payload.contact_email, payload.contact_phone, payload.operating_region, payload.district, payload.address, payload.is_active, current_user["sub"])
             )
             return cursor.fetchone()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create NGO: {e}")
 
 @router.patch("/admin/ngos/{ngo_id}", response_model=NGOResponse)
-def update_ngo(ngo_id: str, payload: NGOUpdate, current_user: UserResponse = Depends(require_role([UserRole.admin]))):
+def update_ngo(ngo_id: str, payload: NGOUpdate, current_user: dict = Depends(require_roles("admin"))):
     try:
         with get_db() as cursor:
             fields = []
@@ -75,12 +75,12 @@ def update_ngo(ngo_id: str, payload: NGOUpdate, current_user: UserResponse = Dep
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/admin/ngo-officers", response_model=NGOOperatorResponse)
-def create_ngo_officer(payload: NGOOperatorCreate, current_user: UserResponse = Depends(require_role([UserRole.admin]))):
+def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(require_roles("admin"))):
     """Admin creates an NGO officer by linking a user to an NGO and promoting their role."""
     try:
         with get_db() as cursor:
             # 1. Update user role to ngo_operator automatically
-            cursor.execute("UPDATE users SET role = %s WHERE id = %s", (UserRole.ngo_operator, payload.user_id))
+            cursor.execute("UPDATE users SET role = %s WHERE id = %s", ('ngo_operator', payload.user_id))
             
             # 2. Insert link
             cursor.execute(
@@ -97,7 +97,7 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: UserResponse = 
             # 3. Audit
             cursor.execute(
                 "INSERT INTO care_audit_log (actor_user_id, actor_role, action_type, entity_type, entity_id) VALUES (%s, %s, %s, %s, %s)",
-                (current_user.id, current_user.role, "officer_created", "ngo_operator", op["id"])
+                (current_user["sub"], current_user["role"], "officer_created", "ngo_operator", op["id"])
             )
             
             # 4. Fetch enriched details for response
@@ -110,7 +110,7 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: UserResponse = 
 
 
 @router.get("/admin/ngo-officers", response_model=List[NGOOperatorResponse])
-def admin_list_officers(current_user: UserResponse = Depends(require_role([UserRole.admin]))):
+def admin_list_officers(current_user: dict = Depends(require_roles("admin"))):
     try:
         with get_db() as cursor:
             query = """

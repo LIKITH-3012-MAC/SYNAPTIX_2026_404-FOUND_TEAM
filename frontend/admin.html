@@ -1115,6 +1115,10 @@
                     document.getElementById("panel-title").textContent = titles[0];
                     document.getElementById("panel-sub").textContent   = titles[1];
                     if (id === "heatmap-panel" && dashboardData) setTimeout(() => MapManager.getMap()?.invalidateSize(), 100);
+                    // Auto-load Care data when NGO or Care panels are shown
+                    if ((id === "ngo-panel" || id === "care-reports-panel") && window.CareAdmin) {
+                        CareAdmin.init().catch(e => console.warn("[CareAdmin]", e));
+                    }
                 }
             </script>
 

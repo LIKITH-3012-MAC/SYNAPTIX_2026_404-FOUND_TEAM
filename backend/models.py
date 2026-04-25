@@ -372,3 +372,48 @@ class NGOOperatorResponse(BaseModel):
     role_within_ngo: str
     is_active:       bool
     created_at:      datetime
+
+
+# ── Broadcast Alert Schemas ───────────────────────────────────
+class BroadcastAlertCreate(BaseModel):
+    title:         str = Field(..., min_length=3)
+    message:       str = Field(..., min_length=5)
+    severity:      str = "info"   # info, warning, critical
+    target_region: Optional[str] = None
+    target_role:   str = "all"    # all, citizen, ngo, volunteer
+
+class BroadcastAlertResponse(BaseModel):
+    id:                  str
+    title:               str
+    message:             str
+    severity:            str
+    target_region:       Optional[str]
+    target_role:         str
+    created_by_admin_id: Optional[str]
+    created_at:          datetime
+
+
+# ── Volunteer Schemas ─────────────────────────────────────────
+class VolunteerCreate(BaseModel):
+    full_name:           str = Field(..., min_length=2)
+    email:               EmailStr
+    phone:               Optional[str] = None
+    skills:              Optional[str] = None
+    languages:           Optional[str] = None
+    current_region:      Optional[str] = None
+    ngo_id:              Optional[str] = None
+    availability_status: str = "available"
+
+class VolunteerResponse(BaseModel):
+    id:                  str
+    ngo_id:              Optional[str]
+    full_name:           str
+    email:               str
+    phone:               Optional[str]
+    skills:              Optional[str]
+    languages:           Optional[str]
+    availability_status: str
+    current_region:      Optional[str]
+    is_verified:         bool
+    created_at:          datetime
+    updated_at:          datetime

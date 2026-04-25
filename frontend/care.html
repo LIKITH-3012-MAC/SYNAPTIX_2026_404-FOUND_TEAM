@@ -95,7 +95,7 @@
       <div class="care-nav-item" data-target="view-logistics">
         <i class="fas fa-box"></i> <span>Resource Logistics</span>
       </div>
-      <div class="care-nav-item" data-target="view-chart-pie">
+      <div class="care-nav-item" data-target="view-analytics">
         <i class="fas fa-chart-line"></i> <span>Impact Analytics</span>
       </div>
       <div class="care-nav-item" data-target="view-timeline">
@@ -126,7 +126,7 @@
       <div class="care-view-title" id="topbar-title">Care Overview</div>
       <div class="care-topbar-actions">
         <a href="index.html" class="care-btn care-btn-outline"><i class="fas fa-arrow-left"></i> Exit to Primary Hub</a>
-        <button class="care-btn care-btn-primary"><i class="fas fa-broadcast-tower"></i> Broadcast Alert</button>
+        <button class="care-btn care-btn-primary" onclick="CareAdmin.openBroadcastModal()"><i class="fas fa-broadcast-tower"></i> Broadcast Alert</button>
       </div>
     </header>
 
@@ -140,7 +140,7 @@
             <p>Resolvit Care is an AI-powered social operations intelligence module. It unifies field reports, volunteer matching, and logistics into a single command center for rapid disaster and community response.</p>
             <div style="margin-top: 24px; display:flex; gap:16px;">
               <button class="care-btn care-btn-primary" onclick="document.querySelector('[data-target=\'view-command\']').click()">Open Command Center</button>
-              <button class="care-btn care-btn-outline">Register NGO</button>
+              <button class="care-btn care-btn-outline" onclick="CareAdmin.openCreateNGOModal()">Register NGO</button>
             </div>
           </div>
           <div style="width: 300px; height:300px; position:relative;">
@@ -153,23 +153,23 @@
         <div class="care-grid-4">
           <div class="care-kpi-tile">
             <div class="care-kpi-label">Active Incidents</div>
-            <div class="care-kpi-value text-red">142</div>
+            <div class="care-kpi-value text-red" id="care-kpi-incidents">—</div>
             <div class="care-kpi-trend trend-down">-12%</div>
             <div class="progress-bg"><div class="progress-bar" style="width:75%; background:#ef4444;"></div></div>
           </div>
           <div class="care-kpi-tile">
             <div class="care-kpi-label">NGOs Connected</div>
-            <div class="care-kpi-value">28</div>
+            <div class="care-kpi-value" id="care-kpi-ngos">—</div>
             <div class="care-kpi-trend trend-up">+3</div>
           </div>
           <div class="care-kpi-tile">
             <div class="care-kpi-label">Volunteers Available</div>
-            <div class="care-kpi-value text-blue">1,405</div>
+            <div class="care-kpi-value text-blue" id="care-kpi-volunteers">—</div>
             <div class="progress-bg"><div class="progress-bar" style="width:88%;"></div></div>
           </div>
           <div class="care-kpi-tile">
             <div class="care-kpi-label">Lives Impacted</div>
-            <div class="care-kpi-value text-green">14.2k</div>
+            <div class="care-kpi-value text-green" id="care-kpi-impact">—</div>
             <div class="care-kpi-trend trend-up">+8%</div>
           </div>
         </div>
@@ -246,7 +246,7 @@
         <div class="care-grid-4">
           <div class="care-kpi-tile kpi-accent-red">
             <div class="care-kpi-label">Open / Critical</div>
-            <div class="care-kpi-value">142 <span style="color:#ef4444; font-size:1.4rem;">/ 28</span></div>
+            <div class="care-kpi-value"><span id="care-cmd-open">—</span> <span style="color:#ef4444; font-size:1.4rem;">/ <span id="care-cmd-critical">—</span></span></div>
           </div>
           <div class="care-kpi-tile kpi-accent-blue">
             <div class="care-kpi-label">Field Teams Active</div>
@@ -314,8 +314,9 @@
         <div class="care-panel" style="display:flex; justify-content:space-between; align-items:center;">
           <h3 style="margin:0; color:white;">Volunteer Orchestration</h3>
           <div style="display:flex; gap:12px;">
-            <input type="text" placeholder="Search skills, languages..." style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:8px 16px; border-radius:8px; color:white; width:250px;">
-            <button class="care-btn care-btn-outline"><i class="fas fa-filter"></i> Filters</button>
+            <input type="text" id="volunteer-search-input" placeholder="Search skills, languages..." style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:8px 16px; border-radius:8px; color:white; width:250px;" onkeydown="if(event.key==='Enter') fetchVolunteers(this.value)">
+            <button class="care-btn care-btn-outline" onclick="fetchVolunteers(document.getElementById('volunteer-search-input').value)"><i class="fas fa-search"></i> Search</button>
+            <button class="care-btn care-btn-primary" onclick="CareAdmin.openCreateVolunteerModal()" style="font-size:0.85rem;">+ Add Volunteer</button>
           </div>
         </div>
 
@@ -499,6 +500,7 @@
 <script src="js/pkce-utils.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/care.js"></script>
+<script src="js/care-admin.js"></script>
 <script src="js/copilot.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {

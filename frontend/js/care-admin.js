@@ -1,9 +1,10 @@
 /**
  * RESOLVIT CARE - Admin Command Logic
- * Manages NGO records, officer assignments, and global care report oversight.
+ * Manages NGO records, officer assignments, broadcasts, volunteers, and global care report oversight.
  */
 
 window.CareAdmin = {
+    async init() {
         await Promise.all([
             this.loadNGOs(),
             this.loadOfficers(),
@@ -48,9 +49,14 @@ window.CareAdmin = {
         modal.style.display = 'flex';
     },
 
+    // ═══════════════════════════════════════════════════════════
+    // NGO MANAGEMENT
+    // ═══════════════════════════════════════════════════════════
+
     async loadNGOs() {
         try {
             const ngos = await API.get('/api/admin/ngos');
+            this._cachedNGOs = ngos;
             const tbody = document.getElementById('ngo-tbody');
             if (!tbody) return;
 
@@ -131,21 +137,29 @@ window.CareAdmin = {
         }
     },
 
+    // ═══════════════════════════════════════════════════════════
+    // CREATE NGO MODAL
+    // ═══════════════════════════════════════════════════════════
+
     openCreateNGOModal() {
         this.showModal("Register New NGO", `
             <form id="create-ngo-form" class="flex flex-col" style="gap:16px;">
                 <div class="form-group"><label class="form-label">NGO Name</label><input type="text" name="name" class="form-input" required placeholder="e.g. HealthFirst Foundation"></div>
                 <div class="form-group"><label class="form-label">Slug (unique)</label><input type="text" name="slug" class="form-input" required placeholder="e.g. health-first"></div>
                 <div class="form-group"><label class="form-label">Specialization</label><input type="text" name="specialization" class="form-input" placeholder="e.g. Emergency Response"></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea name="description" class="form-input" rows="2" placeholder="Brief mission statement"></textarea></div>
+                <div class="form-group"><label class="form-label">Contact Name</label><input type="text" name="contact_name" class="form-input" placeholder="Primary contact person"></div>
                 <div class="form-group"><label class="form-label">Contact Email</label><input type="email" name="contact_email" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Contact Phone</label><input type="text" name="contact_phone" class="form-input" placeholder="+91 XXXXX XXXXX"></div>
                 <div class="form-group"><label class="form-label">Operating Region</label><input type="text" name="operating_region" class="form-input" placeholder="e.g. Bangalore South"></div>
+                <div class="form-group"><label class="form-label">District</label><input type="text" name="district" class="form-input" placeholder="e.g. Bengaluru Urban"></div>
                 <button type="submit" class="btn btn-primary" style="margin-top:8px;">Register Organization</button>
             </form>
         `);
 
         document.getElementById('create-ngo-form').onsubmit = async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
+            const btn = e.target.querySelector('button[type="submit"]');
             btn.disabled = true; btn.textContent = "⏳ Registering...";
             const fd = new FormData(e.target);
             const body = Object.fromEntries(fd.entries());
@@ -154,6 +168,8 @@ window.CareAdmin = {
                 showToast("✅ NGO Registered Successfully", "success");
                 this.hideModal();
                 this.loadNGOs();
+                // Refresh overview stats if on care page
+                if (typeof fetchCareOverview === 'function') fetchCareOverview();
             } catch (err) {
                 showToast(`❌ Failed: ${err.message}`, "error");
                 btn.disabled = false; btn.textContent = "Register Organization";
@@ -161,7 +177,21 @@ window.CareAdmin = {
         };
     },
 
+    openEditNGOModal(ngoId) {
+        // Placeholder — can be extended
+        showToast("Edit modal — coming soon", "info");
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // RECRUIT NGO OFFICER MODAL
+    // ═══════════════════════════════════════════════════════════
+
     openRecruitOfficerModal() {
+        // Build NGO dropdown from cached list
+        const ngoOptions = (this._cachedNGOs || []).map(n => 
+            `<option value="${n.id}">${n.name} (${n.slug})</option>`
+        ).join('');
+
         this.showModal("Recruit NGO Officer", `
             <div style="margin-bottom:20px; color:#94a3b8; font-size:0.85rem;">Assign a trusted citizen to manage NGO operations.</div>
             <form id="recruit-officer-form" class="flex flex-col" style="gap:16px;">
@@ -171,8 +201,8 @@ window.CareAdmin = {
                     <small style="color:#64748b;">Copy this from the Citizen Management panel</small>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Target NGO ID</label>
-                    <input type="text" name="ngo_id" class="form-input" required placeholder="Enter NGO UUID">
+                    <label class="form-label">Target NGO</label>
+                    ${ngoOptions ? `<select name="ngo_id" class="form-input" required>${ngoOptions}</select>` : `<input type="text" name="ngo_id" class="form-input" required placeholder="Enter NGO UUID">`}
                 </div>
                 <div class="form-group">
                     <label class="form-label">Operation Role</label>
@@ -184,16 +214,16 @@ window.CareAdmin = {
 
         document.getElementById('recruit-officer-form').onsubmit = async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
+            const btn = e.target.querySelector('button[type="submit"]');
             btn.disabled = true; btn.textContent = "⏳ Appointing...";
             const fd = new FormData(e.target);
             const body = Object.fromEntries(fd.entries());
             try {
                 await API.post('/api/admin/ngo-officers', body);
-                showToast("🎨 Officer Recruited & Role Elevated", "success");
+                showToast("✅ Officer Recruited & Role Elevated", "success");
                 this.hideModal();
                 this.loadOfficers();
-                this.loadNGOs(); // Refresh to see potential updated counts
+                this.loadNGOs();
             } catch (err) {
                 showToast(`❌ Failed: ${err.message}`, "error");
                 btn.disabled = false; btn.textContent = "Appoint Officer";
@@ -201,18 +231,201 @@ window.CareAdmin = {
         };
     },
 
+    toggleOfficer(officerId) {
+        showToast("Toggle officer — coming soon", "info");
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // BROADCAST ALERT MODAL
+    // ═══════════════════════════════════════════════════════════
+
+    openBroadcastModal() {
+        this.showModal("Broadcast Alert", `
+            <div style="margin-bottom:20px; color:#94a3b8; font-size:0.85rem;">Send an emergency or informational broadcast to the Resolvit Care network.</div>
+            <form id="broadcast-form" class="flex flex-col" style="gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Alert Title</label>
+                    <input type="text" name="title" class="form-input" required placeholder="e.g. Flood Warning — Ward 12">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <textarea name="message" class="form-input" rows="4" required placeholder="Detailed alert message..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Severity</label>
+                    <select name="severity" class="form-input" required>
+                        <option value="info">ℹ️ Info</option>
+                        <option value="warning">⚠️ Warning</option>
+                        <option value="critical">🔴 Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Region (optional)</label>
+                    <input type="text" name="target_region" class="form-input" placeholder="e.g. Ward 12, Kavali">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Audience</label>
+                    <select name="target_role" class="form-input">
+                        <option value="all">All Users</option>
+                        <option value="citizen">Citizens Only</option>
+                        <option value="ngo">NGOs Only</option>
+                        <option value="volunteer">Volunteers Only</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:8px; background:linear-gradient(135deg, #ef4444, #f97316);">🔊 Send Broadcast</button>
+            </form>
+        `);
+
+        document.getElementById('broadcast-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.textContent = "⏳ Broadcasting...";
+            const fd = new FormData(e.target);
+            const body = Object.fromEntries(fd.entries());
+            try {
+                await API.post('/api/care/admin/broadcasts', body);
+                showToast("📡 Broadcast Alert Sent Successfully", "success");
+                this.hideModal();
+                // Refresh timeline if visible
+                if (typeof fetchOpsTimeline === 'function') fetchOpsTimeline();
+            } catch (err) {
+                showToast(`❌ Broadcast Failed: ${err.message}`, "error");
+                btn.disabled = false; btn.textContent = "🔊 Send Broadcast";
+            }
+        };
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // VOLUNTEER MANAGEMENT
+    // ═══════════════════════════════════════════════════════════
+
+    openCreateVolunteerModal() {
+        // Build NGO dropdown from cached list
+        const ngoOptions = (this._cachedNGOs || []).map(n => 
+            `<option value="${n.id}">${n.name}</option>`
+        ).join('');
+
+        this.showModal("Register Volunteer", `
+            <form id="create-volunteer-form" class="flex flex-col" style="gap:16px;">
+                <div class="form-group"><label class="form-label">Full Name</label><input type="text" name="full_name" class="form-input" required placeholder="Volunteer full name"></div>
+                <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Phone</label><input type="text" name="phone" class="form-input" placeholder="+91 XXXXX XXXXX"></div>
+                <div class="form-group"><label class="form-label">Skills</label><input type="text" name="skills" class="form-input" placeholder="e.g. First Aid, Logistics, Translation"></div>
+                <div class="form-group"><label class="form-label">Languages</label><input type="text" name="languages" class="form-input" placeholder="e.g. English, Telugu, Hindi"></div>
+                <div class="form-group"><label class="form-label">Region</label><input type="text" name="current_region" class="form-input" placeholder="e.g. Kavali, Nellore"></div>
+                <div class="form-group">
+                    <label class="form-label">Linked NGO (optional)</label>
+                    <select name="ngo_id" class="form-input">
+                        <option value="">— Independent —</option>
+                        ${ngoOptions}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:8px;">Register Volunteer</button>
+            </form>
+        `);
+
+        document.getElementById('create-volunteer-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.textContent = "⏳ Registering...";
+            const fd = new FormData(e.target);
+            const body = Object.fromEntries(fd.entries());
+            if (!body.ngo_id) delete body.ngo_id; // Don't send empty string
+            try {
+                await API.post('/api/care/admin/volunteers', body);
+                showToast("✅ Volunteer Registered", "success");
+                this.hideModal();
+                if (typeof fetchVolunteers === 'function') fetchVolunteers();
+                if (typeof fetchCareOverview === 'function') fetchCareOverview();
+            } catch (err) {
+                showToast(`❌ Failed: ${err.message}`, "error");
+                btn.disabled = false; btn.textContent = "Register Volunteer";
+            }
+        };
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // REPORT ACTIONS
+    // ═══════════════════════════════════════════════════════════
+
     viewReport(id) {
         if (window.DetailManager) {
             DetailManager.open(id, 'care');
         }
-    }
-};
+    },
 
-// Auto-init when panel is shown
-const originalShowPanel = window.showPanel;
-window.showPanel = function(id) {
-    if (typeof originalShowPanel === 'function') originalShowPanel(id);
-    if (id === 'ngo-panel' || id === 'care-reports-panel') {
-        CareAdmin.init();
+    async openAssignNGOModal(reportId) {
+        const ngoOptions = (this._cachedNGOs || []).map(n =>
+            `<option value="${n.id}">${n.name} (${n.specialization || 'General'})</option>`
+        ).join('');
+
+        this.showModal("Assign NGO to Report", `
+            <form id="assign-ngo-form" class="flex flex-col" style="gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Select NGO</label>
+                    <select name="ngo_id" class="form-input" required>${ngoOptions || '<option value="">No NGOs available</option>'}</select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Assignment Reason</label>
+                    <textarea name="assignment_reason" class="form-input" rows="2" placeholder="Why this NGO?"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:8px;">Assign NGO</button>
+            </form>
+        `);
+
+        document.getElementById('assign-ngo-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.textContent = "⏳ Assigning...";
+            const fd = new FormData(e.target);
+            const body = Object.fromEntries(fd.entries());
+            try {
+                await API.post(`/api/care/admin/reports/${reportId}/assign-ngo`, body);
+                showToast("✅ NGO Assigned", "success");
+                this.hideModal();
+                this.loadCareReports();
+            } catch (err) {
+                showToast(`❌ Failed: ${err.message}`, "error");
+                btn.disabled = false; btn.textContent = "Assign NGO";
+            }
+        };
+    },
+
+    async openResolveModal(reportId) {
+        this.showModal("Resolve Report", `
+            <form id="resolve-report-form" class="flex flex-col" style="gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Resolution Summary</label>
+                    <textarea name="resolution_summary" class="form-input" rows="4" required placeholder="Describe resolution actions taken..."></textarea>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:12px;">
+                    <input type="checkbox" name="send_email" id="resolve-send-email" checked>
+                    <label for="resolve-send-email" class="form-label" style="margin:0;">Send resolution email to reporter</label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:8px; background:linear-gradient(135deg, #10b981, #059669);">✅ Mark Resolved</button>
+            </form>
+        `);
+
+        document.getElementById('resolve-report-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.textContent = "⏳ Resolving...";
+            const fd = new FormData(e.target);
+            const body = {
+                resolution_summary: fd.get('resolution_summary'),
+                send_email: !!fd.get('send_email')
+            };
+            try {
+                await API.post(`/api/care/admin/reports/${reportId}/resolve`, body);
+                showToast("✅ Report Resolved Successfully", "success");
+                this.hideModal();
+                this.loadCareReports();
+                if (typeof fetchCareOverview === 'function') fetchCareOverview();
+                if (typeof fetchRealCareData === 'function') fetchRealCareData();
+            } catch (err) {
+                showToast(`❌ Failed: ${err.message}`, "error");
+                btn.disabled = false; btn.textContent = "✅ Mark Resolved";
+            }
+        };
     }
 };

@@ -448,6 +448,18 @@ def execute_schema():
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
         """,
+        """
+        CREATE TABLE IF NOT EXISTS broadcast_alerts (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            title VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL,
+            severity VARCHAR(32) DEFAULT 'info',
+            target_region VARCHAR(128),
+            target_role VARCHAR(32) DEFAULT 'all',
+            created_by_admin_id UUID REFERENCES users(id),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
         # ─── END RESOLVIT CARE EXTENSIONS ──────────────────────────────────────
 
         # User Table Extensions for Direct Twitter
