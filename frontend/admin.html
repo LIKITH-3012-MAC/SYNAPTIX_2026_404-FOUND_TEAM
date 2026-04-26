@@ -457,6 +457,7 @@
             <a class="sidebar-link" onclick="showPanel('ngo-panel');closeSidebar()">🏢 NGO Management</a>
             <a class="sidebar-link" onclick="showPanel('care-reports-panel');closeSidebar()">🏥 Care Operations</a>
             <a class="sidebar-link" onclick="showPanel('audit-panel');closeSidebar()">📜 System Audit Log</a>
+            <a class="sidebar-link" onclick="showPanel('export-panel');closeSidebar()">📤 Data Export Center</a>
             <div class="sidebar-sep"></div>
             <a class="sidebar-link" onclick="enterRadarMode()">🌌 Civic Radar Mode</a>
             <div class="sidebar-sep"></div>
@@ -692,6 +693,67 @@
             <div class="panel hidden" id="anomaly-panel">
                 <h3>🔍 Performance Anomaly Board</h3>
                 <div id="anomaly-list"><p style="color:#94a3b8;text-align:center;padding:24px;">Loading anomalies...</p></div>
+            </div>
+
+            <!-- Data Export Center Panel -->
+            <div class="panel hidden" id="export-panel">
+                <h3>📤 Civic Intelligence Data Export</h3>
+                <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">Download complete DB-backed data for reporting and analysis. All actions are audited.</p>
+                
+                <form id="export-form" style="display:flex; flex-direction:column; gap:20px;">
+                    <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                        <h4 style="margin-bottom:12px;font-size:0.95rem;">1. Select Dataset</h4>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="exportType" value="issues" checked> 🚨 Issues & Complaints</label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="exportType" value="citizens"> 👥 Citizens</label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="exportType" value="authorities"> 🏛️ Authorities</label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="exportType" value="care_reports"> 🏥 Care Reports</label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="exportType" value="ngos"> 🏢 NGOs</label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="exportType" value="volunteers"> 🤝 Volunteers</label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="exportType" value="audit_logs"> 📜 System Audit Logs</label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="exportType" value="email_logs"> 📧 Email Logs</label>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                        <h4 style="margin-bottom:12px;font-size:0.95rem;">2. Filters (Optional)</h4>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+                            <div><label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:4px;">District</label><input type="text" id="exp-district" class="form-control" style="width:100%; background:#0f172a; border:1px solid #1e293b; color:white; padding:8px; border-radius:6px;" placeholder="e.g. Nellore"></div>
+                            <div><label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:4px;">Status</label><select id="exp-status" class="form-control" style="width:100%; background:#0f172a; border:1px solid #1e293b; color:white; padding:8px; border-radius:6px;"><option value="">All Statuses</option><option value="reported">Reported</option><option value="assigned">Assigned</option><option value="resolved">Resolved</option><option value="escalated">Escalated</option></select></div>
+                            <div><label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:4px;">From Date</label><input type="date" id="exp-from" class="form-control" style="width:100%; background:#0f172a; border:1px solid #1e293b; color:white; padding:8px; border-radius:6px; color-scheme:dark;"></div>
+                            <div><label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:4px;">To Date</label><input type="date" id="exp-to" class="form-control" style="width:100%; background:#0f172a; border:1px solid #1e293b; color:white; padding:8px; border-radius:6px; color-scheme:dark;"></div>
+                            <div style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="exp-resolved"><label for="exp-resolved" style="font-size:0.85rem;">Resolved Only</label></div>
+                            <div style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="exp-escalated"><label for="exp-escalated" style="font-size:0.85rem;">Escalated Only</label></div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end;">
+                        <button type="button" class="btn btn-primary" id="btn-export-download" onclick="downloadExport()" style="padding:12px 24px; font-weight:800; font-size:1rem; display:flex; align-items:center; gap:8px; border:none; border-radius:8px; background:#6366f1; color:white; cursor:pointer; transition:all 0.2s;">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download CSV
+                        </button>
+                    </div>
+                </form>
+
+                <div class="sidebar-sep" style="margin:30px 0;"></div>
+
+                <h3>🔄 Export History</h3>
+                <div style="overflow-x:auto;">
+                    <table class="esc-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Admin</th>
+                                <th>Type</th>
+                                <th>Rows</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="export-history-tbody">
+                            <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">Loading history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Civic Radar Mode (hidden fullscreen) -->
@@ -1104,7 +1166,7 @@
                     } catch (e) { showToast(e.message, "error"); }
                 }
 
-                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel", "ngo-panel", "care-reports-panel", "audit-panel"];
+                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel", "ngo-panel", "care-reports-panel", "audit-panel", "export-panel"];
                 const panelTitles = {
                     "heatmap-panel":     ["🗺️ City Heatmap",                "Urban nodes pulse with severity. Hover for full intelligence."],
                     "governance-panel":  ["📊 Governance Health Index",      "Real-time city governance score across 5 dimensions."],
@@ -1116,7 +1178,8 @@
                     "users-panel":       ["👥 Citizen Management",           "Review citizen reputation, trust scores, and access rights."],
                     "ngo-panel":         ["🏢 NGO Management",               "Manage humanitarian organizations and recruit NGO officers."],
                     "care-reports-panel":["🏥 Global Care Operations",        "Oversight of all humanitarian social response complaints."],
-                    "audit-panel":       ["📜 System Audit Log",             "Immutable record of system state changes and admin actions."]
+                    "audit-panel":       ["📜 System Audit Log",             "Immutable record of system state changes and admin actions."],
+                    "export-panel":      ["📤 Data Export Center",           "Download full DB-backed datasets for civic intelligence analysis."]
                 };
 
                 function showPanel(id) {
@@ -1129,6 +1192,103 @@
                     // Auto-load Care data when NGO or Care panels are shown
                     if ((id === "ngo-panel" || id === "care-reports-panel") && window.CareAdmin) {
                         CareAdmin.init().catch(e => console.warn("[CareAdmin]", e));
+                    }
+                    if (id === "export-panel") {
+                        loadExportHistory().catch(e => console.warn("[ExportHistory]", e));
+                    }
+                }
+
+                async function downloadExport() {
+                    const btn = document.getElementById('btn-export-download');
+                    if(btn.disabled) return;
+
+                    const type = document.querySelector('input[name="exportType"]:checked')?.value || 'issues';
+                    const params = new URLSearchParams();
+                    params.append('type', type);
+
+                    const filters = [
+                        {id: 'exp-district', key: 'district'},
+                        {id: 'exp-status', key: 'status'},
+                        {id: 'exp-from', key: 'date_from'},
+                        {id: 'exp-to', key: 'date_to'}
+                    ];
+
+                    filters.forEach(f => {
+                        const val = document.getElementById(f.id)?.value;
+                        if(val) params.append(f.key, val);
+                    });
+
+                    if(document.getElementById('exp-resolved')?.checked) params.append('resolved_only', 'true');
+                    if(document.getElementById('exp-escalated')?.checked) params.append('escalated_only', 'true');
+
+                    try {
+                        btn.disabled = true;
+                        btn.innerHTML = '⏳ Processing Export...';
+                        
+                        const token = localStorage.getItem("resolvit_token");
+                        const url = `${BASE_URL}/api/admin/export/csv?${params.toString()}`;
+                        
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+
+                        if (!response.ok) {
+                            const data = await response.json().catch(()=>({}));
+                            throw new Error(data.detail || `Export failed with status ${response.status}`);
+                        }
+
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = 'export.csv';
+                        if (contentDisposition && contentDisposition.includes('filename=')) {
+                            filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
+                        }
+
+                        const blob = await response.blob();
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(downloadUrl);
+                        
+                        showToast(`Successfully exported ${filename}`, 'success');
+                        
+                        // Refresh history
+                        setTimeout(loadExportHistory, 1500);
+
+                    } catch (error) {
+                        console.error("Export Error:", error);
+                        showToast(error.message, 'error');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download CSV';
+                    }
+                }
+
+                async function loadExportHistory() {
+                    try {
+                        const history = await API.get("/api/admin/export/history");
+                        const tbody = document.getElementById("export-history-tbody");
+                        
+                        if (!history || !history.length) {
+                            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">No recent exports found.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = history.map(h => `
+                            <tr>
+                                <td data-label="Time" style="font-size:0.75rem;color:#64748b;">${new Date(h.created_at).toLocaleString()}</td>
+                                <td data-label="Admin"><strong>${h.admin_name}</strong></td>
+                                <td data-label="Type" style="text-transform:capitalize;font-weight:700;color:#6366f1;">${h.type.replace('_', ' ')}</td>
+                                <td data-label="Rows"><span style="font-family:'JetBrains Mono', monospace;">${h.row_count.toLocaleString()}</span></td>
+                                <td data-label="Status">${h.status === 'success' ? '✅ Success' : '❌ Failed'}</td>
+                            </tr>
+                        `).join('');
+                    } catch (e) {
+                        console.warn("Failed to load export history:", e);
                     }
                 }
             </script>

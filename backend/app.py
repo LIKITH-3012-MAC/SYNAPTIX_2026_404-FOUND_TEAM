@@ -34,6 +34,7 @@ from routes.admin_routes import router as admin_router
 from routes.credits_routes import router as credits_router
 from routes.simulation import router as simulation_router
 from routes.export_routes import router as export_router
+from routes.admin_export_routes import router as admin_export_router
 from routes.feedback_routes import router as feedback_router
 from routes.image_routes import router as image_router
 from routes.chat import router as chat_router
@@ -146,6 +147,7 @@ app.include_router(issues_router,     prefix="/api/issues",     tags=["Issues"])
 app.include_router(issues_router,     prefix="/api/admin/issues", tags=["Admin Issue Aliases"])
 
 app.include_router(export_router,     prefix="/api/export",     tags=["Exports"])
+app.include_router(admin_export_router, prefix="/api/admin/export", tags=["Admin Exports"])
 app.include_router(audit_router,      prefix="/api/audit",      tags=["Audit"])
 app.include_router(metrics_router,    prefix="/api/metrics",    tags=["Metrics"])
 app.include_router(admin_router,      prefix="/api/admin",      tags=["Admin"])
