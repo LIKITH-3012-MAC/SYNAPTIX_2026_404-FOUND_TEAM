@@ -957,7 +957,7 @@
                     btns.forEach(b => { b.disabled = true; b.textContent = "Processing..."; });
 
                     try {
-                        const res = await API.post(`/api/admin/citizens/${userId}/suspend?suspend=${state}`);
+                        const res = await API.patch(`/api/admin/users/${userId}/status`, { status: state ? "suspended" : "active" });
                         showToast(res.message || `User ${state ? 'suspended' : 'reactivated'} successfully`, state ? "warning" : "success");
                         await loadUsers();
                         await loadAuditLogs();

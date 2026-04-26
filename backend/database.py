@@ -114,7 +114,12 @@ def execute_schema():
     
     migrations = [
         # User Table Extensions
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN DEFAULT FALSE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_by_admin_id UUID REFERENCES users(id);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS suspension_reason TEXT;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_score INTEGER DEFAULT 100;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(255);",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(32) DEFAULT 'database';",

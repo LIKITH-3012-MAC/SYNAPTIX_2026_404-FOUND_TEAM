@@ -109,12 +109,18 @@ def adjust_credits(user_id: str, payload: CreditPayload, current_admin: dict = D
         "message": f"Successfully adjusted credits by {payload.delta}"
     }
 
-@router.post("/citizens/{user_id}/suspend", response_model=MessageResponse)
-def suspend_user(user_id: str, suspend: bool = True, current_admin: dict = Depends(require_roles("admin"))):
+class UserStatusPayload(BaseModel):
+    status: str
+    reason: Optional[str] = None
+
+@router.patch("/users/{user_id}/status", response_model=MessageResponse)
+def suspend_user(user_id: str, payload: UserStatusPayload, current_admin: dict = Depends(require_roles("admin"))):
     """Suspend or unsuspend a user account."""
     # Prevent admin from suspending themselves
     if str(current_admin.get("sub")) == str(user_id):
         raise HTTPException(status_code=400, detail="You cannot suspend your own account.")
+
+    suspend = payload.status == "suspended"
 
     with get_db() as cursor:
         # Verify target user exists and get current status
@@ -128,8 +134,17 @@ def suspend_user(user_id: str, suspend: bool = True, current_admin: dict = Depen
 
         # Update user status
         cursor.execute(
-            "UPDATE users SET is_suspended = %s, is_active = %s, updated_at = NOW() WHERE id = %s",
-            (suspend, not suspend, user_id)
+            """
+            UPDATE users 
+            SET is_suspended = %s, 
+                is_active = %s, 
+                suspended_at = CASE WHEN %s THEN NOW() ELSE NULL END,
+                suspended_by_admin_id = CASE WHEN %s THEN %s ELSE NULL END,
+                suspension_reason = %s,
+                updated_at = NOW() 
+            WHERE id = %s
+            """,
+            (suspend, not suspend, suspend, suspend, current_admin["sub"], payload.reason, user_id)
         )
         # Log action with proper JSONB wrapper
         cursor.execute(
@@ -138,7 +153,7 @@ def suspend_user(user_id: str, suspend: bool = True, current_admin: dict = Depen
                 current_admin["sub"], user_id,
                 "user_suspended" if suspend else "user_unsuspended",
                 Json({"status": previous_status}),
-                Json({"status": new_status, "is_suspended": suspend})
+                Json({"status": new_status, "is_suspended": suspend, "reason": payload.reason})
             )
         )
     return {
