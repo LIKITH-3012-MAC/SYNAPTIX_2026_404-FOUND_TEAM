@@ -484,11 +484,19 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
     1. Check user exists
     2. Generate reset token
     3. Store hashed token in DB
-    4. Send email with branded HTML template
+    4. Send email with branded HTML template (inline CSS, Gmail-safe)
     """
     email = payload.email.strip().lower()
     print(f"[AUTH-TRACE] Forgot password requested for: {email}")
 
+    # ── Diagnostic: check Resend config at request-time ──
+    from services.email_service import RESEND_API_KEY, EMAIL_ENABLED, RESEND_FROM_EMAIL, is_placeholder
+    print(f"[AUTH-TRACE] RESEND_API_KEY present: {bool(RESEND_API_KEY)}")
+    print(f"[AUTH-TRACE] RESEND_API_KEY is placeholder: {is_placeholder(RESEND_API_KEY)}")
+    print(f"[AUTH-TRACE] EMAIL_ENABLED: {EMAIL_ENABLED}")
+    print(f"[AUTH-TRACE] RESEND_FROM_EMAIL: {RESEND_FROM_EMAIL}")
+
+    user = None
     with get_db() as cursor:
         cursor.execute("SELECT id, full_name, username FROM users WHERE email = %s AND password_hash IS NOT NULL", (email,))
         user = cursor.fetchone()
@@ -517,51 +525,106 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
         )
         print(f"[AUTH-TRACE] Password reset: token stored in DB, expires in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES}m")
 
-        reset_link = f"{APP_BASE_URL}/reset-password.html?token={token}"
-        
-        # Cyber-Premium Branded HTML email
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{ background-color: #0f172a; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }}
-                .container {{ max-width: 600px; margin: 40px auto; background-color: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); }}
-                .header {{ padding: 40px 0; text-align: center; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }}
-                .header h1 {{ margin: 0; color: #ffffff; font-size: 28px; font-weight: 800; text-transform: uppercase; }}
-                .content {{ padding: 48px 40px; text-align: center; color: #f1f5f9; }}
-                .btn {{ display: inline-block; background-color: #6366f1; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 30px 0; }}
-                .footer {{ padding: 32px 40px; background-color: #0f172a; text-align: center; color: #94a3b8; font-size: 14px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header"><h1>RESOLVIT</h1></div>
-                <div class="content">
-                    <h2 style="color: #ffffff;">Reset Your Password</h2>
-                    <p>Hello {user['full_name'] or user['username']},</p>
-                    <p>We received a request to reset your RESOLVIT account password. Use the secure link below to proceed:</p>
-                    <a href="{reset_link}" class="btn">RESET PASSWORD</a>
-                    <p style="font-size: 14px; color: #94a3b8;">This link will expire in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutes.</p>
-                    <p style="font-size: 13px; color: #64748b; margin-top: 24px;">If you did not request this reset, you can safely ignore this email.</p>
-                </div>
-                <div class="footer">
-                    <p>&copy; 2026 RESOLVIT. Digital Accountability Platform.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        # Dispatch via Background Task
-        print(f"[AUTH-TRACE] Password reset: scheduling email dispatch to {email}")
-        background_tasks.add_task(dispatch_email_task, email, "Reset Your RESOLVIT Password", html, template_name="forgot_password")
-        print(f"[AUTH-TRACE] Password reset: email task scheduled successfully")
-        
-        return {
-            "success": True,
-            "message": "If an account exists, a reset link has been sent."
-        }
+    # ── DB is now committed. Build email OUTSIDE the DB context. ──
+    FRONTEND_URL = os.getenv("FRONTEND_URL", APP_BASE_URL)
+    reset_link = f"{FRONTEND_URL}/reset-password.html?token={token}"
+    user_name = user['full_name'] or user['username']
+    
+    print(f"[AUTH-TRACE] Password reset link domain: {FRONTEND_URL}")
+    
+    # Premium inline-CSS email template (Gmail/Outlook safe — no <style> blocks)
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your RESOLVIT Password</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f5f9;padding:32px 16px;">
+<tr><td align="center">
+
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+    <!-- HEADER -->
+    <tr><td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:40px;text-align:center;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="font-size:28px;font-weight:800;color:#ffffff;letter-spacing:3px;text-transform:uppercase;">🔐 RESOLVIT</td></tr>
+            <tr><td style="font-size:13px;color:rgba(255,255,255,0.8);padding-top:8px;letter-spacing:1px;">Secure Password Recovery</td></tr>
+        </table>
+    </td></tr>
+
+    <!-- BODY -->
+    <tr><td style="padding:48px 40px;">
+
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+            <tr><td style="font-size:20px;font-weight:700;color:#0f172a;">Hi {user_name},</td></tr>
+            <tr><td style="font-size:15px;color:#475569;line-height:1.7;padding-top:14px;">
+                We received a request to reset your RESOLVIT account password. Click the button below to create a new password:
+            </td></tr>
+        </table>
+
+        <!-- CTA BUTTON -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:32px 0;">
+            <tr><td align="center">
+                <a href="{reset_link}" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:16px 40px;text-decoration:none;border-radius:10px;font-weight:700;font-size:16px;letter-spacing:0.3px;">RESET PASSWORD</a>
+            </td></tr>
+        </table>
+
+        <!-- EXPIRY INFO -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+            <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;">
+                <span style="font-size:13px;color:#64748b;">⏰ This link will expire in <strong style="color:#0f172a;">{PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutes</strong></span>
+            </td></tr>
+        </table>
+
+        <!-- SECURITY NOTE -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="font-size:13px;color:#94a3b8;line-height:1.7;">
+                If you did not request this password reset, you can safely ignore this email. Your account remains secure.
+            </td></tr>
+        </table>
+
+        <!-- FALLBACK LINK -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;">
+            <tr><td style="font-size:12px;color:#94a3b8;line-height:1.6;">
+                If the button above doesn't work, copy and paste this link into your browser:<br>
+                <a href="{reset_link}" style="color:#4f46e5;word-break:break-all;font-size:12px;">{reset_link}</a>
+            </td></tr>
+        </table>
+
+    </td></tr>
+
+    <!-- FOOTER -->
+    <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:28px 40px;text-align:center;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="font-size:12px;color:#94a3b8;line-height:1.8;">
+                This is an automated security notification from RESOLVIT.<br>
+                Please do not reply directly to this email.
+            </td></tr>
+            <tr><td style="padding-top:12px;font-size:11px;color:#cbd5e1;">
+                &copy; 2026 RESOLVIT AI. Digital Civic Intelligence Stack.
+            </td></tr>
+        </table>
+    </td></tr>
+
+</table>
+</td></tr>
+</table>
+
+</body>
+</html>"""
+
+    # Dispatch via Background Task
+    print(f"[AUTH-TRACE] Password reset: scheduling email dispatch to {email}")
+    background_tasks.add_task(dispatch_email_task, email, "Reset your RESOLVIT password 🔐", html, template_name="forgot_password")
+    print(f"[AUTH-TRACE] Password reset: email task scheduled successfully")
+    
+    return {
+        "success": True,
+        "message": "If an account exists, a reset link has been sent."
+    }
 
 
 @router.get("/verify-reset-token", response_model=MessageResponse)

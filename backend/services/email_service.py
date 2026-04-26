@@ -77,7 +77,10 @@ def dispatch_email_task(to_email: str, subject: str, html_content: str,
     THE BACKGROUND WORKER.
     Handles delivery with Exponential Backoff (1s, 3s, 5s).
     """
+    print(f"[EMAIL-DISPATCH] ▶ START: to={to_email}, subject={subject[:60]}, template={template_name}")
+    
     if not EMAIL_ENABLED:
+        print(f"[EMAIL-DISPATCH] ⚠ EMAIL_ENABLED is False — skipping send (mock mode)")
         print(f"[EMAIL-MOCK] {subject} -> {to_email}")
         return
 
@@ -85,9 +88,17 @@ def dispatch_email_task(to_email: str, subject: str, html_content: str,
     log_id = _log_email_attempt(None, to_email, subject, "pending", template_name=template_name, issue_id=issue_id)
     
     # Validation
-    if not RESEND_API_KEY or is_placeholder(RESEND_API_KEY):
-        _log_email_attempt(log_id, to_email, subject, "failed", error="Invalid RESEND_API_KEY", issue_id=issue_id)
+    if not RESEND_API_KEY:
+        print(f"[EMAIL-DISPATCH] ✗ RESEND_API_KEY is None/empty — cannot send")
+        _log_email_attempt(log_id, to_email, subject, "failed", error="RESEND_API_KEY is missing", issue_id=issue_id)
         return
+    
+    if is_placeholder(RESEND_API_KEY):
+        print(f"[EMAIL-DISPATCH] ✗ RESEND_API_KEY is a placeholder value — cannot send")
+        _log_email_attempt(log_id, to_email, subject, "failed", error="Invalid RESEND_API_KEY (placeholder)", issue_id=issue_id)
+        return
+
+    print(f"[EMAIL-DISPATCH] ✓ API key valid, from={RESEND_FROM_EMAIL}")
 
     max_retries = 3
     backoff_seconds = [1, 3, 5]
@@ -99,6 +110,7 @@ def dispatch_email_task(to_email: str, subject: str, html_content: str,
         "html": html_content
     }
 
+    last_err = "Unknown error"
     for attempt in range(max_retries + 1):
         if attempt > 0:
             print(f"[EMAIL-RETRY] Attempt {attempt} for {to_email} after {backoff_seconds[attempt-1]}s")
@@ -106,6 +118,7 @@ def dispatch_email_task(to_email: str, subject: str, html_content: str,
             _log_email_attempt(log_id, to_email, subject, "retrying", retry_count=attempt, issue_id=issue_id)
 
         try:
+            print(f"[EMAIL-DISPATCH] Sending attempt {attempt} to Resend API...")
             response = requests.post(
                 "https://api.resend.com/emails",
                 headers={
@@ -117,20 +130,23 @@ def dispatch_email_task(to_email: str, subject: str, html_content: str,
             )
             
             resp_text = response.text
+            print(f"[EMAIL-DISPATCH] Resend response: HTTP {response.status_code}")
+            
             if response.status_code in [200, 201, 202, 204]:
-                print(f"[EMAIL-SUCCESS] Sent to {to_email}")
+                print(f"[EMAIL-SUCCESS] ✓ Sent to {to_email} (resend response: {resp_text[:120]})")
                 _log_email_attempt(log_id, to_email, subject, "sent", success=True, response_body=resp_text, retry_count=attempt, issue_id=issue_id)
                 return # SUCCESS
             else:
                 last_err = f"HTTP {response.status_code}: {resp_text}"
-                print(f"[EMAIL-FAILURE] {last_err}")
+                print(f"[EMAIL-FAILURE] ✗ {last_err}")
                 # Continue loop to next retry
         except Exception as e:
             last_err = str(e)
-            print(f"[EMAIL-ERROR] {last_err}")
+            print(f"[EMAIL-ERROR] ✗ Exception: {last_err}")
             # Continue loop to next retry
 
     # If we are here, all attempts failed
+    print(f"[EMAIL-DISPATCH] ✗ ALL RETRIES EXHAUSTED for {to_email}: {last_err}")
     _log_email_attempt(log_id, to_email, subject, "failed", error=last_err, retry_count=attempt, issue_id=issue_id)
 
 # ── Templates & Wrappers ─────────────────────────
