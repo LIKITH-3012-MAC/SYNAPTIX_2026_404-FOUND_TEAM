@@ -1215,7 +1215,25 @@
 
                     filters.forEach(f => {
                         const val = document.getElementById(f.id)?.value;
-                        if(val) params.append(f.key, val);
+                        if(val) {
+                            if (f.id === 'exp-from' || f.id === 'exp-to') {
+                                try {
+                                    if (val.includes('/')) {
+                                        const parts = val.split('/');
+                                        if (parts.length === 3) {
+                                            params.append(f.key, `${parts[2]}-${parts[1]}-${parts[0]}`);
+                                            return;
+                                        }
+                                    }
+                                    const d = new Date(val);
+                                    if (!isNaN(d)) {
+                                        params.append(f.key, d.toISOString().split('T')[0]);
+                                        return;
+                                    }
+                                } catch (e) { console.warn("Date parse error", e); }
+                            }
+                            params.append(f.key, val);
+                        }
                     });
 
                     if(document.getElementById('exp-resolved')?.checked) params.append('resolved_only', 'true');
@@ -1234,8 +1252,16 @@
                         });
 
                         if (!response.ok) {
-                            const data = await response.json().catch(()=>({}));
-                            throw new Error(data.detail || `Export failed with status ${response.status}`);
+                            let errorMsg = `Export failed with status ${response.status}`;
+                            try {
+                                const data = await response.json();
+                                if (data.detail) errorMsg = data.detail;
+                            } catch (e) {
+                                if (response.status === 404) errorMsg = "Export endpoint not found on server.";
+                                if (response.status === 401) errorMsg = "Unauthorized. Please log in again.";
+                                if (response.status === 403) errorMsg = "Forbidden. Admin access required.";
+                            }
+                            throw new Error(errorMsg);
                         }
 
                         const contentDisposition = response.headers.get('Content-Disposition');
@@ -1270,11 +1296,14 @@
 
                 async function loadExportHistory() {
                     try {
-                        const history = await API.get("/api/admin/export/history");
+                        const history = await API.get("/api/admin/export/history").catch(err => {
+                            if (err.status === 404) throw new Error("History endpoint not found");
+                            throw err;
+                        });
                         const tbody = document.getElementById("export-history-tbody");
                         
                         if (!history || !history.length) {
-                            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">No recent exports found.</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">No exports yet.</td></tr>';
                             return;
                         }
 
@@ -1289,6 +1318,8 @@
                         `).join('');
                     } catch (e) {
                         console.warn("Failed to load export history:", e);
+                        const tbody = document.getElementById("export-history-tbody");
+                        if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#ef4444;">Failed to load history.</td></tr>';
                     }
                 }
             </script>

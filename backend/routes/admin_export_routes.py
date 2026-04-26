@@ -313,7 +313,7 @@ def export_csv(
     def generate_csv():
         output = io.StringIO()
         # Add UTF-8 BOM for Excel compatibility
-        output.write('\\xef\\xbb\\xbf')
+        output.write('\ufeff')
         writer = csv.writer(output, quoting=csv.QUOTE_ALL)
         
         # Write headers
