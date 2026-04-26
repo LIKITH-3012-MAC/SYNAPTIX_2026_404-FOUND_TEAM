@@ -185,8 +185,14 @@ const ResolutionHub = {
                                 <label>RESOLUTION NOTE / AUDIT COMMENT</label>
                                 <textarea id="h-update-note" placeholder="Provide full context for this transition..." class="hub-textarea"></textarea>
                             </div>
+                            <div class="form-group full notify-row">
+                                <label class="notify-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.8rem;color:#818cf8;letter-spacing:0;text-transform:none;font-weight:700;">
+                                    <input type="checkbox" id="h-notify-citizen" checked style="width:18px;height:18px;accent-color:#6366f1;cursor:pointer;">
+                                    <span>📧 Notify citizen by email</span>
+                                </label>
+                            </div>
                             <button id="hub-btn-save" class="hub-btn-primary" onclick="ResolutionHub.commitUpdate()">EXECUTE TRANSACTION</button>
-                            <button id="hub-btn-email" class="hub-btn-secondary" onclick="ResolutionHub.emailCitizen()">📧 EMAIL CITIZEN</button>
+                            <button id="hub-btn-email" class="hub-btn-secondary" onclick="ResolutionHub.emailCitizen()">📧 DISPATCH EMAIL MANUALLY</button>
                         </div>
                     </div>
                 </div>
@@ -477,13 +483,15 @@ const ResolutionHub = {
         const id = this.selectedIssueId;
         const btn = document.getElementById('hub-btn-save');
         const originalText = btn.textContent;
+        const notifyCitizen = document.getElementById('h-notify-citizen')?.checked;
+        const adminNote = document.getElementById('h-update-note').value;
         
         const payload = {
             status: document.getElementById('h-update-status').value,
             urgency: parseInt(document.getElementById('h-update-urgency').value) || 3,
             impact_scale: parseInt(document.getElementById('h-update-impact').value) || 1,
             assigned_authority_id: document.getElementById('h-update-assigned').value || null,
-            resolution_note: document.getElementById('h-update-note').value
+            resolution_note: adminNote
         };
 
         if (payload.status === 'resolved' && !payload.resolution_note) {
@@ -497,6 +505,18 @@ const ResolutionHub = {
         try {
             const result = await API.patch(`/api/issues/${id}`, payload);
             showToast('Operational State Successfully Persisted', 'success');
+            
+            // Auto-dispatch email if checkbox is checked
+            if (notifyCitizen) {
+                try {
+                    btn.textContent = 'DISPATCHING EMAIL...';
+                    await API.post(`/api/admin/issues/${id}/email`, { admin_note: adminNote });
+                    showToast('📧 Update email dispatched to citizen', 'success');
+                } catch (emailErr) {
+                    console.warn('[EMAIL] Dispatch failed:', emailErr);
+                    showToast('Issue updated, but email delivery failed. Use manual dispatch.', 'warning');
+                }
+            }
             
             // Re-fetch and sync current view
             await this._loadIssuePipeline(id);
@@ -547,52 +567,17 @@ const ResolutionHub = {
 
         const btn = document.getElementById('hub-btn-email');
         const originalText = btn.textContent;
-        
-        // 1. Get current issue data from our state or fetch it
-        let issue;
-        try {
-            issue = await API.get(`/api/issues/${id}`);
-        } catch (e) {
-            showToast('Failed to fetch issue context', 'error');
-            return;
-        }
-
-        const email = issue.reporter_email;
-        if (!email) {
-            showToast('Citizen email not found in record.', 'warning');
-            return;
-        }
+        const adminNote = document.getElementById('h-update-note')?.value || '';
 
         btn.disabled = true;
         btn.textContent = 'DISPATCHING...';
 
         try {
-            // Option B: Try Backend Send
-            await API.post(`/api/admin/issues/${id}/email`);
-            showToast('Email Dispatched via RESOLVIT Relay', 'success');
+            await API.post(`/api/admin/issues/${id}/email`, { admin_note: adminNote });
+            showToast('📧 Premium email dispatched to citizen via Resolvit Relay', 'success');
         } catch (err) {
-            console.warn('[EmailRelay] Backend send failed or unconfigured. Falling back to Browser Compose.', err);
-            
-            // Option A: Fallback to Gmail Compose
-            const subject = encodeURIComponent(`Update on your RESOLVIT complaint - ${issue.tracking_id || id.slice(0,8)}`);
-            const bodyLine = (label, val) => val ? `${label}: ${val}\n` : '';
-            
-            let bodyText = `Hi ${issue.reporter_full_name || issue.reporter_name || 'Citizen'},\n\n`;
-            bodyText += `There is an update on your RESOLVIT complaint.\n\n`;
-            bodyText += `--- ISSUE DETAILS ---\n`;
-            bodyText += bodyLine('Tracking ID', issue.tracking_id || id);
-            bodyText += bodyLine('Title', issue.title);
-            bodyText += bodyLine('Category', issue.category);
-            bodyText += bodyLine('Current Status', issue.status.replace(/_/g, ' ').toUpperCase());
-            bodyText += bodyLine('Admin Note', document.getElementById('h-update-note').value || 'Processed by Authority');
-            bodyText += bodyLine('Location', issue.address);
-            bodyText += bodyLine('Reported', issue.created_at);
-            bodyText += `\nTrack details here: https://resolvit-ai.online/issue.html?id=${id}\n\n`;
-            bodyText += `Best regards,\nRESOLVIT Admin`;
-
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${subject}&body=${encodeURIComponent(bodyText)}`;
-            window.open(gmailUrl, '_blank');
-            showToast('Opening Gmail Compose...', 'info');
+            console.error('[EmailRelay] Backend send failed:', err);
+            showToast(`Email dispatch failed: ${err.message || 'Unknown error'}. Please check email configuration.`, 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = originalText;

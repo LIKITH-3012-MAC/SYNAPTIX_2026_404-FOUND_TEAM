@@ -199,11 +199,15 @@ const Auth0Integration = {
     // Check if login was triggered from copilot (OAuth redirect flow)
     const copilotPending = sessionStorage.getItem('copilot_login_pending');
     if (copilotPending) {
+      // Don't clear yet — let the copilot's checkPostLoginResume() also detect it
+      // The copilot will clean up its own flags
       sessionStorage.removeItem('copilot_login_pending');
-      // Fire event after a short delay so copilot can initialize and recover draft
+      // Fire event after a longer delay so copilot has time to fully initialize,
+      // recover its draft, and set up event listeners
       setTimeout(() => {
+        console.log('[Auth0] Dispatching resolvit-auth-success for copilot resume');
         window.dispatchEvent(new CustomEvent('resolvit-auth-success'));
-      }, 500);
+      }, 1000);
       return data;
     }
 

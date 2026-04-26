@@ -6,12 +6,13 @@ from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 import json
 from typing import Optional, List, Any
 from datetime import datetime
+from psycopg2.extras import Json
 import logging
 from models import UserResponse, MessageResponse, DataResponse
+from pydantic import BaseModel
 from database import get_db
 from auth import require_roles
 from services.email_service import send_issue_update_email, get_email_health_stats, dispatch_email_task
-from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -111,16 +112,38 @@ def adjust_credits(user_id: str, payload: CreditPayload, current_admin: dict = D
 @router.post("/citizens/{user_id}/suspend", response_model=MessageResponse)
 def suspend_user(user_id: str, suspend: bool = True, current_admin: dict = Depends(require_roles("admin"))):
     """Suspend or unsuspend a user account."""
+    # Prevent admin from suspending themselves
+    if str(current_admin.get("sub")) == str(user_id):
+        raise HTTPException(status_code=400, detail="You cannot suspend your own account.")
+
     with get_db() as cursor:
-        cursor.execute("UPDATE users SET is_suspended = %s, is_active = %s WHERE id = %s", (suspend, not suspend, user_id))
-        # Log action
+        # Verify target user exists and get current status
+        cursor.execute("SELECT id, role, is_suspended FROM users WHERE id = %s", (user_id,))
+        target = cursor.fetchone()
+        if not target:
+            raise HTTPException(status_code=404, detail="User not found.")
+
+        previous_status = "suspended" if target["is_suspended"] else "active"
+        new_status = "suspended" if suspend else "active"
+
+        # Update user status
         cursor.execute(
-            "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, new_value) VALUES (%s, 'user', %s, %s, %s)",
-            (current_admin["sub"], user_id, "suspension_toggle", suspend)
+            "UPDATE users SET is_suspended = %s, is_active = %s, updated_at = NOW() WHERE id = %s",
+            (suspend, not suspend, user_id)
+        )
+        # Log action with proper JSONB wrapper
+        cursor.execute(
+            "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, old_value, new_value) VALUES (%s, 'user', %s, %s, %s, %s)",
+            (
+                current_admin["sub"], user_id,
+                "user_suspended" if suspend else "user_unsuspended",
+                Json({"status": previous_status}),
+                Json({"status": new_status, "is_suspended": suspend})
+            )
         )
     return {
         "success": True,
-        "message": f"User {'suspended' if suspend else 'unsuspended'} successfully"
+        "message": f"User {'suspended' if suspend else 'reactivated'} successfully"
     }
 
 @router.get("/audit_logs", response_model=DataResponse[list])
@@ -141,7 +164,7 @@ def get_audit_logs(
         SELECT l.*, u.username as admin_username
         FROM admin_audit_logs l
         LEFT JOIN users u ON l.admin_id = u.id
-        {{where_clause}}
+        {where_clause}
         ORDER BY l.created_at DESC
         LIMIT %s OFFSET %s
     """
@@ -378,9 +401,12 @@ def get_admin_anomalies(current_admin: dict = Depends(require_roles("admin"))):
     }
 
 
+class AdminEmailPayload(BaseModel):
+    admin_note: Optional[str] = None
+
 @router.post("/issues/{issue_id}/email", response_model=MessageResponse)
-def email_citizen(issue_id: str, background_tasks: BackgroundTasks, current_admin: dict = Depends(require_roles("admin", "authority"))):
-    """Trigger a status update email to the reporter."""
+def email_citizen(issue_id: str, payload: AdminEmailPayload, background_tasks: BackgroundTasks, current_admin: dict = Depends(require_roles("admin", "authority"))):
+    """Trigger a premium status update email to the reporter."""
     with get_db() as cursor:
         # Fetch issue and reporter email
         cursor.execute(
@@ -406,16 +432,26 @@ def email_citizen(issue_id: str, background_tasks: BackgroundTasks, current_admi
     to_email = issue_data["reporter_email"]
     username = issue_data["reporter_name"] or issue_data["reporter_username"]
     
-    send_issue_update_email(background_tasks, to_email, username, issue_data)
+    # Look up admin/authority name
+    with get_db() as cursor:
+        cursor.execute("SELECT full_name, username FROM users WHERE id = %s", (current_admin["sub"],))
+        admin_row = cursor.fetchone()
+    admin_name = (admin_row["full_name"] or admin_row["username"]) if admin_row else 'Admin'
     
-    # Log the email action in admin audit (actual dispatch status logged in email_audit_logs)
+    send_issue_update_email(
+        background_tasks, to_email, username, issue_data,
+        admin_note=payload.admin_note,
+        updated_by_name=admin_name
+    )
+    
+    # Log the email action in admin audit
     with get_db() as cursor:
         cursor.execute(
-            "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, new_value) VALUES (%s, 'issue', %s, 'email_sent', %s)",
-            (current_admin["sub"], issue_id, json.dumps({"to": to_email, "status": "sent"}))
+            "INSERT INTO admin_audit_logs (admin_id, entity_type, entity_id, action, new_value) VALUES (%s, 'issue', %s, %s, %s)",
+            (current_admin["sub"], issue_id, "email_dispatched", json.dumps({"to": to_email, "admin_note": payload.admin_note or "", "dispatched_by": admin_name}))
         )
         
     return {
         "success": True,
-        "message": "Email notification dispatched successfully"
+        "message": "Premium email notification dispatched successfully"
     }

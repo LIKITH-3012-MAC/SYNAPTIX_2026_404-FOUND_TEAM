@@ -50,6 +50,7 @@ class ResolvitCopilot {
         this.initDOM();
         this.bindEvents();
         this.recoverDraft();
+        this.checkPostLoginResume();
     }
 
     getNeuralIcon(sizeClass = '') {
@@ -140,8 +141,11 @@ class ResolvitCopilot {
         });
 
         // Auth resume listener — same-tab custom event (primary)
+        // Fired by Auth.showModal login success & Auth0Integration.syncWithBackend
         window.addEventListener('resolvit-auth-success', () => {
-            if (this.state === COPILOT_STATES.CONFIRM) {
+            console.log('[Copilot] resolvit-auth-success event received, state:', this.state);
+            const token = localStorage.getItem('resolvit_token');
+            if (token && (this.state === COPILOT_STATES.CONFIRM || this.state === COPILOT_STATES.PREVIEW)) {
                 this.appendMessage('ai', '✅ **Identity verified.** Submitting your report now...');
                 this.submitComplaint();
             }
@@ -154,20 +158,6 @@ class ResolvitCopilot {
                 this.submitComplaint();
             }
         });
-
-        // Resume after redirect-based login (e.g. returnTo=chatbot-report)
-        if (window.location.search.includes('returnTo=chatbot-report') || sessionStorage.getItem('copilot_login_pending')) {
-            sessionStorage.removeItem('copilot_login_pending');
-            const token = localStorage.getItem('resolvit_token');
-            if (token) {
-                setTimeout(() => {
-                    if (this.state === COPILOT_STATES.CONFIRM || this.state === COPILOT_STATES.PREVIEW) {
-                        this.appendMessage('ai', '✅ **Welcome back!** Submitting your saved report...');
-                        this.submitComplaint();
-                    }
-                }, 800);
-            }
-        }
     }
 
     getSuggestions() {
@@ -542,28 +532,125 @@ class ResolvitCopilot {
                 <div style="font-size: 2rem; color: #f59e0b; margin-bottom: 8px;"><i class="fas fa-user-shield"></i></div>
                 <h3 style="margin:0 0 8px 0; color:white;">Identity Verification</h3>
                 <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;">Your report is ready. <strong>Login required</strong> to submit to the official pipeline.</p>
-                <div style="display:flex; gap:10px; width: 100%;">
-                    <button class="copilot-card-btn primary" id="copilot-login-btn">Open Login Modal</button>
+                <div style="display:flex; flex-direction:column; gap:10px; width: 100%;">
+                    <button class="copilot-card-btn primary" id="copilot-login-btn" style="padding:14px; font-size:0.95rem; cursor:pointer;">
+                        <i class="fas fa-sign-in-alt" style="margin-right:8px;"></i>Open Login Modal
+                    </button>
+                    <p style="font-size:0.75rem; color: #64748b; text-align:center; margin:4px 0 0 0;">Supports Google, GitHub, Twitter & Email login</p>
                 </div>
             </div>
         `;
         this.messagesDiv.appendChild(container);
 
         // Bind login button with copilot-aware flow
-        container.querySelector('#copilot-login-btn').addEventListener('click', () => {
+        const loginBtn = container.querySelector('#copilot-login-btn');
+        loginBtn.addEventListener('click', () => {
+            console.log('[Copilot] Login button clicked — initiating auth flow');
+
+            // 1. Always save draft before any auth action
             this.saveDraft();
+            // Also save to sessionStorage as a backup for cross-page redirects
+            sessionStorage.setItem('copilot_draft_backup', JSON.stringify({
+                state: this.state,
+                draft: this.issueDraft
+            }));
+
+            // 2. Mark login as pending for redirect-based OAuth flows
+            sessionStorage.setItem('copilot_login_pending', 'true');
+
+            // 3. Try to open in-page Auth modal (preferred — no redirect needed)
             if (window.Auth && typeof Auth.showModal === 'function') {
                 // Set flag so auth.js knows NOT to redirect after login
                 Auth._copilotPendingLogin = true;
                 Auth.showModal('login');
             } else {
-                // Fallback: redirect to login page with returnTo param
-                sessionStorage.setItem('copilot_login_pending', 'true');
+                // Fallback: redirect to index.html with login trigger
+                console.warn('[Copilot] Auth module not available — redirecting to login page');
                 window.location.href = 'index.html?returnTo=chatbot-report';
             }
         });
 
         this.scrollToBottom();
+    }
+
+    /**
+     * Check if we just returned from a redirect-based login (OAuth or fallback).
+     * If so, auto-open the copilot, recover the draft, and resume submission.
+     */
+    checkPostLoginResume() {
+        const isPending = sessionStorage.getItem('copilot_login_pending');
+        const hasReturnTo = window.location.search.includes('returnTo=chatbot-report');
+
+        if (!isPending && !hasReturnTo) return;
+
+        const token = localStorage.getItem('resolvit_token');
+        if (!token) {
+            // Login didn't complete — if returnTo is in the URL, open login modal
+            if (hasReturnTo) {
+                setTimeout(() => {
+                    if (window.Auth && typeof Auth.showModal === 'function') {
+                        // Recover draft first
+                        this._recoverDraftFromBackup();
+                        Auth._copilotPendingLogin = true;
+                        Auth.showModal('login');
+                    }
+                }, 1000);
+            }
+            return;
+        }
+
+        // Login was successful — clean up flags
+        sessionStorage.removeItem('copilot_login_pending');
+
+        // Clean URL if returnTo param is present
+        if (hasReturnTo) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('returnTo');
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+        }
+
+        // Recover draft from backup if main draft was lost during redirect
+        this._recoverDraftFromBackup();
+
+        // Auto-open copilot and submit after a brief delay for page init
+        setTimeout(() => {
+            console.log('[Copilot] Post-login resume — state:', this.state);
+            // Open the copilot panel
+            if (!this.isOpen) this.togglePanel();
+
+            if (this.state === COPILOT_STATES.CONFIRM || this.state === COPILOT_STATES.PREVIEW) {
+                this.appendMessage('ai', '✅ **Welcome back!** Your identity is verified. Submitting your saved report now...');
+                this.submitComplaint();
+            } else if (this.issueDraft.title && this.issueDraft.description) {
+                // Draft exists but state wasn't in confirm — show preview
+                this.state = COPILOT_STATES.PREVIEW;
+                this.appendMessage('ai', '👋 **Welcome back!** I recovered your complaint draft. Please review and confirm.');
+                this.renderPreview();
+            }
+        }, 1200);
+    }
+
+    /**
+     * Recover draft from sessionStorage backup (used after redirect-based login).
+     */
+    _recoverDraftFromBackup() {
+        try {
+            // Check sessionStorage backup first (survives page redirects)
+            const backup = sessionStorage.getItem('copilot_draft_backup');
+            if (backup) {
+                const saved = JSON.parse(backup);
+                if (saved.state && saved.state !== COPILOT_STATES.INIT && saved.state !== COPILOT_STATES.SUCCESS) {
+                    this.state = saved.state;
+                    this.issueDraft = saved.draft;
+                    sessionStorage.removeItem('copilot_draft_backup');
+                    console.log('[Copilot] Draft recovered from sessionStorage backup');
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn('[Copilot] Failed to recover draft from backup:', e);
+        }
+        return false;
     }
 
     renderSuccess(issue) {

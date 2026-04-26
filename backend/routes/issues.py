@@ -438,14 +438,19 @@ def update_issue(
     # ── EMAIL NOTIFICATION ──
     try:
         with get_db() as cursor:
+            # Fetch reporter info
             cursor.execute(
                 "SELECT u.email, u.full_name, u.username FROM users u JOIN issues i ON i.reporter_id = u.id WHERE i.id = %s",
                 (issue_id,)
             )
             user = cursor.fetchone()
+            # Fetch admin/authority name
+            cursor.execute("SELECT full_name, username FROM users WHERE id = %s", (current_user["sub"],))
+            admin_row = cursor.fetchone()
+            admin_name = (admin_row["full_name"] or admin_row["username"]) if admin_row else 'Admin'
+
             if user:
                 email_data = {**updated, "old_status": str(existing.get("status"))}
-                # Ensure dates are strings
                 for k in ["created_at", "updated_at", "resolved_at"]:
                     if email_data.get(k) and hasattr(email_data[k], "isoformat"):
                         email_data[k] = email_data[k].isoformat()
@@ -453,8 +458,10 @@ def update_issue(
                 send_issue_update_email(
                     background_tasks=background_tasks,
                     to_email=user["email"],
-                    username=user["full_name"] or user["username"],
-                    issue_data=email_data
+                    name=user["full_name"] or user["username"],
+                    issue_data=email_data,
+                    admin_note=payload.resolution_note,
+                    updated_by_name=admin_name
                 )
     except Exception as e:
         print(f"[EMAIL ERR] {e}")
@@ -591,10 +598,14 @@ def assign_issue(issue_id: str, payload: AssignPayload, background_tasks: Backgr
                 (issue_id,)
             )
             row = cursor.fetchone()
+            # Fetch admin/authority name
+            cursor.execute("SELECT full_name, username FROM users WHERE id = %s", (current_user["sub"],))
+            admin_row = cursor.fetchone()
+            admin_name = (admin_row["full_name"] or admin_row["username"]) if admin_row else 'Admin'
+
             if row:
                 issue_data = dict(row)
                 issue_data["old_status"] = str(existing["status"])
-                issue_data["note"] = payload.note
                 for k in ["created_at", "updated_at", "resolved_at"]:
                     if issue_data.get(k) and hasattr(issue_data[k], "isoformat"):
                         issue_data[k] = issue_data[k].isoformat()
@@ -602,8 +613,10 @@ def assign_issue(issue_id: str, payload: AssignPayload, background_tasks: Backgr
                 send_issue_update_email(
                     background_tasks=background_tasks,
                     to_email=issue_data["email"],
-                    username=issue_data["full_name"] or issue_data["username"],
-                    issue_data=issue_data
+                    name=issue_data["full_name"] or issue_data["username"],
+                    issue_data=issue_data,
+                    admin_note=payload.note,
+                    updated_by_name=admin_name
                 )
     except Exception as e:
         print(f"[EMAIL ERR] {e}")
@@ -658,10 +671,14 @@ def escalate_issue(issue_id: str, background_tasks: BackgroundTasks, note: Optio
                 (issue_id,)
             )
             row = cursor.fetchone()
+            # Fetch admin/authority name
+            cursor.execute("SELECT full_name, username FROM users WHERE id = %s", (current_user["sub"],))
+            admin_row = cursor.fetchone()
+            admin_name = (admin_row["full_name"] or admin_row["username"]) if admin_row else 'Admin'
+
             if row:
                 issue_data = dict(row)
                 issue_data["old_status"] = str(existing["status"])
-                issue_data["note"] = note
                 for k in ["created_at", "updated_at", "resolved_at"]:
                     if issue_data.get(k) and hasattr(issue_data[k], "isoformat"):
                         issue_data[k] = issue_data[k].isoformat()
@@ -669,8 +686,10 @@ def escalate_issue(issue_id: str, background_tasks: BackgroundTasks, note: Optio
                 send_issue_update_email(
                     background_tasks=background_tasks,
                     to_email=issue_data["email"],
-                    username=issue_data["full_name"] or issue_data["username"],
-                    issue_data=issue_data
+                    name=issue_data["full_name"] or issue_data["username"],
+                    issue_data=issue_data,
+                    admin_note=note,
+                    updated_by_name=admin_name
                 )
     except Exception as e:
         print(f"[EMAIL ERR] {e}")
@@ -717,10 +736,14 @@ def resolve_issue(issue_id: str, background_tasks: BackgroundTasks, note: Option
                 (issue_id,)
             )
             row = cursor.fetchone()
+            # Fetch admin/authority name
+            cursor.execute("SELECT full_name, username FROM users WHERE id = %s", (current_user["sub"],))
+            admin_row = cursor.fetchone()
+            admin_name = (admin_row["full_name"] or admin_row["username"]) if admin_row else 'Admin'
+
             if row:
                 issue_data = dict(row)
                 issue_data["old_status"] = str(existing["status"])
-                issue_data["note"] = note
                 for k in ["created_at", "updated_at", "resolved_at"]:
                     if issue_data.get(k) and hasattr(issue_data[k], "isoformat"):
                         issue_data[k] = issue_data[k].isoformat()
@@ -728,8 +751,10 @@ def resolve_issue(issue_id: str, background_tasks: BackgroundTasks, note: Option
                 send_issue_update_email(
                     background_tasks=background_tasks,
                     to_email=issue_data["email"],
-                    username=issue_data["full_name"] or issue_data["username"],
-                    issue_data=issue_data
+                    name=issue_data["full_name"] or issue_data["username"],
+                    issue_data=issue_data,
+                    admin_note=note,
+                    updated_by_name=admin_name
                 )
     except Exception as e:
         print(f"[EMAIL ERR] {e}")

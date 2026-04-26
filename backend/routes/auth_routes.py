@@ -495,17 +495,27 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
         
         if not user:
             # Silent fail for security, but log it
-            print(f"[AUTH-TRACE] Password reset attempt for non-existent or OAuth user: {email}")
+            print(f"[AUTH-TRACE] Password reset: user not found or OAuth-only for: {email}")
             return {"success": True, "message": "If an account exists, a reset link has been sent."}
+
+        print(f"[AUTH-TRACE] Password reset: user found (ID: {user['id']})")
 
         token = generate_reset_token()
         token_hash = hash_token(token)
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
 
+        # Invalidate any existing unused tokens for this user
+        cursor.execute(
+            "UPDATE password_reset_tokens SET invalidated_at = NOW(), invalidated_reason = 'new_request' "
+            "WHERE user_id = %s AND used_at IS NULL AND invalidated_at IS NULL",
+            (user["id"],)
+        )
+
         cursor.execute(
             "INSERT INTO password_reset_tokens (user_id, email_snapshot, token_hash, expires_at) VALUES (%s, %s, %s, %s)",
             (user["id"], email, token_hash, expires_at)
         )
+        print(f"[AUTH-TRACE] Password reset: token stored in DB, expires in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES}m")
 
         reset_link = f"{APP_BASE_URL}/reset-password.html?token={token}"
         
@@ -534,6 +544,7 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
                     <p>We received a request to reset your RESOLVIT account password. Use the secure link below to proceed:</p>
                     <a href="{reset_link}" class="btn">RESET PASSWORD</a>
                     <p style="font-size: 14px; color: #94a3b8;">This link will expire in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutes.</p>
+                    <p style="font-size: 13px; color: #64748b; margin-top: 24px;">If you did not request this reset, you can safely ignore this email.</p>
                 </div>
                 <div class="footer">
                     <p>&copy; 2026 RESOLVIT. Digital Accountability Platform.</p>
@@ -543,7 +554,9 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
         </html>
         """
         # Dispatch via Background Task
+        print(f"[AUTH-TRACE] Password reset: scheduling email dispatch to {email}")
         background_tasks.add_task(dispatch_email_task, email, "Reset Your RESOLVIT Password", html, template_name="forgot_password")
+        print(f"[AUTH-TRACE] Password reset: email task scheduled successfully")
         
         return {
             "success": True,
@@ -560,19 +573,19 @@ def verify_reset_token(token: str = Query(...)):
     token_hash = hash_token(token)
     with get_db() as cursor:
         cursor.execute(
-            "SELECT id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = %s",
+            "SELECT id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = %s AND invalidated_at IS NULL",
             (token_hash,)
         )
         row = cursor.fetchone()
 
         if not row:
-            return {"success": False, "message": "Invalid reset token."}
+            raise HTTPException(status_code=400, detail="Invalid reset token.")
         
         if row["used_at"]:
-            return {"success": False, "message": "This token has already been used."}
+            raise HTTPException(status_code=410, detail="This token has already been used.")
         
         if row["expires_at"] < datetime.now(timezone.utc):
-            return {"success": False, "message": "This token has expired."}
+            raise HTTPException(status_code=410, detail="This token has expired.")
 
     return {"success": True, "message": "Token is valid."}
 
@@ -590,7 +603,7 @@ def reset_password(payload: ResetPasswordRequest):
     
     with get_db() as cursor:
         cursor.execute(
-            "SELECT id, user_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = %s",
+            "SELECT id, user_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = %s AND invalidated_at IS NULL",
             (token_hash,)
         )
         token_row = cursor.fetchone()
