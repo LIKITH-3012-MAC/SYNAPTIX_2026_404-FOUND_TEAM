@@ -39,7 +39,8 @@ class ResolvitCopilot {
             category: '',
             description: '',
             urgency: 3,
-            impact_scale: 1,
+            impact_scale: 10,
+            safety_risk_probability: 0.15,
             location_text: '',
             latitude: null,
             longitude: null,
@@ -272,7 +273,15 @@ class ResolvitCopilot {
                 break;
 
             case COPILOT_STATES.COLLECT_LOCATION:
-                if (input) this.issueDraft.location_text = input;
+                if (input) {
+                    this.issueDraft.location_text = input;
+                    // Reset coordinates if user typed a new location manually
+                    // unless they just confirmed "GPS Coordinate Sync Success"
+                    if (input !== "GPS Coordinate Sync Success") {
+                        this.issueDraft.latitude = null;
+                        this.issueDraft.longitude = null;
+                    }
+                }
                 this.state = COPILOT_STATES.COLLECT_SEVERITY;
                 this.updateSuggestions();
                 this.appendMessage('ai', "⚠️ **Impact Assessment.**\n\nOn a scale of 1-5, how **urgent** is this? (1: Low, 5: Critical)");
@@ -348,6 +357,9 @@ class ResolvitCopilot {
                 this.issueDraft.longitude = pos.coords.longitude;
                 this.issueDraft.location_text = "GPS Coordinate Sync Success";
                 this.appendMessage('ai', `✅ **GPS Locked:** ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+                
+                // Manually advance state and trigger next step
+                this.input.value = "GPS Coordinate Sync Success";
                 this.handleSend();
             },
             (err) => {
@@ -472,13 +484,28 @@ class ResolvitCopilot {
         this.state = COPILOT_STATES.SUBMITTING;
         this.showTyping();
         try {
+            // Build complete payload matching normal report form
+            const payload = {
+                title: this.issueDraft.title,
+                description: this.issueDraft.description,
+                category: this.issueDraft.category,
+                urgency: parseInt(this.issueDraft.urgency),
+                impact_scale: parseInt(this.issueDraft.impact_scale),
+                safety_risk_probability: parseFloat(this.issueDraft.safety_risk_probability),
+                latitude: this.issueDraft.latitude ? parseFloat(this.issueDraft.latitude) : null,
+                longitude: this.issueDraft.longitude ? parseFloat(this.issueDraft.longitude) : null,
+                location_text: this.issueDraft.location_text,
+                image_url: this.issueDraft.image_url || null,
+                source: 'copilot_chat'
+            };
+
             const response = await fetch(this.intakeUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(this.issueDraft)
+                body: JSON.stringify(payload)
             });
 
             let data;
@@ -492,6 +519,12 @@ class ResolvitCopilot {
                 this.state = COPILOT_STATES.SUCCESS;
                 this.clearDraft();
                 this.updateSuggestions();
+                
+                // Check if location was text-only
+                if (!payload.latitude || !payload.longitude) {
+                    this.appendMessage('ai', "ℹ️ **Note:** Location saved as text. Map clustering requires GPS or geocoded coordinates.");
+                }
+                
                 this.renderSuccess(data.data);
             } else {
                 // Handle specific error codes
@@ -508,7 +541,12 @@ class ResolvitCopilot {
                     const errMsg = this._parseErrorDetail(data.detail)
                                 || data.message
                                 || 'Submission failed. Please check the complaint details and try again.';
-                    this.appendMessage('ai', `❌ **Submission Error:**\n${errMsg}`);
+                    
+                    if (errMsg.includes('safety_risk_probability')) {
+                        this.appendMessage('ai', `❌ **Submission Failed:** Required risk data was missing. System has been updated to fix this. Please retry.`);
+                    } else {
+                        this.appendMessage('ai', `❌ **Submission Error:**\n${errMsg}\n\n“Submission failed because required risk data was missing. Please retry or use the full report form.”`);
+                    }
                     this.saveDraft();
                     this.renderPreview();
                 }
