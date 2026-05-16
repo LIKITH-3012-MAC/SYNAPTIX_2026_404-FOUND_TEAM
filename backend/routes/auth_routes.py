@@ -504,12 +504,12 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
         
         if not user:
             # Silent fail for security, but log it internally
-            print(f"[AUTH-TRACE] Password reset: User NOT FOUND in database for: {email}")
+            print(f"[AUTH-TRACE] USER_NOT_FOUND for: {email}")
             return {"success": True, "message": "If an account exists, a reset link has been sent."}
 
         # Handle OAuth users
         if user["auth_provider"] != "database":
-            print(f"[AUTH-TRACE] Password reset: User found but uses OAuth ({user['auth_provider']}) for: {email}")
+            print(f"[AUTH-TRACE] USER_FOUND but OAuth-only for: {email}")
             # Even for OAuth users, we return "success" to avoid enumeration, 
             # but we can choose whether to send an email or not.
             # Best practice: send an email saying "You usually log in with Google".
@@ -517,10 +517,10 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
             cursor.execute("SELECT password_hash FROM users WHERE id = %s", (user["id"],))
             pwd_check = cursor.fetchone()
             if not pwd_check or not pwd_check["password_hash"]:
-                print(f"[AUTH-TRACE] Password reset: OAuth user with NO local password. Skipping email.")
+                print(f"[AUTH-TRACE] Skipping email: OAuth user with NO local password.")
                 return {"success": True, "message": "If an account exists, a reset link has been sent."}
 
-        print(f"[AUTH-TRACE] Password reset: Valid user found (ID: {user['id']}, Provider: {user['auth_provider']})")
+        print(f"[AUTH-TRACE] USER_FOUND (ID: {user['id']}, Provider: {user['auth_provider']})")
 
         token = generate_reset_token()
         token_hash = hash_token(token)
@@ -537,7 +537,7 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
             "INSERT INTO password_reset_tokens (user_id, email_snapshot, token_hash, expires_at) VALUES (%s, %s, %s, %s)",
             (user["id"], email, token_hash, expires_at)
         )
-        print(f"[AUTH-TRACE] Password reset: Token stored in DB, expires in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES}m")
+        print(f"[AUTH-TRACE] TOKEN_CREATED (Expires in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES}m)")
 
     # ── DB is now committed. Build email OUTSIDE the DB context. ──
     # Priority: Env FRONTEND_URL > Env APP_BASE_URL > Code Default
@@ -632,9 +632,9 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
 </html>"""
 
     # Dispatch via Background Task
-    print(f"[AUTH-TRACE] Password reset: scheduling email dispatch to {email}")
+    print(f"[AUTH-TRACE] RESEND_CALLED (scheduling for {email})")
     background_tasks.add_task(dispatch_email_task, email, "Reset your RESOLVIT password 🔐", html, template_name="forgot_password")
-    print(f"[AUTH-TRACE] Password reset: email task scheduled successfully")
+    print(f"[AUTH-TRACE] Task scheduled successfully")
     
     return {
         "success": True,

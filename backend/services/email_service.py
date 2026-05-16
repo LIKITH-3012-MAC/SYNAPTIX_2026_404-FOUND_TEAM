@@ -99,11 +99,15 @@ def _log_email_attempt(log_id: Optional[str], recipient: str, subject: str, stat
         print(f"[CRITICAL-DB] Failed to log email audit: {e}")
         return None
 
+import resend
+
+# ── Logic: Background Dispatch & Retries ─────────────────────────
+
 def dispatch_email_task(to_email: str, subject: str, html_content: str, 
                         issue_id: Optional[str] = None, template_name: Optional[str] = None):
     """
     THE BACKGROUND WORKER.
-    Handles delivery with Exponential Backoff (1s, 3s, 5s).
+    Uses official Resend SDK with delivery auditing.
     """
     print(f"[EMAIL-DISPATCH] ▶ START: to={to_email}, subject={subject[:60]}, template={template_name}")
     
@@ -126,71 +130,48 @@ def dispatch_email_task(to_email: str, subject: str, html_content: str,
         _log_email_attempt(log_id, to_email, subject, "failed", error="Invalid RESEND_API_KEY (placeholder)", issue_id=issue_id)
         return
 
+    # Configure Resend
+    resend.api_key = RESEND_API_KEY
+    
     # Robust Sender Validation
-    # If RESEND_FROM_EMAIL is "My App <updates@resolvit-ai.online>", we use it directly.
-    # If it is just "updates@resolvit-ai.online", we wrap it with the branding.
     if "<" in RESEND_FROM_EMAIL and ">" in RESEND_FROM_EMAIL:
         sender = RESEND_FROM_EMAIL
     else:
         sender = f"RESOLVIT <{RESEND_FROM_EMAIL}>"
 
-    max_retries = 3
-    backoff_seconds = [1, 3, 5]
-    
-    payload = {
-        "from": sender,
-        "to": [to_email],
-        "subject": subject,
-        "html": html_content
-    }
+    print(f"[EMAIL-DISPATCH] ✓ RESEND_CALLED (to: {to_email}, from: {sender})")
 
-    last_err = "Unknown error"
-    for attempt in range(max_retries + 1):
-        if attempt > 0:
-            print(f"[EMAIL-RETRY] Attempt {attempt} for {to_email} after {backoff_seconds[attempt-1]}s")
-            time.sleep(backoff_seconds[attempt-1])
-            _log_email_attempt(log_id, to_email, subject, "retrying", retry_count=attempt, issue_id=issue_id)
-
-        try:
-            print(f"[EMAIL-DISPATCH] Sending attempt {attempt} to Resend API...")
-            response = requests.post(
-                "https://api.resend.com/emails",
-                headers={
-                    "Authorization": f"Bearer {RESEND_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json=payload,
-                timeout=12
+    try:
+        params = {
+            "from": sender,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        }
+        
+        # Call official SDK
+        response = resend.Emails.send(params)
+        
+        # Resend SDK returns a dict with 'id' if successful
+        resend_id = response.get("id")
+        if resend_id:
+            print(f"[EMAIL-SUCCESS] ✓ RESEND_SUCCESS (ID: {resend_id})")
+            _log_email_attempt(
+                log_id, to_email, subject, "sent", 
+                success=True, 
+                response_body=json.dumps(response), 
+                issue_id=issue_id
             )
+        else:
+            error_msg = f"Unexpected response format: {response}"
+            print(f"[EMAIL-FAILURE] ✗ RESEND_FAILED: {error_msg}")
+            _log_email_attempt(log_id, to_email, subject, "failed", error=error_msg, issue_id=issue_id)
             
-            resp_text = response.text
-            print(f"[EMAIL-DISPATCH] Resend response: HTTP {response.status_code}")
-            
-            if response.status_code in [200, 201, 202, 204]:
-                print(f"[EMAIL-SUCCESS] ✓ Sent to {to_email} (resend response: {resp_text[:120]})")
-                _log_email_attempt(log_id, to_email, subject, "sent", success=True, response_body=resp_text, retry_count=attempt, issue_id=issue_id)
-                return # SUCCESS
-            else:
-                last_err = f"HTTP {response.status_code}: {resp_text}"
-                print(f"[EMAIL-FAILURE] ✗ {last_err}")
-                
-                # Detailed analysis of common Resend errors
-                if response.status_code == 401:
-                    print("[EMAIL-FAILURE-ANALYSIS] Resend API Key is invalid or expired.")
-                elif response.status_code == 403:
-                    print("[EMAIL-FAILURE-ANALYSIS] Domain not verified in Resend, or sandbox restrictions.")
-                elif response.status_code == 422:
-                    print("[EMAIL-FAILURE-ANALYSIS] Malformed request. Check sender/recipient format.")
-                
-                # Continue loop to next retry
-        except Exception as e:
-            last_err = str(e)
-            print(f"[EMAIL-ERROR] ✗ Exception: {last_err}")
-            # Continue loop to next retry
-
-    # If we are here, all attempts failed
-    print(f"[EMAIL-DISPATCH] ✗ ALL RETRIES EXHAUSTED for {to_email}: {last_err}")
-    _log_email_attempt(log_id, to_email, subject, "failed", error=last_err, retry_count=attempt, issue_id=issue_id)
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[EMAIL-FAILURE] ✗ RESEND_FAILED: {error_msg}")
+        traceback.print_exc()
+        _log_email_attempt(log_id, to_email, subject, "failed", error=error_msg, issue_id=issue_id)
 
 # ── Templates & Wrappers ─────────────────────────
 
