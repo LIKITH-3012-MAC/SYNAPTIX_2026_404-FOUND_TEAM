@@ -498,21 +498,35 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
 
     user = None
     with get_db() as cursor:
-        cursor.execute("SELECT id, full_name, username FROM users WHERE email = %s AND password_hash IS NOT NULL", (email,))
+        # Check user exists and has a password (not just OAuth)
+        cursor.execute("SELECT id, full_name, username, auth_provider FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
         
         if not user:
-            # Silent fail for security, but log it
-            print(f"[AUTH-TRACE] Password reset: user not found or OAuth-only for: {email}")
+            # Silent fail for security, but log it internally
+            print(f"[AUTH-TRACE] Password reset: User NOT FOUND in database for: {email}")
             return {"success": True, "message": "If an account exists, a reset link has been sent."}
 
-        print(f"[AUTH-TRACE] Password reset: user found (ID: {user['id']})")
+        # Handle OAuth users
+        if user["auth_provider"] != "database":
+            print(f"[AUTH-TRACE] Password reset: User found but uses OAuth ({user['auth_provider']}) for: {email}")
+            # Even for OAuth users, we return "success" to avoid enumeration, 
+            # but we can choose whether to send an email or not.
+            # Best practice: send an email saying "You usually log in with Google".
+            # For now, we'll proceed if they have a password hash, otherwise we'll skip the email send later.
+            cursor.execute("SELECT password_hash FROM users WHERE id = %s", (user["id"],))
+            pwd_check = cursor.fetchone()
+            if not pwd_check or not pwd_check["password_hash"]:
+                print(f"[AUTH-TRACE] Password reset: OAuth user with NO local password. Skipping email.")
+                return {"success": True, "message": "If an account exists, a reset link has been sent."}
+
+        print(f"[AUTH-TRACE] Password reset: Valid user found (ID: {user['id']}, Provider: {user['auth_provider']})")
 
         token = generate_reset_token()
         token_hash = hash_token(token)
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
 
-        # Invalidate any existing unused tokens for this user
+        # Invalidate any existing unused tokens for this user to prevent replay/spam
         cursor.execute(
             "UPDATE password_reset_tokens SET invalidated_at = NOW(), invalidated_reason = 'new_request' "
             "WHERE user_id = %s AND used_at IS NULL AND invalidated_at IS NULL",
@@ -523,14 +537,15 @@ def forgot_password(payload: ForgotPasswordRequest, background_tasks: Background
             "INSERT INTO password_reset_tokens (user_id, email_snapshot, token_hash, expires_at) VALUES (%s, %s, %s, %s)",
             (user["id"], email, token_hash, expires_at)
         )
-        print(f"[AUTH-TRACE] Password reset: token stored in DB, expires in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES}m")
+        print(f"[AUTH-TRACE] Password reset: Token stored in DB, expires in {PASSWORD_RESET_TOKEN_EXPIRE_MINUTES}m")
 
     # ── DB is now committed. Build email OUTSIDE the DB context. ──
-    FRONTEND_URL = os.getenv("FRONTEND_URL", APP_BASE_URL)
+    # Priority: Env FRONTEND_URL > Env APP_BASE_URL > Code Default
+    FRONTEND_URL = os.getenv("FRONTEND_URL", os.getenv("APP_BASE_URL", APP_BASE_URL)).rstrip("/")
     reset_link = f"{FRONTEND_URL}/reset-password.html?token={token}"
     user_name = user['full_name'] or user['username']
     
-    print(f"[AUTH-TRACE] Password reset link domain: {FRONTEND_URL}")
+    print(f"[AUTH-TRACE] Password reset link built: {reset_link}")
     
     # Premium inline-CSS email template (Gmail/Outlook safe — no <style> blocks)
     html = f"""<!DOCTYPE html>

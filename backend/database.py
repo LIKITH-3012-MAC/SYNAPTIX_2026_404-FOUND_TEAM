@@ -486,6 +486,11 @@ def execute_schema():
         except Exception as e:
             # We cast sql to string just in case, though it is usually a string
             sql_str = str(sql)
-            print(f"[DB Migration Warning] Failed to run: {sql_str[:50]}... Error: {e}")
+            err_msg = str(e).lower()
+            if "permission denied" in err_msg or "must be owner" in err_msg:
+                print(f"[DB-MIGRATION-ERROR] CRITICAL: Permission denied for migration: {sql_str[:50]}... Error: {e}")
+                print("[DB-MIGRATION-ERROR] Ensure the DATABASE_URL user has ALTER TABLE permissions or is the table owner.")
+            else:
+                print(f"[DB-MIGRATION-WARNING] Failed to run: {sql_str[:50]}... Error: {e}")
     
     print("[DB] Migrations complete.")

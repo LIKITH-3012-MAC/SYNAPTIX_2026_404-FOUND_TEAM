@@ -42,30 +42,58 @@ def _log_email_attempt(log_id: Optional[str], recipient: str, subject: str, stat
                     resend_msg_id = data.get("id")
                 except: pass
 
+            # Dynamic list of columns to handle potential schema drift (missing columns)
+            # We check which columns exist in the table before inserting/updating
+            columns_in_db = []
+            try:
+                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'email_audit_logs'")
+                columns_in_db = [r['column_name'] for r in cursor.fetchall()]
+            except: 
+                pass # Fallback to minimal set if metadata check fails
+
             if log_id:
                 # UPDATE
-                cursor.execute(
-                    """
-                    UPDATE email_audit_logs 
-                    SET status = %s, email_sent = %s, error_message = %s, 
-                        response_body = %s, resend_message_id = %s, 
-                        retry_count = %s, failed_at = %s
-                    WHERE id = %s
-                    """,
-                    (status, success, error, response_body, resend_msg_id, 
-                     retry_count, (datetime.now(timezone.utc) if not success and status == 'failed' else None), log_id)
-                )
+                updates = ["email_sent = %s", "error_message = %s", "response_body = %s"]
+                params = [success, error, response_body]
+                
+                if "failed_at" in columns_in_db:
+                    updates.append("failed_at = %s")
+                    params.append((datetime.now(timezone.utc) if not success and status == 'failed' else None))
+                
+                if "status" in columns_in_db:
+                    updates.append("status = %s")
+                    params.append(status)
+                if "resend_message_id" in columns_in_db:
+                    updates.append("resend_message_id = %s")
+                    params.append(resend_msg_id)
+                if "retry_count" in columns_in_db:
+                    updates.append("retry_count = %s")
+                    params.append(retry_count)
+
+                sql = f"UPDATE email_audit_logs SET {', '.join(updates)} WHERE id = %s"
+                params.append(log_id)
+                cursor.execute(sql, tuple(params))
                 return log_id
             else:
                 # INSERT
-                cursor.execute(
-                    """
-                    INSERT INTO email_audit_logs (issue_id, recipient, subject, email_sent, status, error_message, response_body, template_name, retry_count, resend_message_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id
-                    """,
-                    (issue_id, recipient, subject, success, status, error, response_body, template_name, retry_count, resend_msg_id)
-                )
+                cols = ["issue_id", "recipient", "subject", "email_sent", "error_message", "response_body"]
+                vals = [issue_id, recipient, subject, success, error, response_body]
+                
+                if "status" in columns_in_db:
+                    cols.append("status")
+                    vals.append(status)
+                if "template_name" in columns_in_db:
+                    cols.append("template_name")
+                    vals.append(template_name)
+                if "retry_count" in columns_in_db:
+                    cols.append("retry_count")
+                    vals.append(retry_count)
+                if "resend_message_id" in columns_in_db:
+                    cols.append("resend_message_id")
+                    vals.append(resend_msg_id)
+
+                sql = f"INSERT INTO email_audit_logs ({', '.join(cols)}) VALUES ({', '.join(['%s']*len(cols))}) RETURNING id"
+                cursor.execute(sql, tuple(vals))
                 return cursor.fetchone()["id"]
     except Exception as e:
         print(f"[CRITICAL-DB] Failed to log email audit: {e}")
@@ -98,13 +126,19 @@ def dispatch_email_task(to_email: str, subject: str, html_content: str,
         _log_email_attempt(log_id, to_email, subject, "failed", error="Invalid RESEND_API_KEY (placeholder)", issue_id=issue_id)
         return
 
-    print(f"[EMAIL-DISPATCH] ✓ API key valid, from={RESEND_FROM_EMAIL}")
+    # Robust Sender Validation
+    # If RESEND_FROM_EMAIL is "My App <updates@resolvit-ai.online>", we use it directly.
+    # If it is just "updates@resolvit-ai.online", we wrap it with the branding.
+    if "<" in RESEND_FROM_EMAIL and ">" in RESEND_FROM_EMAIL:
+        sender = RESEND_FROM_EMAIL
+    else:
+        sender = f"RESOLVIT <{RESEND_FROM_EMAIL}>"
 
     max_retries = 3
     backoff_seconds = [1, 3, 5]
     
     payload = {
-        "from": f"RESOLVIT <{RESEND_FROM_EMAIL}>",
+        "from": sender,
         "to": [to_email],
         "subject": subject,
         "html": html_content
@@ -139,6 +173,15 @@ def dispatch_email_task(to_email: str, subject: str, html_content: str,
             else:
                 last_err = f"HTTP {response.status_code}: {resp_text}"
                 print(f"[EMAIL-FAILURE] ✗ {last_err}")
+                
+                # Detailed analysis of common Resend errors
+                if response.status_code == 401:
+                    print("[EMAIL-FAILURE-ANALYSIS] Resend API Key is invalid or expired.")
+                elif response.status_code == 403:
+                    print("[EMAIL-FAILURE-ANALYSIS] Domain not verified in Resend, or sandbox restrictions.")
+                elif response.status_code == 422:
+                    print("[EMAIL-FAILURE-ANALYSIS] Malformed request. Check sender/recipient format.")
+                
                 # Continue loop to next retry
         except Exception as e:
             last_err = str(e)
