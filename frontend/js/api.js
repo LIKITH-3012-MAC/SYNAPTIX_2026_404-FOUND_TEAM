@@ -10,7 +10,7 @@
 // ────────────────────────────────────────────────────────────────
 // Backend URL — auto-switches dev ↔ production
 // ────────────────────────────────────────────────────────────────
-const PRODUCTION_URL = "https://synaptix-2026-404-found-team.onrender.com";
+const PRODUCTION_URL = "https://synaptix-2026-404-found-team-6m5l.onrender.com";
 
 const BASE_URL = (() => {
   const host = window.location.hostname;

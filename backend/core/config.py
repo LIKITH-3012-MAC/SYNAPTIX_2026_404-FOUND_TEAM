@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         "https://resolvit-app-2026.vercel.app",
         "https://www.resolvit-ai.online",
         "https://resolvit-ai.online",
-        "https://synaptix-2026-404-found-team.onrender.com"
+        "https://synaptix-2026-404-found-team-6m5l.onrender.com"
     ]
 
     # Email Domain Allowlist for Manual Registration

@@ -133,7 +133,7 @@ const Auth0Integration = {
     const backendBase =
       typeof BASE_URL !== "undefined"
         ? BASE_URL
-        : (window.BASE_URL || "https://synaptix-2026-404-found-team.onrender.com");
+        : (window.BASE_URL || "https://synaptix-2026-404-found-team-6m5l.onrender.com");
 
     const payload = {
       email:

@@ -6,7 +6,7 @@ databases:
 services:
   # 1. API Backend
   - type: web
-    name: synaptix-2026-404-found-team
+    name: synaptix-2026-404-found-team-6m5l
     env: python
     region: singapore
     plan: free
