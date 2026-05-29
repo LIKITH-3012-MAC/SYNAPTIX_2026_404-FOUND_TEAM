@@ -55,7 +55,7 @@ echo ""
 cd "$BACKEND_DIR"
 # Use Gunicorn as a process manager for Uvicorn
 gunicorn app:app \
-    --workers 4 \
+    --workers 1 \
     --worker-class uvicorn.workers.UvicornWorker \
     --bind 0.0.0.0:8000 \
     --timeout 120 \

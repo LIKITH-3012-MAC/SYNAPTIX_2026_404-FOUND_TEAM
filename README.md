@@ -5,21 +5,6 @@
 
 ---
 
-## 🚀 Quick Start
-
-### Option A: Docker (Recommended — Full Stack)
-
-```bash
-cd /path/to/resolvit
-docker-compose up -d
-```
-
-| Frontend | http://localhost:3000            |
-| API      | http://localhost:8000/api/docs  |
-| Auth     | Auth0 + PostgreSQL Sync         |
-
----
-
 ## 🛡️ Authentication Architecture (NEW)
 
 The platform has migrated to a hybrid **Auth0 + Local Security** model:
@@ -30,7 +15,7 @@ The platform has migrated to a hybrid **Auth0 + Local Security** model:
 
 ---
 
-### Option B: Manual Setup (Development)
+## 🚀 Quick Start (Manual Setup)
 
 #### 1. Database
 
@@ -92,7 +77,6 @@ python -m http.server 3000
     auth.py                 ← JWT auth + bcrypt password hashing
     database.py             ← PostgreSQL connection pool
     models.py               ← Pydantic request/response schemas
-    Dockerfile
     requirements.txt
     .env                    ← Environment config (copy this)
     /routes
@@ -121,7 +105,6 @@ python -m http.server 3000
   /database
     schema.sql              ← PostgreSQL schema (6 tables, indexed)
     seed.sql                ← Demo data (users, issues, escalations)
-  docker-compose.yml
   nginx.conf
   README.md
 ```
@@ -252,7 +235,7 @@ PORT=8000
 - **Backend**: Python, FastAPI, psycopg2, APScheduler, python-jose, passlib
 - **Frontend**: Vanilla HTML + CSS + JavaScript, Leaflet.js
 - **Database**: PostgreSQL 15
-- **Infrastructure**: Docker, Nginx
+- **Infrastructure**: Nginx
 
 ---
 

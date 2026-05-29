@@ -18,7 +18,7 @@ const BASE_URL = (() => {
 
   if (isLocal) {
     if (window.location.port === "8000") return ""; // Origin-relative
-    return "http://127.0.0.1:8000";
+    return `http://${host || '127.0.0.1'}:8000`;
   }
   return PRODUCTION_URL;
 })();

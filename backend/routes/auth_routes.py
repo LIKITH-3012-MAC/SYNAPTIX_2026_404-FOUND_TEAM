@@ -718,16 +718,16 @@ def get_user_profile(current_user: dict = Depends(get_current_user)):
     
     with get_db() as cursor:
         # 1. Count from main 'issues' table
-        cursor.execute("SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'resolved') FROM issues WHERE reporter_id = %s", (user_id,))
+        cursor.execute("SELECT COUNT(*) AS total_count, COUNT(*) FILTER (WHERE status = 'resolved') AS resolved_count FROM issues WHERE reporter_id = %s", (user_id,))
         issues_data = cursor.fetchone()
         
         # 2. Count from 'reports' (Care module) table
         # Note: reports table uses 'user_id' whereas issues uses 'reporter_id'
-        cursor.execute("SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'resolved') FROM reports WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT COUNT(*) AS total_count, COUNT(*) FILTER (WHERE status = 'resolved') AS resolved_count FROM reports WHERE user_id = %s", (user_id,))
         reports_data = cursor.fetchone()
 
-        total_issues = (issues_data[0] if issues_data else 0) + (reports_data[0] if reports_data else 0)
-        total_resolved = (issues_data[1] if issues_data else 0) + (reports_data[1] if reports_data else 0)
+        total_issues = (issues_data['total_count'] if issues_data else 0) + (reports_data['total_count'] if reports_data else 0)
+        total_resolved = (issues_data['resolved_count'] if issues_data else 0) + (reports_data['resolved_count'] if reports_data else 0)
         active_ops = total_issues - total_resolved
 
     return {

@@ -42,8 +42,8 @@ def init_pool():
     if _pool is None:
         print(f"[DB DEBUG] Initializing pool with DSN: {DATABASE_URL}")
         _pool = pool.ThreadedConnectionPool(
-            minconn=5,
-            maxconn=100,
+            minconn=1,
+            maxconn=20,
             dsn=DATABASE_URL,
             cursor_factory=RealDictCursor,
             connect_timeout=10,
