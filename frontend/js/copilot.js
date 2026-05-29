@@ -50,7 +50,8 @@ class ResolvitCopilot {
 
         this.initDOM();
         this.bindEvents();
-        this.recoverDraft();
+        // Only recover draft if returning from a login redirect.
+        // Normal page refreshes always start with a clean chat.
         this.checkPostLoginResume();
     }
 
@@ -485,13 +486,15 @@ class ResolvitCopilot {
         this.showTyping();
         try {
             // Build complete payload matching normal report form
+            // Guard against NaN/undefined from old drafts recovered from localStorage
+            const safetyRisk = parseFloat(this.issueDraft.safety_risk_probability);
             const payload = {
                 title: this.issueDraft.title,
                 description: this.issueDraft.description,
                 category: this.issueDraft.category,
-                urgency: parseInt(this.issueDraft.urgency),
-                impact_scale: parseInt(this.issueDraft.impact_scale),
-                safety_risk_probability: parseFloat(this.issueDraft.safety_risk_probability),
+                urgency: parseInt(this.issueDraft.urgency) || 3,
+                impact_scale: parseInt(this.issueDraft.impact_scale) || 10,
+                safety_risk_probability: isNaN(safetyRisk) ? 0.15 : safetyRisk,
                 latitude: this.issueDraft.latitude ? parseFloat(this.issueDraft.latitude) : null,
                 longitude: this.issueDraft.longitude ? parseFloat(this.issueDraft.longitude) : null,
                 location_text: this.issueDraft.location_text,
@@ -543,9 +546,11 @@ class ResolvitCopilot {
                                 || 'Submission failed. Please check the complaint details and try again.';
                     
                     if (errMsg.includes('safety_risk_probability')) {
+                        // Actually fix the missing field so retry works
+                        this.issueDraft.safety_risk_probability = 0.15;
                         this.appendMessage('ai', `❌ **Submission Failed:** Required risk data was missing. System has been updated to fix this. Please retry.`);
                     } else {
-                        this.appendMessage('ai', `❌ **Submission Error:**\n${errMsg}\n\n“Submission failed because required risk data was missing. Please retry or use the full report form.”`);
+                        this.appendMessage('ai', `❌ **Submission Error:**\n${errMsg}\n\nPlease retry or use the full report form.`);
                     }
                     this.saveDraft();
                     this.renderPreview();
@@ -574,7 +579,7 @@ class ResolvitCopilot {
                     <button class="copilot-card-btn primary" id="copilot-login-btn" style="padding:14px; font-size:0.95rem; cursor:pointer;">
                         <i class="fas fa-sign-in-alt" style="margin-right:8px;"></i>Open Login Modal
                     </button>
-                    <p style="font-size:0.75rem; color: #64748b; text-align:center; margin:4px 0 0 0;">Supports Google, GitHub, Twitter & Email login</p>
+                    <p style="font-size:0.75rem; color: #64748b; text-align:center; margin:4px 0 0 0;">Supports Google, GitHub & Email login</p>
                 </div>
             </div>
         `;
@@ -647,14 +652,40 @@ class ResolvitCopilot {
             window.history.replaceState({}, document.title, url.pathname + url.search);
         }
 
-        // Recover draft from backup if main draft was lost during redirect
-        this._recoverDraftFromBackup();
+        // Recover draft from backup (sessionStorage) or localStorage
+        const recovered = this._recoverDraftFromBackup();
+        if (!recovered) {
+            // Try localStorage as fallback for redirect-based login
+            try {
+                const raw = localStorage.getItem('copilot_draft');
+                if (raw) {
+                    const saved = JSON.parse(raw);
+                    if (saved.state && saved.state !== COPILOT_STATES.INIT && saved.state !== COPILOT_STATES.SUCCESS) {
+                        this.state = saved.state;
+                        const defaults = {
+                            title: '', category: '', description: '',
+                            urgency: 3, impact_scale: 10, safety_risk_probability: 0.15,
+                            location_text: '', latitude: null, longitude: null,
+                            image_url: '', source: 'copilot_chat'
+                        };
+                        this.issueDraft = { ...defaults, ...saved.draft };
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // Clear stored drafts so future refreshes are always clean
+        localStorage.removeItem('copilot_draft');
+        sessionStorage.removeItem('copilot_draft_backup');
 
         // Auto-open copilot and submit after a brief delay for page init
         setTimeout(() => {
             console.log('[Copilot] Post-login resume — state:', this.state);
             // Open the copilot panel
             if (!this.isOpen) this.togglePanel();
+
+            // Reset chat to clean greeting before showing post-login messages
+            this._resetChatDOM();
 
             if (this.state === COPILOT_STATES.CONFIRM || this.state === COPILOT_STATES.PREVIEW) {
                 this.appendMessage('ai', '✅ **Welcome back!** Your identity is verified. Submitting your saved report now...');
@@ -679,7 +710,21 @@ class ResolvitCopilot {
                 const saved = JSON.parse(backup);
                 if (saved.state && saved.state !== COPILOT_STATES.INIT && saved.state !== COPILOT_STATES.SUCCESS) {
                     this.state = saved.state;
-                    this.issueDraft = saved.draft;
+                    // Merge with defaults to fill any missing fields
+                    const defaults = {
+                        title: '',
+                        category: '',
+                        description: '',
+                        urgency: 3,
+                        impact_scale: 10,
+                        safety_risk_probability: 0.15,
+                        location_text: '',
+                        latitude: null,
+                        longitude: null,
+                        image_url: '',
+                        source: 'copilot_chat'
+                    };
+                    this.issueDraft = { ...defaults, ...saved.draft };
                     sessionStorage.removeItem('copilot_draft_backup');
                     console.log('[Copilot] Draft recovered from sessionStorage backup');
                     return true;
@@ -733,7 +778,23 @@ class ResolvitCopilot {
                 const saved = JSON.parse(raw);
                 if (saved.state !== COPILOT_STATES.INIT && saved.state !== COPILOT_STATES.SUCCESS) {
                     this.state = saved.state;
-                    this.issueDraft = saved.draft;
+                    // Merge recovered draft with defaults to ensure all fields exist
+                    // This prevents NaN/undefined errors from old drafts that are
+                    // missing fields added in later versions (e.g. safety_risk_probability)
+                    const defaults = {
+                        title: '',
+                        category: '',
+                        description: '',
+                        urgency: 3,
+                        impact_scale: 10,
+                        safety_risk_probability: 0.15,
+                        location_text: '',
+                        latitude: null,
+                        longitude: null,
+                        image_url: '',
+                        source: 'copilot_chat'
+                    };
+                    this.issueDraft = { ...defaults, ...saved.draft };
                     this.appendMessage('ai', "👋 **Welcome back.** I recovered your previous report draft. Shall we continue?");
                     this.renderPreview();
                 }

@@ -51,8 +51,11 @@ DATASETS = {
         "query": """
             SELECT 
                 id as user_id, full_name as name, email, role, is_active as status,
-                trust_score, points_cache as civic_credits, reports_filed,
-                resolved_reports, active_reports, created_at as joined_at, last_login_at
+                trust_score, points_cache as civic_credits,
+                (SELECT COUNT(*) FROM issues WHERE reporter_id = users.id) as reports_filed,
+                (SELECT COUNT(*) FROM issues WHERE reporter_id = users.id AND status = 'resolved') as resolved_reports,
+                (SELECT COUNT(*) FROM issues WHERE reporter_id = users.id AND status != 'resolved') as active_reports,
+                created_at as joined_at, NULL::timestamp as last_login_at
             FROM users
             WHERE role = 'citizen'
         """,
@@ -86,7 +89,7 @@ DATASETS = {
                 r.created_at, r.resolved_at, r.resolution_summary
             FROM reports r
             LEFT JOIN ngos n ON r.assigned_ngo_id = n.id
-            LEFT JOIN users o ON r.assigned_officer_id = o.id
+            LEFT JOIN users o ON r.assigned_admin_id = o.id
         """,
         "columns": [
             "care_report_id", "title", "category", "status", "assigned_ngo", 
@@ -98,7 +101,9 @@ DATASETS = {
             SELECT 
                 id as ngo_id, name as ngo_name, specialization, operating_region as region,
                 contact_email, contact_phone, is_active as active_status,
-                assigned_reports, resolved_reports, created_at
+                (SELECT COUNT(*) FROM reports WHERE assigned_ngo_id = ngos.id) as assigned_reports,
+                (SELECT COUNT(*) FROM reports WHERE assigned_ngo_id = ngos.id AND status = 'resolved') as resolved_reports,
+                created_at
             FROM ngos
         """,
         "columns": [

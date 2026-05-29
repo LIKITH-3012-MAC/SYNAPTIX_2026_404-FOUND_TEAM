@@ -180,11 +180,6 @@ const Auth = {
                     Continue with GitHub
                 </button>
 
-                <!-- Twitter Login Button -->
-                <button type="button" id="btn-twitter-login" onclick="Auth._twitterLogin(event)" class="btn" style="width:100%;padding:14px;margin-bottom:20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:14px;color:white;font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:all 0.3s ease;backdrop-filter:blur(8px);" onmouseover="this.style.background='rgba(29,161,242,0.15)';this.style.borderColor='#1da1f2'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.borderColor='rgba(255,255,255,0.15)'">
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.25h-6.657l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.045 4.126H5.078z"/></svg>
-                    Continue with Twitter
-                </button>
 
                 <!-- Divider -->
                 <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
@@ -412,52 +407,6 @@ const Auth = {
 };
 
 // Unified UI — Update Navbar based on User State.
-Auth._twitterLogin = async function(e) {
-    const btn = e?.currentTarget || (typeof event !== 'undefined' ? event.currentTarget : null) || document.getElementById('btn-twitter-login');
-    const orig = btn ? btn.innerHTML : '';
-    if (btn) { btn.innerHTML = '⏳ Connecting…'; btn.disabled = true; }
-
-    try {
-        if (typeof PKCE === 'undefined') {
-            throw new Error('PKCE utilities not loaded');
-        }
-
-        // 1. Generate PKCE
-        const verifier = PKCE.generateVerifier();
-        const challenge = await PKCE.generateChallenge(verifier);
-        
-        // 2. Store verifier for callback
-        localStorage.setItem('twitter_pkce_verifier', verifier);
-        
-        // 3. Get Authorize Params from backend
-        const config = await API.get('/api/auth/twitter/authorize');
-        
-        // 4. Construct Twitter URL & Redirect
-        const params = new URLSearchParams({
-            response_type: 'code',
-            client_id: config.client_id,
-            redirect_uri: config.redirect_uri,
-            scope: config.scope,
-            state: config.state,
-            code_challenge: challenge,
-            code_challenge_method: 'S256'
-        });
-        
-        // Preserve copilot pending state across OAuth redirect
-        if (Auth._copilotPendingLogin) {
-            sessionStorage.setItem('copilot_login_pending', 'true');
-            Auth._copilotPendingLogin = false;
-        }
-        
-        window.location.href = `${config.url}?${params.toString()}`;
-    } catch (err) {
-        console.error('[Auth] Twitter login failed:', err);
-        if (btn) { btn.innerHTML = orig; btn.disabled = false; }
-        if (typeof showToast === 'function') {
-            showToast('❌ Twitter login failed. Please use Google or GitHub.', 'error');
-        }
-    }
-};
 
 // Global polyfill for index/submit.html
 window.openLogin = () => Auth.showModal('login');

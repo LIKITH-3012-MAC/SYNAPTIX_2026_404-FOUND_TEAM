@@ -305,7 +305,7 @@ body {
   content: "";
   position: fixed;
   inset: 0;
-  background: url('https://raw.githubusercontent.com/LIKITH-3012-MAC/PORTFOLIO-LIKITH/main/A_breathtaking_ultrawide_cinematic_landscape_photo_delpmaspu.png') no-repeat center center;
+  background: url('../background.jpg') no-repeat center center;
   background-size: cover;
   z-index: -2;
   transform: translate3d(0, 0, 0);

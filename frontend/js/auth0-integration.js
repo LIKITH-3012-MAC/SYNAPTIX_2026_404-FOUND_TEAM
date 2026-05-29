@@ -287,9 +287,6 @@ const Auth0Integration = {
     return this.login("github", event);
   },
 
-  async loginWithTwitter(event) {
-    return this.login("twitter", event);
-  },
 
   async logout() {
     localStorage.removeItem("resolvit_token");
@@ -316,9 +313,6 @@ window.loginWithGoogle = function (e) {
 };
 window.loginWithGitHub = function (e) {
   return Auth0Integration.loginWithGitHub(e);
-};
-window.loginWithTwitter = function (e) {
-  return Auth0Integration.loginWithTwitter(e);
 };
 
 // Boot only after DOM is ready

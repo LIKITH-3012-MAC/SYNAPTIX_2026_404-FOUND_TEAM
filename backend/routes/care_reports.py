@@ -346,7 +346,7 @@ def create_volunteer(payload: VolunteerCreate, current_user: dict = Depends(requ
 # ═══════════════════════════════════════════════════════════════════
 
 @router.get("/admin/overview", tags=["Care Admin"])
-def care_overview(current_user: dict = Depends(require_roles("admin"))):
+def care_overview(current_user: dict = Depends(get_current_user)):
     """Real-time DB-backed overview stats for the Care dashboard."""
     try:
         with get_db() as cursor:
@@ -392,7 +392,7 @@ def care_overview(current_user: dict = Depends(require_roles("admin"))):
 # ═══════════════════════════════════════════════════════════════════
 
 @router.get("/admin/timeline", tags=["Care Admin"])
-def ops_timeline(current_user: dict = Depends(require_roles("admin"))):
+def ops_timeline(current_user: dict = Depends(get_current_user)):
     """Merged timeline of audits, status changes, and broadcasts."""
     try:
         with get_db() as cursor:

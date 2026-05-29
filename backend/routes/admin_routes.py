@@ -381,6 +381,7 @@ def get_admin_gov_health(current_admin: dict = Depends(require_roles("admin"))):
         "data": compute_governance_health()
     }
 
+@router.get("/pressure_data", response_model=DataResponse[list])
 @router.get("/pressure_board", response_model=DataResponse[list])
 def get_pressure_board(current_admin: dict = Depends(require_roles("admin"))):
     """Top issues ranked by Governance Pressure Score."""
@@ -403,11 +404,12 @@ def get_admin_anomalies(current_admin: dict = Depends(require_roles("admin"))):
     """List detected system/officer anomalies."""
     with get_db() as cursor:
         cursor.execute("""
-            SELECT a.*, u.username as authority_name, u.department
+            SELECT a.*, u.username as authority_name, u.department,
+                   u.username as officer_username, u.full_name as officer_name
             FROM anomalies a
             JOIN users u ON a.authority_id = u.id
-            WHERE a.is_resolved = FALSE
-            ORDER BY a.created_at DESC
+            WHERE a.resolved = FALSE
+            ORDER BY a.detected_at DESC
         """)
         rows = cursor.fetchall()
     return {

@@ -9,6 +9,31 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof Auth !== 'undefined') {
         if (!Auth.requireAuth('index.html')) return;
     }
+    
+    // Dynamic user card update in the sidebar
+    const user = Auth.getUser();
+    if (user) {
+        const userCard = document.querySelector('.care-user-card');
+        if (userCard) {
+            const initials = (user.username || 'OP').substring(0, 2).toUpperCase();
+            const roleLabel = user.role === 'admin' ? 'System Administrator' :
+                              user.role === 'ngo_operator' ? 'NGO Operator' :
+                              user.role === 'authority' ? 'Department Official' : 'Citizen Reporter';
+            const accessLabel = user.role === 'admin' ? 'Level 4 Access (Root)' :
+                                user.role === 'ngo_operator' ? 'Level 3 Access (NGO)' :
+                                user.role === 'authority' ? 'Level 2 Access (Dept)' : 'Level 1 Access (User)';
+            
+            userCard.innerHTML = `
+                <div style="width:36px; height:36px; border-radius:50%; background:#10b981; display:flex; align-items:center; justify-content:center; font-weight:bold; color:black;">${initials}</div>
+                <div style="flex:1;">
+                  <div style="font-size:0.85rem; font-weight:600; color:white;">${user.username}</div>
+                  <div style="font-size:0.75rem; color:#94a3b8;">${roleLabel}</div>
+                </div>
+                <i class="fas fa-sign-out-alt" style="color:#94a3b8; cursor:pointer;" onclick="Auth.logout()" title="Logout"></i>
+            `;
+        }
+    }
+
     initCareApp();
     fetchRealCareData();
     fetchCareOverview();
@@ -16,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchOpsTimeline();
 
     // Init CareAdmin for admin users if available
-    const user = Auth.getUser();
     if (user && user.role === 'admin' && window.CareAdmin) {
         CareAdmin.init().catch(e => console.warn("[CareAdmin] Init silently failed:", e));
     }
@@ -29,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchCareOverview() {
     try {
         const user = Auth.getUser();
-        if (!user || user.role !== 'admin') return;
+        if (!user) return;
 
         const data = await API.get('/api/care/admin/overview');
         
@@ -242,7 +266,7 @@ function renderVolunteerGrid(volunteers) {
 async function fetchOpsTimeline() {
     try {
         const user = Auth.getUser();
-        if (!user || user.role !== 'admin') return;
+        if (!user) return;
 
         const events = await API.get('/api/care/admin/timeline');
         renderOpsTimeline(events);
