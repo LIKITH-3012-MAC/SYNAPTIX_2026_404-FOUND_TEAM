@@ -136,14 +136,21 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(
             if not user_id:
                 raise HTTPException(status_code=400, detail="Either user_id or email must be provided.")
 
-            # Resolve ngo_id if it's not a valid UUID (e.g. user entered name or slug)
-            ngo_id = payload.ngo_id
+            ngo_id = payload.ngo_id.strip()
             try:
                 UUID(ngo_id)
             except ValueError:
+                slugified = slugify(ngo_id)
                 cursor.execute(
-                    "SELECT id FROM ngos WHERE name = %s OR slug = %s OR contact_email = %s",
-                    (ngo_id, ngo_id, ngo_id)
+                    """
+                    SELECT id FROM ngos 
+                    WHERE LOWER(name) = %s 
+                       OR slug = %s 
+                       OR LOWER(contact_email) = %s
+                       OR LOWER(name) LIKE %s
+                    LIMIT 1
+                    """,
+                    (ngo_id.lower(), slugified, ngo_id.lower(), f"%{ngo_id.lower()}%")
                 )
                 ngo_row = cursor.fetchone()
                 if not ngo_row:
