@@ -70,7 +70,18 @@ def get_db():
 
     try:
         conn.autocommit = False
+        try:
+            conn.set_session(readonly=False)
+        except Exception:
+            pass
+        
         cursor = conn.cursor()
+        
+        try:
+            cursor.execute("SET default_transaction_read_only = off; SET transaction_read_only = off;")
+        except Exception:
+            pass
+            
         yield cursor
         conn.commit()
     except Exception as e:
@@ -79,6 +90,7 @@ def get_db():
     finally:
         cursor.close()
         connection_pool.putconn(conn)
+
 
 
 # ─────────────────────────────────────────────

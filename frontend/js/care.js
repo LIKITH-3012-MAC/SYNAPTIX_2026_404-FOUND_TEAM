@@ -19,9 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const roleLabel = user.role === 'admin' ? 'System Administrator' :
                               user.role === 'ngo_operator' ? 'NGO Operator' :
                               user.role === 'authority' ? 'Department Official' : 'Citizen Reporter';
-            const accessLabel = user.role === 'admin' ? 'Level 4 Access (Root)' :
-                                user.role === 'ngo_operator' ? 'Level 3 Access (NGO)' :
-                                user.role === 'authority' ? 'Level 2 Access (Dept)' : 'Level 1 Access (User)';
             
             userCard.innerHTML = `
                 <div style="width:36px; height:36px; border-radius:50%; background:#10b981; display:flex; align-items:center; justify-content:center; font-weight:bold; color:black;">${initials}</div>
@@ -31,6 +28,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <i class="fas fa-sign-out-alt" style="color:#94a3b8; cursor:pointer;" onclick="Auth.logout()" title="Logout"></i>
             `;
+        }
+
+        // --- ROLE-BASED SIDEBAR & TOPBAR UI INITIALIZATION ---
+        const role = user.role || 'citizen';
+        
+        // 1. Hide sidebar items not permitted for this role
+        document.querySelectorAll('.care-nav-item').forEach(item => {
+            const allowedRoles = item.getAttribute('data-roles');
+            if (allowedRoles === 'all' || allowedRoles.split(',').includes(role)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // 2. Control visibility of Admin Control Panels in Command Center
+        const adminPanels = document.getElementById('admin-management-panels');
+        if (adminPanels) {
+            adminPanels.style.display = (role === 'admin') ? 'block' : 'none';
+        }
+
+        // 3. Control visibility of Broadcast Alert topbar button
+        const broadcastBtn = document.getElementById('topbar-broadcast-btn');
+        if (broadcastBtn) {
+            broadcastBtn.style.display = (role === 'admin') ? 'inline-flex' : 'none';
+        }
+
+        // 4. Populate Hero actions based on role
+        const heroActions = document.getElementById('hero-actions-container');
+        if (heroActions) {
+            if (role === 'admin') {
+                heroActions.innerHTML = `
+                    <button class="care-btn care-btn-primary" onclick="document.querySelector('[data-target=\\'view-command\\']').click()">Open Command Center</button>
+                    <button class="care-btn care-btn-outline" onclick="CareAdmin.openCreateNGOModal()">Register NGO</button>
+                `;
+            } else if (role === 'ngo_operator') {
+                heroActions.innerHTML = `
+                    <button class="care-btn care-btn-primary" onclick="document.querySelector('[data-target=\\'view-intake\\']').click()">View Assigned Incidents</button>
+                    <button class="care-btn care-btn-outline" onclick="document.querySelector('[data-target=\\'view-tasks\\']').click()">Task Board</button>
+                `;
+            } else {
+                heroActions.innerHTML = `
+                    <button class="care-btn care-btn-primary" onclick="document.querySelector('[data-target=\\'view-submit-report\\']').click()">🚨 Report a Need</button>
+                    <button class="care-btn care-btn-outline" onclick="document.querySelector('[data-target=\\'view-my-submissions\\']').click()">My Submissions</button>
+                `;
+            }
         }
     }
 
@@ -44,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user && user.role === 'admin' && window.CareAdmin) {
         CareAdmin.init().catch(e => console.warn("[CareAdmin] Init silently failed:", e));
     }
+
+    // Init Citizen features (report submission and history load)
+    initCitizenCareFlow();
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -135,6 +181,9 @@ function initCareApp() {
             }
             if (targetId === 'view-timeline') {
                 fetchOpsTimeline();
+            }
+            if (targetId === 'view-my-submissions') {
+                fetchMySubmissions();
             }
         });
     });
@@ -376,3 +425,110 @@ function viewReportDetail(id) {
         DetailManager.open(id, 'care');
     }
 }
+
+// ═══════════════════════════════════════════════════════════
+// CITIZEN INTAKE FLOW & HISTORY
+// ═══════════════════════════════════════════════════════════
+
+function initCitizenCareFlow() {
+    const form = document.getElementById('care-submit-need-form');
+    if (!form) return;
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = "⏳ Submitting Request...";
+
+        const fd = new FormData(form);
+        const payload = {
+            title: fd.get('title'),
+            category: fd.get('category'),
+            description: fd.get('description'),
+            location_text: fd.get('location_text') || null,
+            district: fd.get('district') || null,
+            ward: fd.get('ward') || null,
+            urgency_score: parseInt(fd.get('urgency_score')) || 3,
+            severity_level: 3 // Default
+        };
+
+        try {
+            await API.post('/api/care/reports', payload);
+            showToast("✅ Humanitarian Request Submitted Successfully", "success");
+            form.reset();
+            
+            // Switch to My Submissions tab
+            const submissionsTab = document.querySelector('[data-target="view-my-submissions"]');
+            if (submissionsTab) {
+                submissionsTab.click();
+            } else {
+                fetchMySubmissions();
+            }
+        } catch (err) {
+            showToast(`❌ Failed to submit: ${err.message}`, "error");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "🚨 Submit Humanitarian Request";
+        }
+    };
+}
+
+async function fetchMySubmissions() {
+    const feedContainer = document.getElementById('my-submissions-feed');
+    if (!feedContainer) return;
+
+    feedContainer.innerHTML = '<p style="color:#64748b; padding:20px; text-align:center;">⏳ Loading your submissions...</p>';
+
+    try {
+        const reports = await API.get('/api/care/reports/mine');
+        if (!reports || reports.length === 0) {
+            feedContainer.innerHTML = `
+                <div style="text-align:center; padding:40px; color:#94a3b8;">
+                    <i class="fas fa-clipboard-list" style="font-size:2.5rem; margin-bottom:12px; opacity:0.5;"></i>
+                    <p>You have not submitted any humanitarian requests yet.</p>
+                    <button class="care-btn care-btn-primary" style="margin-top:12px; display:inline-block;" onclick="document.querySelector('[data-target=\\'view-submit-report\\']').click()">Report a Need Now</button>
+                </div>
+            `;
+            return;
+        }
+
+        feedContainer.innerHTML = reports.map(r => {
+            const urgencyColor = r.urgency_score >= 4 ? '#ef4444' : r.urgency_score >= 3 ? '#f97316' : '#10b981';
+            const statusLabel = r.status.replace(/_/g, ' ').toUpperCase();
+            const dateStr = new Date(r.created_at).toLocaleString();
+
+            return `
+                <div class="care-feed-item" style="cursor:default;">
+                    <div class="feed-urgency-indicator" style="background:${urgencyColor};"></div>
+                    <div class="feed-content">
+                        <div class="feed-header">
+                            <h4 class="feed-title">${r.title}</h4>
+                            <span class="badge" style="background:rgba(99,102,241,0.1); color:#818cf8;">${r.complaint_code}</span>
+                        </div>
+                        <p style="font-size:0.9rem; color:#cbd5e1; margin:8px 0;">${r.description}</p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:12px; font-size:0.8rem; color:#94a3b8;">
+                            <div>
+                                <span><i class="fas fa-calendar-alt"></i> ${dateStr}</span>
+                                <span style="margin-left:16px;"><i class="fas fa-tag"></i> ${r.category}</span>
+                                ${r.location_text ? `<span style="margin-left:16px;"><i class="fas fa-map-marker-alt"></i> ${r.location_text}</span>` : ''}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="badge badge-${r.status}" style="font-weight:700;">${statusLabel}</span>
+                            </div>
+                        </div>
+                        ${r.resolution_summary ? `
+                            <div style="margin-top:16px; padding:12px; border-radius:8px; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.15);">
+                                <div style="font-size:0.75rem; font-weight:700; color:#34d399; text-transform:uppercase; margin-bottom:4px;"><i class="fas fa-check-circle"></i> Resolution Summary</div>
+                                <p style="margin:0; font-size:0.85rem; color:#e2e8f0;">${r.resolution_summary}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        feedContainer.innerHTML = `<p style="color:#ef4444; padding:20px; text-align:center;">❌ Failed to load submissions: ${err.message}</p>`;
+    }
+}
+

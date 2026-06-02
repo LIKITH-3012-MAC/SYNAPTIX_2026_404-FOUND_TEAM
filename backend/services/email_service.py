@@ -883,3 +883,258 @@ def trigger_welcome_email(background_tasks, user_id: str, email: str, name: str,
 
     print(f"[WELCOME-EMAIL] Scheduling background dispatch for {email}")
     background_tasks.add_task(dispatch_welcome_email_task, str(user_id), email, name, provider)
+
+
+def send_issue_creation_email(background_tasks, to_email: str, name: str, issue_data: dict):
+    """
+    Premium civic issue creation/complaint confirmation email.
+    Dispatches a richly-formatted HTML email to the citizen reporter.
+    """
+    title = issue_data.get('title', 'Your Issue')
+    subject = f"⚖️ RESOLVIT: Complaint Registered Successfully — {title}"
+    
+    html = _build_issue_creation_html(name, issue_data)
+    
+    background_tasks.add_task(
+        dispatch_email_task, to_email, subject, html,
+        issue_id=str(issue_data.get('id', '')),
+        template_name="issue_created"
+    )
+
+
+def _build_issue_creation_html(name: str, issue_data: dict) -> str:
+    """
+    Build a premium, world-class HTML email for new issue submissions.
+    Light-background, card-based, mobile-responsive, Gmail/Outlook safe.
+    All CSS is inline. Unicode-safe.
+    """
+    FRONTEND_URL = os.getenv("FRONTEND_URL", os.getenv("APP_BASE_URL", "https://www.resolvit-ai.online"))
+    issue_id = str(issue_data.get('id', ''))
+    tracking_id = issue_data.get('tracking_id', issue_id[:8].upper() if issue_id else '—')
+    title = issue_data.get('title', 'Civic Report')
+    category = issue_data.get('category', '—')
+    address = issue_data.get('address') or issue_data.get('location_text', '—')
+    created_at = str(issue_data.get('created_at', '—'))[:19].replace('T', ' ')
+    urgency = issue_data.get('urgency', 3)
+    priority_score = issue_data.get('priority_score', 0)
+    
+    # Priority Badge / Level
+    priority_num = int(float(priority_score)) if priority_score else 0
+    if priority_num >= 70:
+        priority_label = "CRITICAL PRIORITY"
+        priority_color = "#ef4444" # red
+        priority_bg = "#fef2f2"
+    elif priority_num >= 40:
+        priority_label = "MEDIUM PRIORITY"
+        priority_color = "#f59e0b" # amber
+        priority_bg = "#fffbeb"
+    else:
+        priority_label = "STANDARD PRIORITY"
+        priority_color = "#10b981" # emerald
+        priority_bg = "#f0fdf4"
+
+    # Format description
+    desc = issue_data.get('description', '')
+    desc_html = desc.replace('\n', '<br>') if desc else 'No description provided.'
+
+    # Location Coordinates
+    lat = issue_data.get('latitude')
+    lng = issue_data.get('longitude')
+    coords_html = ''
+    if lat and lng:
+        coords_html = f'''
+        <tr>
+            <td style="padding:10px 0;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">Coordinates</td>
+            <td style="padding:10px 0;font-size:13px;font-weight:600;color:#0f172a;text-align:right;font-family:monospace;border-bottom:1px solid #f1f5f9;">{lat}, {lng}</td>
+        </tr>
+        '''
+
+    # Expected Resolution SLA Due
+    sla_expires_at = issue_data.get('sla_expires_at')
+    sla_line = ''
+    if sla_expires_at:
+        if hasattr(sla_expires_at, "isoformat"):
+            formatted_sla = sla_expires_at.isoformat()[:19].replace('T', ' ')
+        else:
+            formatted_sla = str(sla_expires_at)[:19].replace('T', ' ')
+        sla_line = f'''
+        <tr>
+            <td style="padding:10px 0;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">Expected SLA Resolution</td>
+            <td style="padding:10px 0;font-size:14px;font-weight:700;color:#ef4444;text-align:right;border-bottom:1px solid #f1f5f9;">{formatted_sla}</td>
+        </tr>
+        '''
+
+    # Gamification
+    source = issue_data.get('source', 'web')
+    points = 15 if source == 'copilot_chat' else 10
+    bonus_note = " (AI Copilot Bonus included!)" if source == 'copilot_chat' else ""
+
+    return f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resolvit Complaint Registered</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+<!-- Wrapper -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc;padding:40px 16px;">
+<tr><td align="center">
+
+<!-- Container -->
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(79, 70, 229, 0.08);border:1px solid #e2e8f0;">
+
+    <!-- ═══ HEADER ═══ -->
+    <tr><td style="background:linear-gradient(135deg,#312e81 0%,#4f46e5 50%,#7c3aed 100%);padding:48px 40px;text-align:center;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="font-size:32px;font-weight:900;color:#ffffff;letter-spacing:4px;text-transform:uppercase;font-family:system-ui,-apple-system,sans-serif;">⚖️ RESOLVIT</td></tr>
+            <tr><td style="font-size:14px;color:rgba(255,255,255,0.85);padding-top:8px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">Civic Resolution Engine</td></tr>
+        </table>
+    </td></tr>
+
+    <!-- ═══ STATUS BANNER ═══ -->
+    <tr><td style="background:#f1f5f9;padding:16px 40px;text-align:center;border-bottom:1px solid #e2e8f0;">
+        <span style="display:inline-block;background:#ecfdf5;color:#047857;padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;border:1px solid #a7f3d0;">🟢 REPORT REGISTERED</span>
+    </td></tr>
+
+    <!-- ═══ BODY ═══ -->
+    <tr><td style="padding:44px 40px;">
+
+        <!-- Greeting -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+            <tr><td style="font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">Dear {name},</td></tr>
+            <tr><td style="font-size:15px;color:#475569;line-height:1.7;padding-top:12px;">
+                Your civic voice has been registered successfully. Thank you for choosing <strong>RESOLVIT</strong> to report this issue and improve your local community. 
+                Our AI engine has analyzed your complaint, computed its priority score, and logged it securely in our system.
+            </td></tr>
+        </table>
+
+        <!-- ═══ METADATA CARD ═══ -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+            <tr><td style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.02);">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td colspan="2" style="font-size:18px;font-weight:800;color:#1e1b4b;padding-bottom:14px;border-bottom:2px solid #f1f5f9;">📝 Complaint Details</td></tr>
+                    <tr>
+                        <td width="40%" style="padding:12px 0;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">Complaint ID</td>
+                        <td width="60%" style="padding:12px 0;font-size:13px;font-weight:700;color:#4f46e5;text-align:right;font-family:monospace;border-bottom:1px solid #f1f5f9;">#{tracking_id}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:12px 0;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">Title</td>
+                        <td style="padding:12px 0;font-size:14px;font-weight:600;color:#0f172a;text-align:right;border-bottom:1px solid #f1f5f9;">{title}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:12px 0;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">Category</td>
+                        <td style="padding:12px 0;font-size:14px;font-weight:600;color:#0f172a;text-align:right;border-bottom:1px solid #f1f5f9;">{category}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:12px 0;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">Reported Date</td>
+                        <td style="padding:12px 0;font-size:14px;color:#0f172a;text-align:right;border-bottom:1px solid #f1f5f9;">{created_at}</td>
+                    </tr>
+                    {coords_html}
+                    {sla_line}
+                </table>
+            </td></tr>
+        </table>
+
+        <!-- ═══ PRIORITY & LOCATION GRID ═══ -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+            <tr>
+                <!-- Urgency & AI Priority -->
+                <td width="100%" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr><td style="font-size:14px;font-weight:800;color:#334155;padding-bottom:10px;">🧠 AI Analysis Details</td></tr>
+                        <tr><td>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="font-size:13px;color:#64748b;padding:4px 0;">Calculated Priority</td>
+                                    <td style="text-align:right;padding:4px 0;">
+                                        <span style="background:{priority_bg};color:{priority_color};padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:0.3px;">{priority_label} ({priority_num}/100)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size:13px;color:#64748b;padding:4px 0;">Urgency Factor</td>
+                                    <td style="text-align:right;font-size:13px;font-weight:700;color:#0f172a;padding:4px 0;">{urgency} / 5</td>
+                                </tr>
+                            </table>
+                        </td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <!-- ═══ LOCATION CARD ═══ -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+            <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td style="font-size:14px;font-weight:800;color:#334155;padding-bottom:8px;">📍 Incident Location</td></tr>
+                    <tr><td style="font-size:14px;color:#0f172a;line-height:1.6;font-weight:500;">{address}</td></tr>
+                </table>
+            </td></tr>
+        </table>
+
+        <!-- ═══ DESCRIPTION CARD ═══ -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+            <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td style="font-size:14px;font-weight:800;color:#334155;padding-bottom:8px;">📝 User Description</td></tr>
+                    <tr><td style="font-size:13px;color:#475569;line-height:1.6;font-style:italic;">"{desc_html}"</td></tr>
+                </table>
+            </td></tr>
+        </table>
+
+        <!-- ═══ GAMIFICATION REWARD BANNER ═══ -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+            <tr><td style="background:linear-gradient(135deg,rgba(79,70,229,0.06) 0%,rgba(124,58,237,0.06) 100%);border:1px dashed #c7d2fe;border-radius:16px;padding:24px;text-align:center;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td style="font-size:16px;font-weight:800;color:#4338ca;padding-bottom:6px;">🎁 Civic Engagement Reward</td></tr>
+                    <tr><td style="font-size:13px;color:#4f46e5;line-height:1.5;">
+                        You have earned <strong>+{points} Resolvit Credits</strong>{bonus_note} for making your neighborhood safer and more accountable.
+                    </td></tr>
+                </table>
+            </td></tr>
+        </table>
+
+        <!-- ═══ CTA BUTTONS ═══ -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="text-align:center;margin-top:10px;">
+            <tr>
+                <td align="center">
+                    <a href="{FRONTEND_URL}/issue.html?id={issue_id}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#ffffff;padding:16px 36px;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;letter-spacing:0.5px;box-shadow:0 8px 24px rgba(79,70,229,0.25);">Track Real-time Progress</a>
+                </td>
+            </tr>
+            <tr>
+                <td align="center" style="padding-top:14px;">
+                    <a href="{FRONTEND_URL}/dashboard.html" style="display:inline-block;background:#f1f5f9;color:#4f46e5;padding:12px 28px;text-decoration:none;border-radius:10px;font-weight:600;font-size:13px;border:1px solid #e2e8f0;">Go to Dashboard</a>
+                </td>
+            </tr>
+        </table>
+
+    </td></tr>
+
+    <!-- ═══ FOOTER ═══ -->
+    <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:36px 40px;text-align:center;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="font-size:12px;color:#94a3b8;line-height:1.8;">
+                This is an automated municipal routing update from RESOLVIT.<br>
+                Please do not reply directly to this email.
+            </td></tr>
+            <tr><td style="padding-top:16px;font-size:11px;color:#cbd5e1;">
+                <strong style="color:#64748b;">RESOLVIT</strong> — Civic Resolution Intelligence Platform.<br>
+                Empowering citizens, enhancing transparency, driving resolution.
+            </td></tr>
+            <tr><td style="padding-top:10px;font-size:11px;color:#cbd5e1;">
+                &copy; 2026 RESOLVIT AI. Digital Civic Governance Ecosystem.
+            </td></tr>
+        </table>
+    </td></tr>
+
+</table>
+<!-- /Container -->
+
+</td></tr>
+</table>
+<!-- /Wrapper -->
+
+</body>
+</html>'''
+

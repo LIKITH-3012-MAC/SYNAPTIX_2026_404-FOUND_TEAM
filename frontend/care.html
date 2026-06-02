@@ -131,35 +131,41 @@ Project: Resolvit AI
     </div>
     
     <nav class="care-nav">
-      <div class="care-nav-item active" data-target="view-overview">
+      <div class="care-nav-item active" data-target="view-overview" data-roles="all">
         <i class="fas fa-home"></i> <span>Care Overview</span>
       </div>
-      <div class="care-nav-item" data-target="view-intake">
+      <div class="care-nav-item" data-target="view-submit-report" data-roles="citizen,admin">
+        <i class="fas fa-plus-circle"></i> <span>Report a Need</span>
+      </div>
+      <div class="care-nav-item" data-target="view-my-submissions" data-roles="citizen,admin">
+        <i class="fas fa-clipboard-list"></i> <span>My Submissions</span>
+      </div>
+      <div class="care-nav-item" data-target="view-intake" data-roles="admin,ngo_operator">
         <i class="fas fa-inbox"></i> <span>Unified Intake</span>
         <div class="care-pulse-dot"></div>
       </div>
-      <div class="care-nav-item" data-target="view-command">
+      <div class="care-nav-item" data-target="view-command" data-roles="admin,ngo_operator">
         <i class="fas fa-desktop"></i> <span>Command Center</span>
       </div>
-      <div class="care-nav-item" data-target="view-volunteers">
+      <div class="care-nav-item" data-target="view-volunteers" data-roles="admin,ngo_operator">
         <i class="fas fa-users"></i> <span>Volunteer Network</span>
       </div>
-      <div class="care-nav-item" data-target="view-geospatial">
+      <div class="care-nav-item" data-target="view-geospatial" data-roles="all">
         <i class="fas fa-globe"></i> <span>Geo-Intelligence</span>
       </div>
-      <div class="care-nav-item" data-target="view-tasks">
+      <div class="care-nav-item" data-target="view-tasks" data-roles="admin,ngo_operator">
         <i class="fas fa-tasks"></i> <span>Task Orchestration</span>
       </div>
-      <div class="care-nav-item" data-target="view-logistics">
+      <div class="care-nav-item" data-target="view-logistics" data-roles="admin,ngo_operator">
         <i class="fas fa-box"></i> <span>Resource Logistics</span>
       </div>
-      <div class="care-nav-item" data-target="view-analytics">
+      <div class="care-nav-item" data-target="view-analytics" data-roles="admin">
         <i class="fas fa-chart-line"></i> <span>Impact Analytics</span>
       </div>
-      <div class="care-nav-item" data-target="view-timeline">
+      <div class="care-nav-item" data-target="view-timeline" data-roles="all">
         <i class="fas fa-history"></i> <span>Ops Timeline</span>
       </div>
-      <div class="care-nav-item" data-target="view-integrations">
+      <div class="care-nav-item" data-target="view-integrations" data-roles="admin">
         <i class="fas fa-network-wired"></i> <span>Data Sources</span>
       </div>
     </nav>
@@ -184,7 +190,7 @@ Project: Resolvit AI
       <div class="care-view-title" id="topbar-title">Care Overview</div>
       <div class="care-topbar-actions">
         <a href="index.html" class="care-btn care-btn-outline"><i class="fas fa-arrow-left"></i> Exit to Primary Hub</a>
-        <button class="care-btn care-btn-primary" onclick="CareAdmin.openBroadcastModal()"><i class="fas fa-broadcast-tower"></i> Broadcast Alert</button>
+        <button id="topbar-broadcast-btn" class="care-btn care-btn-primary" style="display:none;" onclick="CareAdmin.openBroadcastModal()"><i class="fas fa-broadcast-tower"></i> Broadcast Alert</button>
       </div>
     </header>
 
@@ -196,9 +202,8 @@ Project: Resolvit AI
           <div class="hero-text">
             <h1>Transform Fragmented Signals<br>Into Coordinated Action.</h1>
             <p>Resolvit Care is an AI-powered social operations intelligence module. It unifies field reports, volunteer matching, and logistics into a single command center for rapid disaster and community response.</p>
-            <div style="margin-top: 24px; display:flex; gap:16px;">
-              <button class="care-btn care-btn-primary" onclick="document.querySelector('[data-target=\'view-command\']').click()">Open Command Center</button>
-              <button class="care-btn care-btn-outline" onclick="CareAdmin.openCreateNGOModal()">Register NGO</button>
+            <div style="margin-top: 24px; display:flex; gap:16px;" id="hero-actions-container">
+              <!-- Loaded dynamically by JS -->
             </div>
           </div>
           <div style="width: 300px; height:300px; position:relative;">
@@ -232,6 +237,7 @@ Project: Resolvit AI
           </div>
         </div>
 
+        <!-- Operational Flow -->
         <div class="care-panel">
           <div class="care-kpi-label" style="margin-bottom:16px;">Operational Intelligence Workflow</div>
           <div class="routing-flow">
@@ -240,6 +246,50 @@ Project: Resolvit AI
             <div class="flow-node" style="border-color:#f97316;">Score & Map</div> <i class="fas fa-arrow-right flow-arrow"></i>
             <div class="flow-node" style="border-color:#10b981;">Match Resources</div> <i class="fas fa-arrow-right flow-arrow"></i>
             <div class="flow-node">Dispatch</div>
+          </div>
+        </div>
+
+        <!-- NGO Onboarding & Role Guides -->
+        <div class="care-panel">
+          <h2 style="color:white; margin:0 0 8px 0; font-size:1.5rem;"><i class="fas fa-network-wired text-violet"></i> NGO & Care Coordination Ecosystem</h2>
+          <p style="color:#94a3b8; margin:0 0 32px 0; font-size:0.95rem;">A collaborative platform connecting citizens, non-governmental organizations, and administrators for rapid response.</p>
+          
+          <div class="care-grid-3">
+            <div class="volunteer-card" style="border: 1px solid rgba(165,180,252,0.15); background: linear-gradient(135deg, rgba(99,102,241,0.03), transparent);">
+              <div class="vol-header">
+                <div class="vol-avatar" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; border-radius:12px;">
+                  <i class="fas fa-user-friends" style="color:#a5b4fc; font-size:1.5rem;"></i>
+                </div>
+                <div class="vol-info" style="margin-left: 12px;">
+                  <h4 style="color:#a5b4fc; margin:0 0 4px 0;">1. Citizens & Volunteers</h4>
+                  <p style="font-size:0.8rem; color:#cbd5e1; line-height:1.4; margin:0;">Submit immediate humanitarian needs, request emergency aid, view active broadcasts, and register as ready-to-deploy field volunteers.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="volunteer-card" style="border: 1px solid rgba(16,185,129,0.15); background: linear-gradient(135deg, rgba(16,185,129,0.03), transparent);">
+              <div class="vol-header">
+                <div class="vol-avatar" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; border-radius:12px;">
+                  <i class="fas fa-hotel" style="color:#34d399; font-size:1.5rem;"></i>
+                </div>
+                <div class="vol-info" style="margin-left: 12px;">
+                  <h4 style="color:#34d399; margin:0 0 4px 0;">2. NGO Operators</h4>
+                  <p style="font-size:0.8rem; color:#cbd5e1; line-height:1.4; margin:0;">Coordinate field efforts, view assigned incidents, dispatch registered volunteers, update incident status, and post logs in the timeline.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="volunteer-card" style="border: 1px solid rgba(168,85,247,0.15); background: linear-gradient(135deg, rgba(168,85,247,0.03), transparent);">
+              <div class="vol-header">
+                <div class="vol-avatar" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); display:flex; align-items:center; justify-content:center; border-radius:12px;">
+                  <i class="fas fa-crown" style="color:#c084fc; font-size:1.5rem;"></i>
+                </div>
+                <div class="vol-info" style="margin-left: 12px;">
+                  <h4 style="color:#c084fc; margin:0 0 4px 0;">3. System Administrators</h4>
+                  <p style="font-size:0.8rem; color:#cbd5e1; line-height:1.4; margin:0;">Register NGOs in the central directory, recruit NGO officers, match and assign incidents to organizations, and broadcast alerts.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -362,6 +412,82 @@ Project: Resolvit AI
                 </div>
                 <div class="progress-bg"><div class="progress-bar" style="width:85%; background:#3b82f6;"></div></div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin-only NGO management panels -->
+        <div id="admin-management-panels" style="display:none; margin-top:32px;">
+          <!-- NGO Registry -->
+          <div class="care-table-wrapper">
+            <div class="care-table-header">
+              <h3 class="care-table-title"><i class="fas fa-building text-violet"></i> Registered NGOs</h3>
+              <button class="care-btn care-btn-primary" onclick="CareAdmin.openCreateNGOModal()"><i class="fas fa-plus"></i> Register NGO</button>
+            </div>
+            <div class="table-responsive">
+              <table class="care-table">
+                <thead>
+                  <tr>
+                    <th>Organization / Slug</th>
+                    <th>Contact Person</th>
+                    <th>Specialization</th>
+                    <th>Officers</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="ngo-tbody">
+                  <!-- Loaded by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- NGO Officers Directory -->
+          <div class="care-table-wrapper" style="margin-top:24px;">
+            <div class="care-table-header">
+              <h3 class="care-table-title"><i class="fas fa-user-shield text-blue"></i> Appointed NGO Officers</h3>
+              <button class="care-btn care-btn-primary" onclick="CareAdmin.openRecruitOfficerModal()"><i class="fas fa-user-plus"></i> Recruit Officer</button>
+            </div>
+            <div class="table-responsive">
+              <table class="care-table">
+                <thead>
+                  <tr>
+                    <th>Officer Name / Email</th>
+                    <th>NGO ID / Name</th>
+                    <th>Role in NGO</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="officer-tbody">
+                  <!-- Loaded by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Care Incidents oversight -->
+          <div class="care-table-wrapper" style="margin-top:24px;">
+            <div class="care-table-header">
+              <h3 class="care-table-title"><i class="fas fa-file-invoice text-red"></i> Care Operations Incidents</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="care-table">
+                <thead>
+                  <tr>
+                    <th>Code / Title</th>
+                    <th>Category</th>
+                    <th>Urgency</th>
+                    <th>Assigned NGO</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="care-reports-tbody">
+                  <!-- Loaded by JS -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -543,6 +669,78 @@ Project: Resolvit AI
           
           <div class="care-panel" style="margin-top:20px; background:linear-gradient(135deg, rgba(99,102,241,0.2), transparent); border-color:rgba(99,102,241,0.4); display:inline-block;">
              <h3 style="color:white; margin:0;">AI Normalization Engine</h3>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== VIEW: REPORT A NEED ==================== -->
+      <section class="care-view" id="view-submit-report">
+        <div class="care-panel" style="max-width: 650px; margin: 0 auto;">
+          <h2 style="color:white; margin: 0 0 8px 0;"><i class="fas fa-plus-circle text-violet"></i> Report a Need</h2>
+          <p style="color:#94a3b8; margin: 0 0 24px 0; font-size:0.9rem;">Submit an emergency, relief, or humanitarian need for NGO attention.</p>
+          
+          <form id="care-submit-need-form" class="flex flex-col" style="gap:16px;">
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input type="text" name="title" class="form-input" required placeholder="e.g. Water supply needed at camp 4">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select name="category" class="form-input" required>
+                <option value="Food & Water">Food & Water</option>
+                <option value="Medical Assistance">Medical Assistance</option>
+                <option value="Rescue & Shelter">Rescue & Shelter</option>
+                <option value="Sanitation">Sanitation</option>
+                <option value="Logistics Support">Logistics Support</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Description / Details</label>
+              <textarea name="description" class="form-input" rows="4" required placeholder="Describe the situation, resources needed, and urgency details..."></textarea>
+            </div>
+            
+            <div class="care-grid-2">
+              <div class="form-group">
+                <label class="form-label">Location / Address</label>
+                <input type="text" name="location_text" class="form-input" placeholder="e.g. Near Community Center">
+              </div>
+              <div class="form-group">
+                <label class="form-label">District</label>
+                <input type="text" name="district" class="form-input" placeholder="e.g. Nellore">
+              </div>
+            </div>
+            
+            <div class="care-grid-2">
+              <div class="form-group">
+                <label class="form-label">Ward</label>
+                <input type="text" name="ward" class="form-input" placeholder="e.g. Ward 12">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Urgency Level</label>
+                <select name="urgency_score" class="form-input">
+                  <option value="1">Low (General need)</option>
+                  <option value="2">Medium</option>
+                  <option value="3" selected>High (Urgent support)</option>
+                  <option value="4">Severe (Critical risk)</option>
+                  <option value="5">Emergency (Life at stake)</option>
+                </select>
+              </div>
+            </div>
+            
+            <button type="submit" class="care-btn care-btn-primary" style="margin-top:12px; justify-content:center; padding:14px; font-size:1rem; width:100%;">🚨 Submit Humanitarian Request</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ==================== VIEW: MY SUBMISSIONS ==================== -->
+      <section class="care-view" id="view-my-submissions">
+        <div class="care-panel">
+          <h2 style="color:white; margin:0 0 16px 0;">My Submitted Requests</h2>
+          <div id="my-submissions-feed">
+            <!-- Loaded by JS -->
           </div>
         </div>
       </section>

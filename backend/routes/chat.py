@@ -5,7 +5,7 @@ Chatbot Router
 
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -13,6 +13,7 @@ from database import get_db
 from auth import get_current_user
 from services.ai_service import stream_groq_chat
 from services.workflow_engine import WorkflowEngine
+from services.email_service import send_issue_creation_email
 from models import IssueCreate, IssueResponse, DataResponse
 
 router = APIRouter()
@@ -57,6 +58,7 @@ async def process_chat(payload: ChatRequest):
 @router.post("/chat/complaint-intake", status_code=201, response_model=DataResponse[IssueResponse])
 def chat_complaint_intake(
     payload: IssueCreate,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -70,6 +72,21 @@ def chat_complaint_intake(
         payload.source = "copilot_chat"
         
         issue_data = WorkflowEngine.process_new_issue(payload, reporter_id)
+
+        # Dispatch complaint confirmation email in background
+        try:
+            with get_db() as cursor:
+                cursor.execute(
+                    "SELECT email, full_name, username FROM users WHERE id = %s",
+                    (reporter_id,)
+                )
+                user = cursor.fetchone()
+                if user:
+                    to_email = user["email"]
+                    name = user["full_name"] or user["username"] or "Citizen"
+                    send_issue_creation_email(background_tasks, to_email, name, issue_data)
+        except Exception as mail_err:
+            print(f"[EMAIL-INIT-ERR] Failed to schedule issue creation email from chat: {mail_err}")
 
         # Use issues.py serializer to format output safely
         from routes.issues import _serialize_issue

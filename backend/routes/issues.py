@@ -22,7 +22,7 @@ from services.clustering import attempt_clustering
 from services.blockchain import log_event
 from services.escalation import award_credits
 from services.workflow_engine import WorkflowEngine
-from services.email_service import send_issue_update_email
+from services.email_service import send_issue_update_email, send_issue_creation_email
 from datetime import datetime, timezone
 
 router = APIRouter()
@@ -141,6 +141,7 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
 @router.post("", status_code=201, response_model=DataResponse[IssueResponse])
 def create_issue(
     payload: IssueCreate,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -154,6 +155,21 @@ def create_issue(
             payload.source = "web"
             
         issue_data = WorkflowEngine.process_new_issue(payload, reporter_id)
+        
+        # Dispatch complaint confirmation email in background
+        try:
+            with get_db() as cursor:
+                cursor.execute(
+                    "SELECT email, full_name, username FROM users WHERE id = %s",
+                    (reporter_id,)
+                )
+                user = cursor.fetchone()
+                if user:
+                    to_email = user["email"]
+                    name = user["full_name"] or user["username"] or "Citizen"
+                    send_issue_creation_email(background_tasks, to_email, name, issue_data)
+        except Exception as mail_err:
+            print(f"[EMAIL-INIT-ERR] Failed to schedule issue creation email: {mail_err}")
         
         return {
             "success": True,
