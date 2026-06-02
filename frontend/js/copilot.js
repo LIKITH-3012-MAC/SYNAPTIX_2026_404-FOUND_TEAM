@@ -92,7 +92,6 @@ class ResolvitCopilot {
                         <div class="ai-avatar"><i class="fas fa-robot"></i></div>
                         <div class="msg-bubble">
                             <p>Hello! I am your <strong>Resolvit AI Copilot</strong>.</p>
-                            <p>I was developed by <strong>Likith Naidu Anumakonda</strong> for the RESOLVIT platform.</p>
                             <p>I can help you report civic issues intelligently. What's on your mind?</p>
                         </div>
                     </div>
@@ -223,7 +222,7 @@ class ResolvitCopilot {
                 return;
             }
             if (input.toLowerCase().includes('who built you') || input.toLowerCase().includes('creator')) {
-                this.appendMessage('ai', "I was developed by **Likith Naidu Anumakonda** for the RESOLVIT platform. My purpose is to bridge the gap between citizens and authorities through AI.");
+                this.appendMessage('ai', "I am the **Resolvit AI Copilot**, built for the RESOLVIT platform. My purpose is to bridge the gap between citizens and authorities through AI.");
                 return;
             }
             
