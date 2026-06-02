@@ -113,7 +113,19 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(
     try:
         with get_db() as cursor:
             user_id = payload.user_id
-            if payload.email:
+            
+            # Resolve user_id if it's an email or username instead of a UUID
+            if user_id:
+                try:
+                    UUID(user_id)
+                except ValueError:
+                    cursor.execute("SELECT id FROM users WHERE email = %s OR username = %s", (user_id.strip().lower(), user_id.strip()))
+                    user_row = cursor.fetchone()
+                    if not user_row:
+                        raise HTTPException(status_code=404, detail=f"User with email/username '{user_id}' not found.")
+                    user_id = str(user_row["id"])
+                    
+            elif payload.email:
                 email = payload.email.strip().lower()
                 cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
                 user_row = cursor.fetchone()
