@@ -1,10 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
+import re
+from datetime import datetime
 from models import NGOCreate, NGOUpdate, NGOResponse, UserResponse, UserRole, NGOOperatorCreate, NGOOperatorResponse
 from auth import require_roles, get_current_user
 from database import get_db
 
 router = APIRouter()
+
+def slugify(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[\s_-]+', '-', text)
+    return text
 
 @router.get("/admin/ngos", response_model=List[NGOResponse])
 def admin_list_ngos(current_user: dict = Depends(require_roles("admin"))):
@@ -39,13 +47,19 @@ def public_list_ngos():
 def create_ngo(payload: NGOCreate, current_user: dict = Depends(require_roles("admin"))):
     try:
         with get_db() as cursor:
+            # Clean and unique slugify
+            ngo_slug = slugify(payload.slug or payload.name)
+            cursor.execute("SELECT id FROM ngos WHERE slug = %s", (ngo_slug,))
+            if cursor.fetchone():
+                ngo_slug = f"{ngo_slug}-{int(datetime.now().timestamp()) % 1000}"
+
             cursor.execute(
                 """
                 INSERT INTO ngos (name, slug, description, specialization, contact_name, contact_email, contact_phone, operating_region, district, address, is_active, created_by_admin_id)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *;
                 """,
-                (payload.name, payload.slug, payload.description, payload.specialization, payload.contact_name, payload.contact_email, payload.contact_phone, payload.operating_region, payload.district, payload.address, payload.is_active, current_user["sub"])
+                (payload.name, ngo_slug, payload.description, payload.specialization, payload.contact_name, payload.contact_email, payload.contact_phone, payload.operating_region, payload.district, payload.address, payload.is_active, current_user["sub"])
             )
             return cursor.fetchone()
     except Exception as e:
