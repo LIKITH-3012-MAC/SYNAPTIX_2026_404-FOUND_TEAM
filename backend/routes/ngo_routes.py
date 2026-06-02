@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from typing import List
 import re
 from datetime import datetime
@@ -6,6 +6,7 @@ from uuid import UUID
 from models import NGOCreate, NGOUpdate, NGOResponse, UserResponse, UserRole, NGOOperatorCreate, NGOOperatorResponse
 from auth import require_roles, get_current_user
 from database import get_db
+from services.email_service import send_officer_appointment_email
 
 router = APIRouter()
 
@@ -108,7 +109,11 @@ def update_ngo(ngo_id: str, payload: NGOUpdate, current_user: dict = Depends(req
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/admin/ngo-officers", response_model=NGOOperatorResponse)
-def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(require_roles("admin"))):
+def create_ngo_officer(
+    payload: NGOOperatorCreate,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(require_roles("admin"))
+):
     """Admin creates an NGO officer by linking a user to an NGO and promoting their role."""
     try:
         with get_db() as cursor:
@@ -181,6 +186,25 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(
             # 4. Fetch enriched details for response
             cursor.execute("SELECT u.username, u.email, u.full_name FROM users u WHERE u.id = %s", (user_id,))
             u = cursor.fetchone()
+
+            # 5. Fetch NGO name for the email
+            cursor.execute("SELECT name FROM ngos WHERE id = %s", (ngo_id,))
+            ngo_row = cursor.fetchone()
+            ngo_name = ngo_row["name"] if ngo_row else "Partner NGO"
+
+            # 6. Send email notification via Resend in background
+            if u and u.get("email"):
+                try:
+                    send_officer_appointment_email(
+                        background_tasks=background_tasks,
+                        to_email=u["email"],
+                        user_name=u["full_name"] or u["username"],
+                        ngo_name=ngo_name,
+                        role_within_ngo=payload.role_within_ngo or "Lead Officer"
+                    )
+                except Exception as email_err:
+                    print(f"[EMAIL-ERROR] Failed to send officer appointment email: {email_err}")
+
             res = {**op, **u} if u else op
             return _serialize_operator(res)
             

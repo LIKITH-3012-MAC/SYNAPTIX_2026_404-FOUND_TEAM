@@ -1176,3 +1176,36 @@ def send_ngo_assignment_email(
     )
     return True
 
+
+def send_officer_appointment_email(
+    background_tasks,
+    to_email: str,
+    user_name: str,
+    ngo_name: str,
+    role_within_ngo: str
+) -> bool:
+    """
+    Sends email to a user notifying them of their appointment as an NGO officer.
+    """
+    subject = "Resolvit Care: Appointed as NGO Officer"
+    
+    html_content = _get_premium_shell(
+        title="Resolvit Partner NGO Officer Appointment",
+        body=f"""
+            <p>Hello {user_name},</p>
+            <p>You have been appointed as a <strong>{role_within_ngo}</strong> for the NGO <strong>{ngo_name}</strong> on the Resolvit platform.</p>
+            <p>Please log in to your dashboard to manage NGO operations, view assigned incidents, and coordinate volunteer networks.</p>
+            <p style="margin-top: 30px;">Thank you,<br>Resolvit Team</p>
+        """
+    )
+    
+    background_tasks.add_task(
+        dispatch_email_task,
+        to_email,
+        subject,
+        html_content,
+        None,
+        "officer_appointment"
+    )
+    return True
+
