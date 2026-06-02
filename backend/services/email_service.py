@@ -1138,3 +1138,41 @@ def _build_issue_creation_html(name: str, issue_data: dict) -> str:
 </body>
 </html>'''
 
+
+def send_ngo_assignment_email(
+    ngo_email: str,
+    ngo_person_name: str,
+    issue_title: str,
+    issue_location: str,
+    issue_description: str
+) -> bool:
+    """
+    Sends email to NGO CEO/email notifying them of new issue assigned.
+    """
+    subject = "New Issue Assigned by Resolvit"
+    
+    # Build HTML matching the required content
+    html_content = _get_premium_shell(
+        title="New Issue Assigned by Resolvit",
+        body=f"""
+            <p>Hello {ngo_person_name},</p>
+            <p>The CEO/Admin of Resolvit has mentioned your NGO for solving an issue at the following location:</p>
+            <div style="background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); margin: 20px 0;">
+                <p style="margin: 8px 0; color: #ffffff;"><strong>Issue Title:</strong> {issue_title}</p>
+                <p style="margin: 8px 0; color: #ffffff;"><strong>Issue Location:</strong> {issue_location}</p>
+                <p style="margin: 8px 0; color: #ffffff;"><strong>Issue Description:</strong> {issue_description}</p>
+            </div>
+            <p>Please log in to your NGO dashboard using this email account to view and update the issue.</p>
+            <p style="margin-top: 30px;">Thank you,<br>Resolvit Team</p>
+        """
+    )
+    
+    # Schedule dispatch
+    dispatch_email_task(
+        to_email=ngo_email,
+        subject=subject,
+        html_content=html_content,
+        template_name="ngo_assignment"
+    )
+    return True
+

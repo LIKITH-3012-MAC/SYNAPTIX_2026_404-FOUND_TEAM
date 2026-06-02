@@ -8,7 +8,8 @@ window.CareAdmin = {
         await Promise.all([
             this.loadNGOs(),
             this.loadOfficers(),
-            this.loadCareReports()
+            this.loadCareReports(),
+            this.loadIssueAssignments()
         ]);
         this.bindGlobalEvents();
     },
@@ -427,5 +428,84 @@ window.CareAdmin = {
                 btn.disabled = false; btn.textContent = "✅ Mark Resolved";
             }
         };
+    },
+
+    async loadIssueAssignments() {
+        try {
+            const assignments = await API.get('/api/admin/assignments');
+            const tbody = document.getElementById('ngo-assignments-tbody');
+            if (!tbody) return;
+
+            if (assignments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">No issue assignments found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = assignments.map(a => {
+                const dateStr = a.assigned_at ? new Date(a.assigned_at).toLocaleString() : 'N/A';
+                const seenStr = a.seen_by_ngo ? '👁️ Yes' : '❌ Unread';
+                const seenColor = a.seen_by_ngo ? '#10b981' : '#ef4444';
+                
+                return `
+                    <tr>
+                        <td>
+                            <strong>${a.issue_title}</strong><br>
+                            <small style="color:#64748b;">📍 ${a.issue_location || 'N/A'}</small>
+                        </td>
+                        <td>
+                            <strong>${a.ngo_name || 'N/A'}</strong><br>
+                            <small style="color:#64748b;">✉️ ${a.ngo_email}</small>
+                        </td>
+                        <td>
+                            <span class="badge badge-${a.status}">${a.status}</span>
+                        </td>
+                        <td style="color:${seenColor}; font-weight:700;">${seenStr}</td>
+                        <td>
+                            <button class="btn btn-outline btn-sm" onclick="CareAdmin.viewAssignmentUpdates('${a.issue_id}', '${a.issue_title}')">View Updates</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (e) {
+            console.warn("Assignments Load Fail:", e);
+        }
+    },
+
+    async viewAssignmentUpdates(issueId, issueTitle) {
+        try {
+            const updates = await API.get(`/api/admin/issues/${issueId}/updates`);
+            let content = '';
+            
+            if (updates.length === 0) {
+                content = '<div style="text-align:center;color:#94a3b8;padding:20px;">No operational status updates logged by NGO yet.</div>';
+            } else {
+                content = `
+                    <div class="custom-scrollbar" style="max-height:350px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; padding:10px 0;">
+                        ${updates.map(u => `
+                            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:16px; border-radius:12px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748b; margin-bottom:6px;">
+                                    <strong>${u.ngo_name || 'NGO'} (${u.ngo_email})</strong>
+                                    <span>${new Date(u.created_at).toLocaleString()}</span>
+                                </div>
+                                <div style="font-weight:700; color:var(--primary); font-size:0.85rem; text-transform:uppercase; margin-bottom:4px;">
+                                    Status: ${u.status}
+                                </div>
+                                <div style="font-size:0.85rem; color:#cbd5e1; line-height:1.4;">
+                                    ${u.update_message || 'No comment provided.'}
+                                </div>
+                                ${u.proof_image_url ? `
+                                <div style="margin-top:8px;">
+                                    <a href="${u.proof_image_url}" target="_blank" style="color:var(--primary); font-size:0.8rem; font-weight:700; text-decoration:none;">🖼️ View Proof Image</a>
+                                </div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            this.showModal(`Updates History: ${issueTitle}`, content);
+        } catch (err) {
+            showToast(`Error fetching updates: ${err.message}`, "error");
+        }
     }
 };

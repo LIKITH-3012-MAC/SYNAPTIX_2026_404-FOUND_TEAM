@@ -14,6 +14,7 @@ class UserRole(str, Enum):
     citizen      = "citizen"
     authority    = "authority"
     admin        = "admin"
+    ngo          = "ngo"
     ngo_operator = "ngo_operator"
 
 class IssueCategory(str, Enum):
@@ -417,3 +418,19 @@ class VolunteerResponse(BaseModel):
     is_verified:         bool
     created_at:          datetime
     updated_at:          datetime
+
+
+# ── NGO Assignment Workflow Schemas ───────────────────────────
+class NGOAssignmentCreate(BaseModel):
+    ngo_name: str
+    contact_person_name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    admin_message: Optional[str] = None
+
+
+class NGOUpdateStatus(BaseModel):
+    status: str
+    update_message: Optional[str] = None
+    proof_image_url: Optional[str] = None

@@ -247,9 +247,18 @@ def complete_signup(payload: CompleteSignupRequest, background_tasks: Background
             print(f"[SIGNUP-TRACE] user already exists false")
 
             pwd_hash = hash_password(payload.password)
+            
+            # Check if this email is registered as an NGO or has an issue assignment
             cursor.execute(
-                "INSERT INTO users (full_name, username, email, password_hash, role, auth_provider) VALUES (%s, %s, %s, %s, 'citizen', 'database') RETURNING id",
-                (payload.full_name, payload.username, email, pwd_hash)
+                "SELECT id FROM ngos WHERE email = %s UNION SELECT id FROM issue_assignments WHERE ngo_email = %s LIMIT 1",
+                (email, email)
+            )
+            is_ngo = cursor.fetchone() is not None
+            assigned_role = 'ngo' if is_ngo else 'citizen'
+
+            cursor.execute(
+                "INSERT INTO users (full_name, username, email, password_hash, role, auth_provider) VALUES (%s, %s, %s, %s, %s, 'database') RETURNING id",
+                (payload.full_name, payload.username, email, pwd_hash, assigned_role)
             )
             user_id = cursor.fetchone()["id"]
             print(f"[SIGNUP-TRACE] user row created")

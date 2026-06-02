@@ -6,10 +6,13 @@ Production-ready for Render deployment
 
 import os
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, register_uuid
 from psycopg2 import pool
 from contextlib import contextmanager
 from dotenv import load_dotenv
+
+# Register UUID adapter for psycopg2 globally
+register_uuid()
 
 # ─────────────────────────────────────────────
 # Load .env ONLY in local development
@@ -489,6 +492,44 @@ def execute_schema():
 
         # Adjusting Constraints
         "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_issues_cluster') THEN ALTER TABLE issues ADD CONSTRAINT fk_issues_cluster FOREIGN KEY (cluster_id) REFERENCES issue_clusters(id) ON DELETE SET NULL; END IF; END $$;",
+
+        # NGO Workflow Extensions
+        "ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;",
+        "ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('citizen', 'authority', 'admin', 'ngo_operator', 'ngo'));",
+        "ALTER TABLE issues DROP CONSTRAINT IF EXISTS issues_status_check;",
+        "ALTER TABLE issues ADD CONSTRAINT issues_status_check CHECK (status IN ('reported','verified','clustered','assigned','in_progress','escalated','resolved','archived', 'Assigned', 'Accepted', 'In Progress', 'Solved', 'Rejected'));",
+        "ALTER TABLE issues ADD COLUMN IF NOT EXISTS location TEXT;",
+        "ALTER TABLE ngos ADD COLUMN IF NOT EXISTS ngo_name VARCHAR(255);",
+        "ALTER TABLE ngos ADD COLUMN IF NOT EXISTS contact_person_name VARCHAR(255);",
+        "ALTER TABLE ngos ADD COLUMN IF NOT EXISTS email VARCHAR(255);",
+        "ALTER TABLE ngos ADD COLUMN IF NOT EXISTS phone VARCHAR(32);",
+        """
+        CREATE TABLE IF NOT EXISTS issue_assignments (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+            ngo_id UUID REFERENCES ngos(id) ON DELETE SET NULL,
+            ngo_email VARCHAR(255) NOT NULL,
+            assigned_by_admin_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            admin_message TEXT,
+            status VARCHAR(64) DEFAULT 'Assigned',
+            seen_by_ngo BOOLEAN DEFAULT false,
+            is_new BOOLEAN DEFAULT true,
+            assigned_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS issue_updates (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            assignment_id UUID NOT NULL REFERENCES issue_assignments(id) ON DELETE CASCADE,
+            issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+            ngo_email VARCHAR(255) NOT NULL,
+            status VARCHAR(64) NOT NULL,
+            update_message TEXT,
+            proof_image_url TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
     ]
 
     for sql in migrations:

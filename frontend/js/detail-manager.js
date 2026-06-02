@@ -195,6 +195,37 @@ const ResolutionHub = {
                             <button id="hub-btn-email" class="hub-btn-secondary" onclick="ResolutionHub.emailCitizen()">📧 DISPATCH EMAIL MANUALLY</button>
                         </div>
                     </div>
+
+                    <!-- MODULE 8: NGO ASSIGNMENT ENGINE -->
+                    <div id="hub-ngo-assignment-engine" class="hub-module decision-module hidden" style="background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15); margin-top:20px;">
+                        <div class="module-header">
+                            <label>NGO WORKFLOW ASSIGNMENT</label>
+                            <span class="auth-tag" style="background:rgba(16,185,129,0.1); color:#10b981;">ADMIN ONLY</span>
+                        </div>
+                        <form id="hub-ngo-assign-form" onsubmit="ResolutionHub.assignToNGO(event)" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+                            <div class="form-group full" style="margin-bottom: 0px;">
+                                <label style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom: 6px;">NGO NAME</label>
+                                <input type="text" id="h-ngo-name" class="hub-input" required placeholder="e.g. SaveTheChildren Foundation">
+                            </div>
+                            <div class="form-group full" style="margin-bottom: 0px;">
+                                <label style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom: 6px;">NGO CEO / CONTACT PERSON</label>
+                                <input type="text" id="h-ngo-contact" class="hub-input" required placeholder="e.g. Srujan Reddy">
+                            </div>
+                            <div class="form-group full" style="margin-bottom: 0px;">
+                                <label style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom: 6px;">NGO EMAIL</label>
+                                <input type="email" id="h-ngo-email" class="hub-input" required placeholder="e.g. contact@savethechildren.org">
+                            </div>
+                            <div class="form-group full" style="margin-bottom: 0px;">
+                                <label style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom: 6px;">CONFIRM ISSUE LOCATION</label>
+                                <input type="text" id="h-ngo-location" class="hub-input" required placeholder="Verify exact location address">
+                            </div>
+                            <div class="form-group full" style="margin-bottom: 0px;">
+                                <label style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom: 6px;">ADMIN MESSAGE / DESCRIPTION</label>
+                                <textarea id="h-ngo-message" class="hub-textarea" required placeholder="Enter instructions for the NGO CEO..." style="height:80px;"></textarea>
+                            </div>
+                            <button type="submit" id="hub-btn-assign-ngo" class="hub-btn-primary" style="background:#10b981; margin-top:8px;">ASSIGN TO NGO</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         `;
@@ -389,6 +420,20 @@ const ResolutionHub = {
             document.getElementById('h-update-assigned').value = issue.assigned_authority_id || '';
             document.getElementById('h-update-note').value = '';
         }
+
+        // Toggle NGO Assignment Form & populate location
+        if (user.role === 'admin') {
+            const ngoEngine = document.getElementById('hub-ngo-assignment-engine');
+            if (ngoEngine) ngoEngine.classList.remove('hidden');
+            document.getElementById('h-ngo-location').value = issue.address || issue.location_text || '';
+            document.getElementById('h-ngo-name').value = '';
+            document.getElementById('h-ngo-contact').value = '';
+            document.getElementById('h-ngo-email').value = '';
+            document.getElementById('h-ngo-message').value = '';
+        } else {
+            const ngoEngine = document.getElementById('hub-ngo-assignment-engine');
+            if (ngoEngine) ngoEngine.classList.add('hidden');
+        }
     },
 
     async _enableActions(user) {
@@ -578,6 +623,51 @@ const ResolutionHub = {
         } catch (err) {
             console.error('[EmailRelay] Backend send failed:', err);
             showToast(`Email dispatch failed: ${err.message || 'Unknown error'}. Please check email configuration.`, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    },
+
+    async assignToNGO(e) {
+        e.preventDefault();
+        const id = this.selectedIssueId;
+        if (!id) return;
+
+        const btn = document.getElementById('hub-btn-assign-ngo');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'ASSIGNING TO NGO...';
+
+        const payload = {
+            ngo_name: document.getElementById('h-ngo-name').value.trim(),
+            contact_person_name: document.getElementById('h-ngo-contact').value.trim(),
+            email: document.getElementById('h-ngo-email').value.trim().toLowerCase(),
+            location: document.getElementById('h-ngo-location').value.trim(),
+            admin_message: document.getElementById('h-ngo-message').value.trim()
+        };
+
+        try {
+            const res = await API.post(`/api/admin/issues/${id}/assign-ngo`, payload);
+            showToast(res.message || 'Successfully assigned to NGO!', 'success');
+            
+            // Re-fetch pipeline
+            await this._loadIssuePipeline(id);
+
+            // Refresh relative dashboards
+            if (typeof fetchIssues === 'function') fetchIssues(); 
+            if (typeof loadIssues === 'function') loadIssues();
+            if (typeof loadDashboard === 'function') loadDashboard();
+            if (typeof loadEscalations === 'function') loadEscalations();
+            if (typeof loadAuditLogs === 'function') loadAuditLogs();
+
+            // Refresh assignments list if CareAdmin is initialized
+            if (window.CareAdmin && typeof CareAdmin.loadIssueAssignments === 'function') {
+                CareAdmin.loadIssueAssignments().catch(e => console.warn(e));
+            }
+
+        } catch (err) {
+            showToast(`Assignment Failed: ${err.message}`, 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = originalText;

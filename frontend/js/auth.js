@@ -221,6 +221,7 @@ const Auth = {
                     setTimeout(() => {
                         if (u.role === 'admin') window.location.href = 'admin.html';
                         else if (u.role === 'authority') window.location.href = 'authority.html';
+                        else if (u.role === 'ngo') window.location.href = 'ngo.html';
                         else window.location.href = 'dashboard.html';
                     }, 500);
                 } catch (err) {
@@ -268,6 +269,7 @@ const Auth = {
                     setTimeout(() => {
                         if (u.role === 'admin') window.location.href = 'admin.html';
                         else if (u.role === 'authority') window.location.href = 'authority.html';
+                        else if (u.role === 'ngo') window.location.href = 'ngo.html';
                         else window.location.href = 'dashboard.html';
                     }, 700);
                 } catch (err) {
@@ -331,6 +333,7 @@ const Auth = {
             let portalLink = '';
             if (user.role === 'citizen') portalLink = `<a href="citizen.html" class="btn btn-ghost btn-sm" id="nav-pts-badge" data-i18n="nav_profile">⭐ Profile</a>`;
             else if (user.role === 'admin') portalLink = `<a href="admin.html" class="btn btn-ghost btn-sm" data-i18n="nav_admin">🏛️ Admin</a>`;
+            else if (user.role === 'ngo') portalLink = `<a href="ngo.html" class="btn btn-ghost btn-sm" data-i18n="nav_portal">🏢 NGO Portal</a>`;
             else portalLink = `<a href="authority.html" class="btn btn-ghost btn-sm" data-i18n="nav_portal">🏢 Portal</a>`;
 
             el.innerHTML = `

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGO Dashboard | RESOLVIT AI</title>
+    
+    <!-- Outfit Font & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet GIS CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Shared style overrides -->
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/map-premium.css" />
+
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --success: #10b981;
+            --error: #ef4444;
+            --accent: #818cf8;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ─── BLINK / HIGHLIGHT ANIMATION ─── */
+        .new-assignment {
+            animation: blinkHighlight 3s ease-in-out;
+            border-color: #ffe08a !important;
+            box-shadow: 0 0 25px rgba(255, 224, 138, 0.3);
+        }
+
+        @keyframes blinkHighlight {
+            0% { background-color: #fff3cd; transform: scale(1); }
+            25% { background-color: #ffe08a; transform: scale(1.02); }
+            50% { background-color: #fff3cd; transform: scale(1); }
+            75% { background-color: #ffe08a; transform: scale(1.02); }
+            100% { background-color: white; transform: scale(1); }
+        }
+
+        /* Grid layouts */
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 120px 24px 60px;
+        }
+
+        .welcome-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .assignments-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 24px;
+        }
+
+        /* Modal styling */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content-box {
+            background: #1e293b;
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-body-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            padding: 32px;
+        }
+
+        #modal-map {
+            height: 280px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            margin-top: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-control-block {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-control-block label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-input-field {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 12px;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-input-field:focus {
+            border-color: var(--primary);
+        }
+
+        select.form-input-field {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5H7z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            padding-right: 40px;
+        }
+
+        .badge-Solved { background: rgba(16,185,129,0.1); color:#34d399; }
+        .badge-Assigned { background: rgba(99,102,241,0.1); color:#818cf8; }
+        .badge-Accepted { background: rgba(59,130,246,0.1); color:#60a5fa; }
+        .badge-In_Progress { background: rgba(245,158,11,0.1); color:#fbbf24; }
+        .badge-Rejected { background: rgba(239,68,68,0.1); color:#f87171; }
+
+        @media (max-width: 820px) {
+            .modal-body-grid { grid-template-columns: 1fr; gap: 20px; padding: 20px; }
+            .welcome-card { flex-direction: column; text-align: center; }
+            .assignments-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── Navigation Bar ── -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="nav-logo">
+                <img src="resolvit.png" alt="RESOLVIT Logo" class="nav-logo-img">
+                <span>RESOLVIT</span>
+            </a>
+            <div class="nav-links">
+                <a href="dashboard.html" class="nav-link">Issues</a>
+                <a href="submit.html" class="nav-link">Report</a>
+                <a href="ngo.html" class="nav-link active">🏢 NGO Dashboard</a>
+            </div>
+            <div class="nav-actions" id="nav-actions">
+                <!-- Stored state will update here -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Main Dashboard ── -->
+    <div class="dashboard-container">
+        <!-- Welcome Card -->
+        <div class="welcome-card">
+            <div>
+                <h1 style="font-size:2.2rem; font-weight:900; margin:0 0 6px; letter-spacing:-0.5px;">
+                    Welcome, <span id="ngo-name-title" style="color:var(--accent);">NGO Partner</span>!
+                </h1>
+                <p style="color:var(--text-dim); font-size:0.95rem; margin:0;">
+                    Managing civic tasks for: <strong id="ngo-user-email" style="color:#ffffff;">...</strong>
+                </p>
+            </div>
+            <div style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); padding:12px 24px; border-radius:16px; text-align:center;">
+                <div style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--accent); margin-bottom:4px;">Operational Status</div>
+                <div style="font-weight:800; font-size:1.1rem; color:#ffffff;">🟢 Connected & Active</div>
+            </div>
+        </div>
+
+        <h2 style="font-size:1.5rem; font-weight:800; margin-bottom:24px; display:flex; align-items:center; gap:10px;">
+            🏢 Assigned Issue Workload
+        </h2>
+
+        <!-- Cards List -->
+        <div class="assignments-grid" id="ngo-assignments-list">
+            <!-- Populated via script -->
+        </div>
+    </div>
+
+    <!-- ── View Details Modal ── -->
+    <div class="modal-overlay" id="ngo-details-modal">
+        <div class="modal-content-box">
+            <!-- Modal Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:24px 32px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--primary); letter-spacing:1px;">Assigned Task Details</span>
+                        <span id="modal-current-status" class="badge" style="padding:2px 8px; border-radius:8px; font-size:0.7rem; font-weight:700; text-transform:uppercase; background:rgba(99,102,241,0.1); color:#818cf8;">Assigned</span>
+                    </div>
+                    <h3 id="modal-issue-title" style="margin:4px 0 0; font-size:1.4rem; font-weight:900; color:white;">Loading Title...</h3>
+                </div>
+                <button onclick="NGOWorkflow.closeModal()" style="background:none; border:none; color:var(--text-dim); font-size:1.5rem; cursor:pointer; transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-dim)'">✕</button>
+            </div>
+
+            <!-- Modal Content Grid -->
+            <div class="modal-body-grid">
+                <!-- Left: Details & Map -->
+                <div>
+                    <div style="margin-bottom:20px;">
+                        <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; margin:0 0 6px;">Issue Description</h4>
+                        <p id="modal-issue-desc" style="font-size:0.95rem; line-height:1.6; color:#cbd5e1; margin:0;"></p>
+                    </div>
+
+                    <div style="margin-bottom:20px; background:rgba(99,102,241,0.05); padding:16px; border-radius:12px; border-left:3px solid var(--primary);">
+                        <h4 style="font-size:0.8rem; font-weight:700; color:var(--accent); text-transform:uppercase; margin:0 0 4px;">Admin Directives</h4>
+                        <p id="modal-admin-msg" style="font-size:0.9rem; line-height:1.5; color:#cbd5e1; margin:0;"></p>
+                    </div>
+
+                    <div style="margin-bottom:20px;">
+                        <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; margin:0 0 4px;">🗺️ Verified Location</h4>
+                        <div id="modal-issue-location" style="font-size:0.9rem; font-weight:700; color:#ffffff;">Loading...</div>
+                        <div id="modal-map"></div>
+                    </div>
+                </div>
+
+                <!-- Right: Update Status & Logs -->
+                <div>
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:24px; border-radius:20px; margin-bottom:24px;">
+                        <h4 style="font-size:1rem; font-weight:800; color:white; margin:0 0 16px;">✏️ Update Status Flow</h4>
+                        
+                        <form id="status-update-form" onsubmit="NGOWorkflow.submitUpdate(event)" style="display:flex; flex-direction:column; gap:16px;">
+                            <div class="form-control-block">
+                                <label for="update-status-select">Select New Status</label>
+                                <select id="update-status-select" class="form-input-field" required>
+                                    <option value="Assigned">Assigned</option>
+                                    <option value="Accepted">Accepted</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Solved">Solved</option>
+                                    <option value="Rejected">Rejected</option>
+                                </select>
+                            </div>
+
+                            <div class="form-control-block">
+                                <label for="update-message-input">Status/Update Message</label>
+                                <textarea id="update-message-input" class="form-input-field" rows="3" required placeholder="Describe updates, resolution proof, or rejection reasons..."></textarea>
+                            </div>
+
+                            <div class="form-control-block">
+                                <label for="update-proof-input">Proof Image URL (Optional)</label>
+                                <input type="url" id="update-proof-input" class="form-input-field" placeholder="https://example.com/resolved-image.jpg" />
+                                <small style="color:var(--text-dim); font-size:0.75rem;">Required when marking as Solved.</small>
+                            </div>
+
+                            <button type="submit" id="btn-submit-update" class="btn btn-primary" style="padding:14px; border-radius:12px; font-weight:700; font-size:0.95rem; border:none; cursor:pointer;">
+                                Submit Operational Update
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Status History Timeline -->
+                    <div>
+                        <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; margin:0 0 12px; letter-spacing:0.05em;">
+                            🔄 Update & Logs Timeline
+                        </h4>
+                        <div id="modal-update-timeline" style="max-height:220px; overflow-y:auto; padding-right:6px;">
+                            <!-- Updates timeline loaded via script -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core APIs & Leaflet -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Theme & Animations -->
+    <script src="js/theme-manager.js"></script>
+    <script src="js/ngo-workflow.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof Auth !== 'undefined' && Auth.updateNavbar) {
+                Auth.updateNavbar();
+            }
+        });
+    </script>
+</body>
+</html>
