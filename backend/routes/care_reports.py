@@ -19,7 +19,7 @@ def generate_complaint_code():
     return 'RC-' + ''.join(random.choice(chars) for _ in range(8))
 
 @router.post("/reports", response_model=ReportResponse, tags=["Care Reports"])
-def create_report(payload: ReportCreate, current_user: dict = Depends(require_roles("citizen", "admin", "ngo_operator"))):
+def create_report(payload: ReportCreate, current_user: dict = Depends(require_roles("citizen", "admin", "ngo"))):
     try:
         with get_db() as cursor:
             code = generate_complaint_code()
@@ -62,7 +62,7 @@ def admin_list_reports(current_user: dict = Depends(require_roles("admin"))):
 
 
 @router.get("/ngo/reports", response_model=List[ReportResponse], tags=["Care NGO"])
-def list_assigned_reports(current_user: dict = Depends(require_roles("ngo_operator"))):
+def list_assigned_reports(current_user: dict = Depends(require_roles("ngo"))):
     """NGO Operators can only see reports assigned to their organization."""
     try:
         with get_db() as cursor:
@@ -153,7 +153,7 @@ def add_report_note(report_id: str, payload: ReportNoteCreate, current_user: dic
             # NGO Operators can only note on assigned
             if current_user["role"] == 'admin':
                 pass
-            elif current_user["role"] == 'ngo_operator':
+            elif current_user["role"] == 'ngo':
                 cursor.execute("SELECT ngo_id FROM ngo_operators WHERE user_id = %s", (current_user["sub"],))
                 op = cursor.fetchone()
                 cursor.execute("SELECT assigned_ngo_id FROM reports WHERE id = %s", (report_id,))
@@ -213,7 +213,7 @@ def get_care_map_data(current_user: dict = Depends(get_current_user)):
         with get_db() as cursor:
             if current_user["role"] == 'admin':
                 cursor.execute("SELECT id, latitude, longitude, status, urgency_score, complaint_code, title FROM reports WHERE latitude IS NOT NULL")
-            elif current_user["role"] == 'ngo_operator':
+            elif current_user["role"] == 'ngo':
                 cursor.execute("SELECT ngo_id FROM ngo_operators WHERE user_id = %s", (current_user["sub"],))
                 op = cursor.fetchone()
                 if not op: return []
@@ -280,7 +280,7 @@ def list_volunteers(
     status_filter: str = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Search/filter volunteers from DB. Accessible to admin and ngo_operator."""
+    """Search/filter volunteers from DB. Accessible to admin and ngo."""
     try:
         with get_db() as cursor:
             conditions = []

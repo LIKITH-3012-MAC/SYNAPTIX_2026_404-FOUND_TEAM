@@ -162,8 +162,8 @@ def create_ngo_officer(
                     raise HTTPException(status_code=404, detail=f"NGO with name/slug/email '{ngo_id}' not found.")
                 ngo_id = str(ngo_row["id"])
 
-            # 1. Update user role to ngo_operator automatically
-            cursor.execute("UPDATE users SET role = %s WHERE id = %s", ('ngo_operator', user_id))
+            # 1. Update user role to ngo automatically
+            cursor.execute("UPDATE users SET role = %s WHERE id = %s", ('ngo', user_id))
             
             # 2. Insert link
             cursor.execute(

@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userCard) {
             const initials = (user.username || 'OP').substring(0, 2).toUpperCase();
             const roleLabel = user.role === 'admin' ? 'System Administrator' :
-                              user.role === 'ngo_operator' ? 'NGO Operator' :
+                              user.role === 'ngo' ? 'NGO Operator' :
                               user.role === 'authority' ? 'Department Official' : 'Citizen Reporter';
             
             userCard.innerHTML = `
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="care-btn care-btn-primary" onclick="document.querySelector('[data-target=\\'view-command\\']').click()">Open Command Center</button>
                     <button class="care-btn care-btn-outline" onclick="CareAdmin.openCreateNGOModal()">Register NGO</button>
                 `;
-            } else if (role === 'ngo_operator') {
+            } else if (role === 'ngo') {
                 heroActions.innerHTML = `
                     <button class="care-btn care-btn-primary" onclick="document.querySelector('[data-target=\\'view-intake\\']').click()">View Assigned Incidents</button>
                     <button class="care-btn care-btn-outline" onclick="document.querySelector('[data-target=\\'view-tasks\\']').click()">Task Board</button>
@@ -133,7 +133,7 @@ async function fetchRealCareData() {
         
         let endpoint = '/api/care/reports/mine';
         if (user.role === 'admin') endpoint = '/api/care/admin/reports';
-        else if (user.role === 'ngo_operator') endpoint = '/api/care/ngo/reports';
+        else if (user.role === 'ngo') endpoint = '/api/care/ngo/reports';
         
         const reports = await API.get(endpoint);
         console.log("[Care] Fetched live reports:", reports);
