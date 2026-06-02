@@ -81,6 +81,8 @@ def decode_token(token: str) -> dict:
     """Decode and validate a JWT token. Returns payload dict."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("role") == "ngo_operator":
+            payload["role"] = "ngo"
         return payload
     except JWTError:
         raise HTTPException(

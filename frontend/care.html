@@ -541,42 +541,29 @@ Project: Resolvit AI
           <div class="kanban-column">
             <div class="kanban-column-header">
               <span style="color:#94a3b8;">NEW & TRIAGE</span>
-              <span class="kanban-count">4</span>
+              <span class="kanban-count" id="kanban-count-new">0</span>
             </div>
-            <div class="kanban-cards">
-              <div class="task-card" draggable="true">
-                <div class="task-id">TSK-102</div>
-                <div class="task-title">Investigate contamination report at Main Reservoir</div>
-                <div class="task-footer">
-                  <div class="badge badge-reported">Pending Assign</div>
-                </div>
-              </div>
+            <div class="kanban-cards" id="kanban-tasks-new" data-status="submitted">
+              <!-- Populated by JS -->
             </div>
           </div>
 
           <div class="kanban-column">
             <div class="kanban-column-header">
               <span style="color:#60a5fa;">ASSIGNED</span>
-              <span class="kanban-count">1</span>
+              <span class="kanban-count" id="kanban-count-assigned">0</span>
             </div>
-            <div class="kanban-cards">
-              <div class="task-card" draggable="true" style="border-left: 2px solid #3b82f6;">
-                <div class="task-id">TSK-098</div>
-                <div class="task-title">Setup triage tent at North Highway Exit</div>
-                <div class="task-footer">
-                  <div class="badge badge-assigned">Assigned</div>
-                  <div class="task-avatars"><div class="task-avatar"></div></div>
-                </div>
-              </div>
+            <div class="kanban-cards" id="kanban-tasks-assigned" data-status="ngo_assigned">
+              <!-- Populated by JS -->
             </div>
           </div>
 
           <div class="kanban-column">
             <div class="kanban-column-header">
               <span style="color:#f97316;">IN PROGRESS</span>
-              <span class="kanban-count">2</span>
+              <span class="kanban-count" id="kanban-count-progress">0</span>
             </div>
-            <div class="kanban-cards" id="kanban-tasks-progress">
+            <div class="kanban-cards" id="kanban-tasks-progress" data-status="in_progress">
               <!-- Populated by JS -->
             </div>
           </div>
@@ -584,12 +571,10 @@ Project: Resolvit AI
           <div class="kanban-column">
             <div class="kanban-column-header">
               <span style="color:#10b981;">RESOLVED</span>
-              <span class="kanban-count">18</span>
+              <span class="kanban-count" id="kanban-count-resolved">0</span>
             </div>
-            <div class="kanban-cards">
-              <div class="task-card" style="opacity: 0.6;">
-                <del class="task-title" style="color:#94a3b8;">Evacuate street 4 building collapse</del>
-              </div>
+            <div class="kanban-cards" id="kanban-tasks-resolved" data-status="resolved">
+              <!-- Populated by JS -->
             </div>
           </div>
         </div>
@@ -760,7 +745,8 @@ Project: Resolvit AI
 <script src="js/copilot.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    initResolvitCopilot('admin');
+    const user = typeof Auth !== 'undefined' ? Auth.getUser() : null;
+    initResolvitCopilot(user ? user.role : 'citizen');
   });
 </script>
 </body>

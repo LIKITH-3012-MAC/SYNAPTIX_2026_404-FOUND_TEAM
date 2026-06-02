@@ -421,3 +421,48 @@ def ops_timeline(current_user: dict = Depends(get_current_user)):
             return cursor.fetchall()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/ngo/reports/{report_id}/status", tags=["Care NGO"])
+def ngo_update_report_status(report_id: str, payload: ReportStatusUpdate, current_user: dict = Depends(require_roles("ngo"))):
+    """NGO can update status of reports assigned to their organization (e.g., in_progress, resolved)."""
+    try:
+        with get_db() as cursor:
+            # 1. Get the NGO of the current user
+            cursor.execute("SELECT ngo_id FROM ngo_operators WHERE user_id = %s AND is_active = TRUE", (current_user["sub"],))
+            op_data = cursor.fetchone()
+            if not op_data:
+                raise HTTPException(403, "Identity not linked to an active NGO")
+            
+            # 2. Check if the report is assigned to this NGO
+            cursor.execute("SELECT status, assigned_ngo_id FROM reports WHERE id = %s", (report_id,))
+            rep_data = cursor.fetchone()
+            if not rep_data:
+                raise HTTPException(404, "Report not found")
+            
+            if not rep_data["assigned_ngo_id"] or str(rep_data["assigned_ngo_id"]) != str(op_data["ngo_id"]):
+                raise HTTPException(403, "Not authorized: report not assigned to your NGO")
+                
+            old_status = rep_data["status"]
+            
+            # 3. Update status in database (limit statuses NGO can change to: in_progress, resolved, ngo_assigned)
+            allowed_statuses = ['ngo_assigned', 'in_progress', 'resolved']
+            if payload.status not in allowed_statuses:
+                raise HTTPException(400, f"NGO cannot transition report to status: {payload.status}")
+                
+            cursor.execute("UPDATE reports SET status = %s, updated_at = NOW() WHERE id = %s RETURNING *", (payload.status, report_id))
+            rep = cursor.fetchone()
+            
+            # 4. Add status history
+            cursor.execute("INSERT INTO report_status_history (report_id, old_status, new_status, changed_by_user_id, changed_by_role, change_reason, note) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                           (report_id, old_status, payload.status, current_user["sub"], current_user["role"], payload.change_reason or "Updated via Task Board", payload.note))
+            
+            # 5. Log audit
+            cursor.execute(
+                "INSERT INTO care_audit_log (actor_user_id, actor_role, action_type, entity_type, entity_id) VALUES (%s, %s, %s, %s, %s)",
+                (current_user["sub"], current_user["role"], "status_updated", "report", report_id)
+            )
+            return {"success": True, "report": rep}
+    except HTTPException: raise
+    except Exception as e: raise HTTPException(500, str(e))
+

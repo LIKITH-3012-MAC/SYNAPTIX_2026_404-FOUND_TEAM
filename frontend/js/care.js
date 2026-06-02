@@ -232,23 +232,141 @@ function renderIntakeFeed(reports) {
 // ═══════════════════════════════════════════════════════════
 
 function renderKanban(reports) {
-    const kanban = document.getElementById('kanban-tasks-progress');
-    if(!kanban) return;
+    const colNew = document.getElementById('kanban-tasks-new');
+    const colAssigned = document.getElementById('kanban-tasks-assigned');
+    const colProgress = document.getElementById('kanban-tasks-progress');
+    const colResolved = document.getElementById('kanban-tasks-resolved');
 
-    const inProgress = reports.filter(r => r.status === 'in_progress' || r.status === 'ngo_assigned');
+    if (!colNew || !colAssigned || !colProgress || !colResolved) return;
 
-    kanban.innerHTML = inProgress.map(r => `
-        <div class="task-card" draggable="true">
-            <div class="task-id">${r.complaint_code}</div>
-            <div class="task-title">${r.title}</div>
-            <div class="task-footer">
-                <div class="badge badge-in_progress"><i class="fas fa-spinner fa-spin"></i> ${r.status}</div>
-                <div class="task-avatars">
-                    <div class="task-avatar" style="background:#6366f1; color:white; font-size:10px; display:flex; align-items:center; justify-content:center;">OP</div>
+    // Filter reports into respective statuses
+    const newReports = reports.filter(r => ['submitted', 'under_review', 'clarification_needed'].includes(r.status));
+    const assignedReports = reports.filter(r => r.status === 'ngo_assigned');
+    const progressReports = reports.filter(r => ['in_progress', 'awaiting_admin_review'].includes(r.status));
+    const resolvedReports = reports.filter(r => ['resolved', 'closed', 'rejected'].includes(r.status));
+
+    // Update count labels
+    document.getElementById('kanban-count-new').textContent = newReports.length;
+    document.getElementById('kanban-count-assigned').textContent = assignedReports.length;
+    document.getElementById('kanban-count-progress').textContent = progressReports.length;
+    document.getElementById('kanban-count-resolved').textContent = resolvedReports.length;
+
+    // Helper to generate empty state HTML
+    const getEmptyStateHTML = () => `
+        <div class="kanban-empty-state" style="text-align:center; padding:30px 10px; color:#64748b; font-size:0.8rem; border: 1px dashed rgba(255,255,255,0.03); border-radius:10px; background:rgba(0,0,0,0.05);">
+            <i class="fas fa-clipboard-list" style="font-size:1.1rem; color:#475569; margin-bottom:6px; display:block;"></i>
+            No active cards
+        </div>
+    `;
+
+    // Helper to render card HTML
+    const getCardHTML = (r, borderStyle = '') => {
+        const badgeClass = `badge-${r.status}`;
+        let statusLabel = r.status.replace('_', ' ');
+        if (r.status === 'ngo_assigned') statusLabel = 'Assigned';
+        
+        return `
+            <div class="task-card" draggable="true" data-id="${r.id}" style="${borderStyle}">
+                <div class="task-id">${r.complaint_code}</div>
+                <div class="task-title">${r.title}</div>
+                <div class="task-footer">
+                    <div class="badge ${badgeClass}">${statusLabel}</div>
+                    <div class="task-avatars">
+                        <div class="task-avatar" style="background:#6366f1; color:white; font-size:10px; display:flex; align-items:center; justify-content:center; font-weight:600;">OP</div>
+                    </div>
                 </div>
             </div>
+        `;
+    };
+
+    // Populate columns
+    colNew.innerHTML = newReports.length ? newReports.map(r => getCardHTML(r)).join('') : getEmptyStateHTML();
+    colAssigned.innerHTML = assignedReports.length ? assignedReports.map(r => getCardHTML(r, 'border-left: 2px solid #3b82f6;')).join('') : getEmptyStateHTML();
+    colProgress.innerHTML = progressReports.length ? progressReports.map(r => getCardHTML(r, 'border-left: 2px solid #f97316;')).join('') : getEmptyStateHTML();
+    colResolved.innerHTML = resolvedReports.length ? resolvedReports.map(r => `
+        <div class="task-card" style="opacity: 0.6; border-left: 2px solid #10b981;" data-id="${r.id}">
+            <div class="task-id">${r.complaint_code}</div>
+            <del class="task-title" style="color:#94a3b8; display:block; margin-bottom:8px;">${r.title}</del>
+            <div class="task-footer">
+                <div class="badge badge-resolved">Resolved</div>
+            </div>
         </div>
-    `).join('');
+    `).join('') : getEmptyStateHTML();
+
+    // Bind dragstart to newly rendered cards
+    const cards = document.querySelectorAll('.task-card[draggable="true"]');
+    cards.forEach(card => {
+        card.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
+            e.dataTransfer.effectAllowed = 'move';
+            card.style.opacity = '0.4';
+        });
+        
+        card.addEventListener('dragend', () => {
+            card.style.opacity = '';
+        });
+    });
+
+    // Initialize drop targets once if not done
+    if (!window.kanbanDragAndDropInitialized) {
+        initKanbanDragAndDrop();
+        window.kanbanDragAndDropInitialized = true;
+    }
+}
+
+function initKanbanDragAndDrop() {
+    const columns = document.querySelectorAll('.kanban-cards');
+    columns.forEach(col => {
+        col.addEventListener('dragover', e => {
+            e.preventDefault();
+            col.classList.add('drag-over');
+        });
+        
+        col.addEventListener('dragleave', () => {
+            col.classList.remove('drag-over');
+        });
+        
+        col.addEventListener('drop', async e => {
+            e.preventDefault();
+            col.classList.remove('drag-over');
+            
+            const reportId = e.dataTransfer.getData('text/plain');
+            const targetStatus = col.getAttribute('data-status');
+            
+            if (!reportId || !targetStatus) return;
+            
+            try {
+                const user = Auth.getUser();
+                if (!user) return;
+                
+                let endpoint = '';
+                if (user.role === 'admin') {
+                    endpoint = `/api/care/admin/reports/${reportId}/status`;
+                } else if (user.role === 'ngo') {
+                    endpoint = `/api/care/ngo/reports/${reportId}/status`;
+                } else {
+                    showToast("Citizens cannot update report status", "warning");
+                    return;
+                }
+                
+                showToast("Updating status...", "info");
+                
+                await API.patch(endpoint, {
+                    status: targetStatus,
+                    change_reason: "Moved via Kanban drag-and-drop",
+                    note: `Status changed to ${targetStatus} using the Task Orchestration board.`
+                });
+                
+                showToast(`Report status updated to ${targetStatus.replace('_', ' ')}!`, "success");
+                
+                // Fetch fresh data and re-render
+                fetchRealCareData();
+            } catch (err) {
+                console.error("[Kanban] Drop failed:", err);
+                showToast("Failed to update report status: " + (err.message || "Unauthorized"), "danger");
+            }
+        });
+    });
 }
 
 // ═══════════════════════════════════════════════════════════

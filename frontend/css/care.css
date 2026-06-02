@@ -685,3 +685,12 @@ body.care-mode {
   margin: 0;
 }
 
+/* Kanban Drag & Drop Highlight */
+.kanban-cards.drag-over {
+  background: rgba(99, 102, 241, 0.08) !important;
+  border: 2px dashed rgba(99, 102, 241, 0.3) !important;
+  border-radius: 0 0 16px 16px;
+  transition: background 0.15s ease, border 0.15s ease;
+}
+
+

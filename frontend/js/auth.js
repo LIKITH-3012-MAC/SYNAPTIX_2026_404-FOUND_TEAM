@@ -79,7 +79,12 @@ const Auth = {
     getUser() {
         try {
             const raw = localStorage.getItem('resolvit_user');
-            return raw ? JSON.parse(raw) : null;
+            if (!raw) return null;
+            const user = JSON.parse(raw);
+            if (user && user.role === 'ngo_operator') {
+                user.role = 'ngo';
+            }
+            return user;
         } catch {
             return null;
         }
