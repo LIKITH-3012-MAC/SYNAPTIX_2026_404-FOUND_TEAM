@@ -15,6 +15,24 @@ def slugify(text: str) -> str:
     text = re.sub(r'[\s_-]+', '-', text)
     return text
 
+def _serialize_ngo(row: dict) -> dict:
+    if not row:
+        return row
+    r = dict(row)
+    r["id"] = str(r["id"])
+    if r.get("created_by_admin_id"):
+        r["created_by_admin_id"] = str(r["created_by_admin_id"])
+    return r
+
+def _serialize_operator(row: dict) -> dict:
+    if not row:
+        return row
+    r = dict(row)
+    r["id"] = str(r["id"])
+    r["ngo_id"] = str(r["ngo_id"])
+    r["user_id"] = str(r["user_id"])
+    return r
+
 @router.get("/admin/ngos", response_model=List[NGOResponse])
 def admin_list_ngos(current_user: dict = Depends(require_roles("admin"))):
     try:
@@ -24,7 +42,7 @@ def admin_list_ngos(current_user: dict = Depends(require_roles("admin"))):
                 FROM ngos n 
                 ORDER BY n.created_at DESC;
             """)
-            return cursor.fetchall()
+            return [_serialize_ngo(r) for r in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -40,7 +58,7 @@ def public_list_ngos():
                 WHERE n.is_active = TRUE 
                 ORDER BY n.name ASC;
             """)
-            return cursor.fetchall()
+            return [_serialize_ngo(r) for r in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -62,7 +80,7 @@ def create_ngo(payload: NGOCreate, current_user: dict = Depends(require_roles("a
                 """,
                 (payload.name, ngo_slug, payload.description, payload.specialization, payload.contact_name, payload.contact_email, payload.contact_phone, payload.operating_region, payload.district, payload.address, payload.is_active, current_user["sub"])
             )
-            return cursor.fetchone()
+            return _serialize_ngo(cursor.fetchone())
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create NGO: {e}")
 
@@ -85,7 +103,7 @@ def update_ngo(ngo_id: str, payload: NGOUpdate, current_user: dict = Depends(req
             updated = cursor.fetchone()
             if not updated:
                 raise HTTPException(status_code=404, detail="NGO not found")
-            return updated
+            return _serialize_ngo(updated)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -142,9 +160,10 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(
             )
             
             # 4. Fetch enriched details for response
-            cursor.execute("SELECT u.username, u.email, u.full_name FROM users u WHERE u.id = %s", (payload.user_id,))
+            cursor.execute("SELECT u.username, u.email, u.full_name FROM users u WHERE u.id = %s", (user_id,))
             u = cursor.fetchone()
-            return {**op, **u} if u else op
+            res = {**op, **u} if u else op
+            return _serialize_operator(res)
             
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create officer: {e}")
@@ -161,6 +180,6 @@ def admin_list_officers(current_user: dict = Depends(require_roles("admin"))):
                 ORDER BY op.created_at DESC;
             """
             cursor.execute(query)
-            return cursor.fetchall()
+            return [_serialize_operator(r) for r in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
