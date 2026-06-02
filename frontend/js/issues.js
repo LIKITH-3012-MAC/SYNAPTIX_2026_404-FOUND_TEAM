@@ -156,11 +156,11 @@ function renderIssueCard(issue, opts = {}) {
       </div>
 
       <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-             ${opts.showUpvote && !isDemo ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); upvoteIssue('${issue.id}', this)">👍 ${issue.upvotes || 0}</button>` : ''}
-             ${!isDemo ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); exportSingleIssue('${issue.id}')" title="Download Official Record">📁</button>` : ''}
+          <div style="display:flex; align-items:center; gap:8px;">
+             ${opts.showUpvote && !isDemo ? `<button class="issue-action-btn" onclick="event.stopPropagation(); upvoteIssue('${issue.id}', this)" title="Add Civic Upvote">👍 ${issue.upvotes || 0}</button>` : ''}
+             ${!isDemo ? `<button class="issue-action-btn" onclick="event.stopPropagation(); exportSingleIssue('${issue.id}')" title="Download Official Record">📁 Export</button>` : ''}
           </div>
-          <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">#${(issue.id || '').slice(-6)}</span>
+          <span style="font-size:0.7rem; color:var(--text-secondary); font-weight:700; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:6px; border:1px solid var(--border); letter-spacing:0.5px;">ID: ${(issue.id || '').slice(-6).toUpperCase()}</span>
       </div>
     </div>
   `;

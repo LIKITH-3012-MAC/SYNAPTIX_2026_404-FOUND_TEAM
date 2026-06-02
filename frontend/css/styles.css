@@ -2893,3 +2893,28 @@ body {
 #resolution-hub-drawer .evidence-item:hover {
   transform: scale(1.02);
 }
+
+/* Compact Issue Card Action Buttons */
+.issue-action-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  min-height: unset !important; /* Override mobile minimum height */
+  height: auto !important;
+}
+
+.issue-action-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
