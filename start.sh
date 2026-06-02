@@ -60,5 +60,6 @@ gunicorn app:app \
     --bind 0.0.0.0:8000 \
     --timeout 120 \
     --keep-alive 5 \
+    --access-logfile - \
     --access-logformat '%({X-Real-IP}i)s %({X-Forwarded-For)i)s %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' \
     --log-level info

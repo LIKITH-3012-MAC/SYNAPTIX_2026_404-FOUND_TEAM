@@ -86,7 +86,7 @@ const API = {
           throw error;
         }
 
-        if (error.message === "TIMEOUT" || error.name === "AbortError" || error.message.includes("failed to fetch")) {
+        if (error.message === "TIMEOUT" || error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("failed to fetch"))) {
           this.status = 'waking'; // Probably Render cold start
           this._emitStatus();
         }
