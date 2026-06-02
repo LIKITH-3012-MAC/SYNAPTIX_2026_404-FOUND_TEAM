@@ -359,7 +359,8 @@ class ReportResolve(BaseModel):
 
 class NGOOperatorCreate(BaseModel):
     ngo_id:          str
-    user_id:         str
+    user_id:         Optional[str] = None
+    email:           Optional[str] = None
     role_within_ngo: Optional[str] = "member"
 
 

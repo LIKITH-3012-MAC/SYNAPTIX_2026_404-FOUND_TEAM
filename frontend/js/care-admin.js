@@ -197,9 +197,9 @@ window.CareAdmin = {
             <div style="margin-bottom:20px; color:#94a3b8; font-size:0.85rem;">Assign a trusted citizen to manage NGO operations.</div>
             <form id="recruit-officer-form" class="flex flex-col" style="gap:16px;">
                 <div class="form-group">
-                    <label class="form-label">User ID (UUID)</label>
-                    <input type="text" name="user_id" class="form-input" required placeholder="Enter citizen UUID">
-                    <small style="color:#64748b;">Copy this from the Citizen Management panel</small>
+                    <label class="form-label">User Email Address</label>
+                    <input type="email" name="email" class="form-input" required placeholder="e.g. citizen@gmail.com">
+                    <small style="color:#64748b;">Enter the registered email of the user to promote.</small>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Target NGO</label>

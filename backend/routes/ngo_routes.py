@@ -93,8 +93,20 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(
     """Admin creates an NGO officer by linking a user to an NGO and promoting their role."""
     try:
         with get_db() as cursor:
+            user_id = payload.user_id
+            if payload.email:
+                email = payload.email.strip().lower()
+                cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+                user_row = cursor.fetchone()
+                if not user_row:
+                    raise HTTPException(status_code=404, detail=f"User with email '{email}' not found.")
+                user_id = str(user_row["id"])
+
+            if not user_id:
+                raise HTTPException(status_code=400, detail="Either user_id or email must be provided.")
+
             # 1. Update user role to ngo_operator automatically
-            cursor.execute("UPDATE users SET role = %s WHERE id = %s", ('ngo_operator', payload.user_id))
+            cursor.execute("UPDATE users SET role = %s WHERE id = %s", ('ngo_operator', user_id))
             
             # 2. Insert link
             cursor.execute(
@@ -104,7 +116,7 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(
                 ON CONFLICT (ngo_id, user_id) DO UPDATE SET role_within_ngo = EXCLUDED.role_within_ngo, is_active = TRUE
                 RETURNING *;
                 """,
-                (payload.ngo_id, payload.user_id, payload.role_within_ngo)
+                (payload.ngo_id, user_id, payload.role_within_ngo)
             )
             op = cursor.fetchone()
             
