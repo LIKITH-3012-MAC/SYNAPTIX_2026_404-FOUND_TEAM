@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 import re
 from datetime import datetime
+from uuid import UUID
 from models import NGOCreate, NGOUpdate, NGOResponse, UserResponse, UserRole, NGOOperatorCreate, NGOOperatorResponse
 from auth import require_roles, get_current_user
 from database import get_db
@@ -105,6 +106,20 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(
             if not user_id:
                 raise HTTPException(status_code=400, detail="Either user_id or email must be provided.")
 
+            # Resolve ngo_id if it's not a valid UUID (e.g. user entered name or slug)
+            ngo_id = payload.ngo_id
+            try:
+                UUID(ngo_id)
+            except ValueError:
+                cursor.execute(
+                    "SELECT id FROM ngos WHERE name = %s OR slug = %s OR contact_email = %s",
+                    (ngo_id, ngo_id, ngo_id)
+                )
+                ngo_row = cursor.fetchone()
+                if not ngo_row:
+                    raise HTTPException(status_code=404, detail=f"NGO with name/slug/email '{ngo_id}' not found.")
+                ngo_id = str(ngo_row["id"])
+
             # 1. Update user role to ngo_operator automatically
             cursor.execute("UPDATE users SET role = %s WHERE id = %s", ('ngo_operator', user_id))
             
@@ -116,7 +131,7 @@ def create_ngo_officer(payload: NGOOperatorCreate, current_user: dict = Depends(
                 ON CONFLICT (ngo_id, user_id) DO UPDATE SET role_within_ngo = EXCLUDED.role_within_ngo, is_active = TRUE
                 RETURNING *;
                 """,
-                (payload.ngo_id, user_id, payload.role_within_ngo)
+                (ngo_id, user_id, payload.role_within_ngo)
             )
             op = cursor.fetchone()
             

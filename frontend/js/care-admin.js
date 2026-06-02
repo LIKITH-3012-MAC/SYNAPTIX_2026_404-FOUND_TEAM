@@ -202,8 +202,8 @@ window.CareAdmin = {
                     <small style="color:#64748b;">Enter the registered email of the user to promote.</small>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Target NGO</label>
-                    ${ngoOptions ? `<select name="ngo_id" class="form-input" required>${ngoOptions}</select>` : `<input type="text" name="ngo_id" class="form-input" required placeholder="Enter NGO UUID">`}
+                    <label class="form-label">Target NGO (UUID, Name, or Slug)</label>
+                    ${ngoOptions ? `<select name="ngo_id" class="form-input" required>${ngoOptions}</select>` : `<input type="text" name="ngo_id" class="form-input" required placeholder="e.g. Likith Impact Foundation or UUID">`}
                 </div>
                 <div class="form-group">
                     <label class="form-label">Operation Role</label>
