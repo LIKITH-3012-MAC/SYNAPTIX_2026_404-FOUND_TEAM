@@ -342,8 +342,8 @@ Project: Resolvit AI
             </div>
 
             <div style="display:flex; gap:16px;">
-              <button class="care-btn care-btn-primary" style="flex:1; justify-content:center; padding:16px; font-size:1rem;">Accept & Generate Response Task</button>
-              <button class="care-btn care-btn-outline" style="flex:1; justify-content:center; padding:16px; font-size:1rem; color:#ef4444; border-color:rgba(239,68,68,0.3);">Flag as Duplicate</button>
+              <button class="care-btn care-btn-primary" style="flex:1; justify-content:center; padding:16px; font-size:1rem;" onclick="showToast('✅ Response task generated and dispatched to field team.', 'success')">Accept & Generate Response Task</button>
+              <button class="care-btn care-btn-outline" style="flex:1; justify-content:center; padding:16px; font-size:1rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="showToast('🚩 Report flagged as duplicate. Merging into primary cluster.', 'warning')">Flag as Duplicate</button>
             </div>
           </div>
         </div>
@@ -379,7 +379,7 @@ Project: Resolvit AI
               <div class="feed-content">
                 <div class="feed-title">Prioritize Ward 12 flood relief cluster</div>
                 <div class="feed-meta" style="margin-top:4px;">Urgency: 98 • Recommendation</div>
-                <button class="care-btn care-btn-outline" style="margin-top:12px; font-size:0.75rem; padding:4px 12px;">Auto-Deploy Nearby Team</button>
+                <button class="care-btn care-btn-outline" style="margin-top:12px; font-size:0.75rem; padding:4px 12px;" onclick="showToast('🚀 Deploying nearest available team to Ward 12. ETA: 14 minutes.', 'success')">Auto-Deploy Nearby Team</button>
               </div>
             </div>
             <div class="care-feed-item" style="border-left: 3px solid #ef4444;">
@@ -609,7 +609,7 @@ Project: Resolvit AI
             <div style="font-size:2.5rem; font-weight:800; color:#ef4444;">2 <span style="font-size:1rem; color:#94a3b8; font-weight:500;">Available</span></div>
             <div class="progress-bg"><div class="progress-bar" style="width:10%; background:#ef4444;"></div></div>
             <p style="color:#f87171; font-size:0.85rem; margin-top:8px;">CRITICAL SHORTAGE. Deployment delayed.</p>
-            <button class="care-btn care-btn-outline" style="width:100%; margin-top:12px; border-color:rgba(239,68,68,0.3); color:#f87171;">Request External Resources</button>
+            <button class="care-btn care-btn-outline" style="width:100%; margin-top:12px; border-color:rgba(239,68,68,0.3); color:#f87171;" onclick="showToast('📦 External resource request sent to regional logistics hub.', 'info')">Request External Resources</button>
           </div>
           <div class="care-panel">
             <h3 style="margin:0 0 16px 0; color:white;">Medical Supplies</h3>

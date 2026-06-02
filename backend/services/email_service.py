@@ -1186,26 +1186,43 @@ def send_officer_appointment_email(
 ) -> bool:
     """
     Sends email to a user notifying them of their appointment as an NGO officer.
+    Uses direct synchronous dispatch for reliability (background_tasks can silently fail
+    with gunicorn multi-worker setups).
     """
-    subject = "Resolvit Care: Appointed as NGO Officer"
+    subject = "⚖️ Resolvit Care: You've Been Appointed as NGO Officer"
     
     html_content = _get_premium_shell(
-        title="Resolvit Partner NGO Officer Appointment",
+        title="NGO Officer Appointment Confirmed",
         body=f"""
-            <p>Hello {user_name},</p>
-            <p>You have been appointed as a <strong>{role_within_ngo}</strong> for the NGO <strong>{ngo_name}</strong> on the Resolvit platform.</p>
-            <p>Please log in to your dashboard to manage NGO operations, view assigned incidents, and coordinate volunteer networks.</p>
-            <p style="margin-top: 30px;">Thank you,<br>Resolvit Team</p>
+            <p style="font-size: 16px;">Hello <strong>{user_name}</strong>,</p>
+            <p>You have been officially appointed as a <strong style="color: #818cf8;">{role_within_ngo}</strong> 
+            for <strong style="color: #10b981;">{ngo_name}</strong> on the RESOLVIT Civic Governance Platform.</p>
+            
+            <div style="margin: 28px 0; padding: 20px; background: rgba(99, 102, 241, 0.08); border-radius: 16px; border-left: 4px solid #6366f1;">
+                <p style="margin: 0 0 8px; font-weight: 700; color: #818cf8;">Your Responsibilities:</p>
+                <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; line-height: 1.8;">
+                    <li>View and manage assigned civic incidents</li>
+                    <li>Update issue statuses and upload resolution proofs</li>
+                    <li>Coordinate with volunteer networks</li>
+                    <li>Track operational analytics for your NGO</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="https://www.resolvit-ai.online/ngo.html" 
+                   style="display: inline-block; padding: 14px 36px; background: linear-gradient(135deg, #6366f1, #8b5cf6); 
+                          color: white; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px;
+                          box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
+                    🏢 Open NGO Dashboard
+                </a>
+            </div>
+            
+            <p style="margin-top: 30px; color: #94a3b8;">Thank you for your service,<br>
+            <strong style="color: white;">The Resolvit Team</strong></p>
         """
     )
     
-    background_tasks.add_task(
-        dispatch_email_task,
-        to_email,
-        subject,
-        html_content,
-        None,
-        "officer_appointment"
-    )
+    # Direct synchronous dispatch — guaranteed delivery before response
+    dispatch_email_task(to_email, subject, html_content, template_name="officer_appointment")
     return True
 
