@@ -80,9 +80,13 @@ const i18n = {
             form_opt_roads: "🛣️ Roads & Potholes",
             form_opt_water: "💧 Water Supply",
             form_opt_electric: "⚡ Electricity",
+            form_opt_sanitation: "🗑️ Sanitation & Garbage",
+            form_opt_safety: "🚨 Safety Hazard",
+            form_opt_environment: "🌿 Environment",
+            form_opt_other: "📋 Other",
             form_label_impact: "Number of People Affected *",
             form_label_desc: "Description *",
-            form_placeholder_desc: "Describe the issue in detail...",
+            form_placeholder_desc: "Describe the issue in detail. Include specific location details, when you noticed it, and any safety concerns...",
             btn_use_location: "📍 Use My Current Location",
             btn_submit_report: "🚨 Submit Issue Report",
             
@@ -194,7 +198,28 @@ const i18n = {
             footer_tech_ai: "AI क्लस्टरिंग इंजन",
             footer_tech_bc: "ब्लॉकचेन ऑडिट ट्रेल",
             footer_tech_score: "डायनेमिक प्रायोरिटी स्कोरिंग",
-            footer_copy: "© 2026 RESOLVIT. लोगों के लिए नागरिक तकनीक।"
+            footer_copy: "© 2026 RESOLVIT. लोगों के लिए नागरिक तकनीक।",
+            
+            // Report Page
+            report_hint: "नागरिक पोर्टल",
+            report_title: "एक नागरिक समस्या की रिपोर्ट करें",
+            report_subtitle: "अपनी समस्याओं को जमा करें और हमारी एआई प्रणाली इसे समान रिपोर्टों के साथ समूहित करेगी, एक प्राथमिकता स्कोर सौंपेगी, और संबंधित प्राधिकरण को तुरंत सूचित करेगी।",
+            form_section_details: "1. समस्या का विवरण",
+            form_label_title: "समस्या का शीर्षक *",
+            form_placeholder_title: "जैसे: बस स्टॉप 4 के पास मेन स्ट्रीट पर बड़ा गड्ढा",
+            form_label_category: "श्रेणी *",
+            form_opt_roads: "🛣️ सड़कें और गड्ढे",
+            form_opt_water: "💧 जलापूर्ति",
+            form_opt_electric: "⚡ बिजली",
+            form_opt_sanitation: "🗑️ स्वच्छता और कचरा",
+            form_opt_safety: "🚨 सुरक्षा खतरा",
+            form_opt_environment: "🌿 पर्यावरण",
+            form_opt_other: "📋 अन्य",
+            form_label_impact: "प्रभावित लोगों की संख्या *",
+            form_label_desc: "विवरण *",
+            form_placeholder_desc: "समस्या का विस्तार से वर्णन करें। विशिष्ट स्थान विवरण, जब आपने इसे देखा, और कोई सुरक्षा चिंताएं शामिल करें...",
+            btn_use_location: "📍 मेरी वर्तमान स्थिति का उपयोग करें",
+            btn_submit_report: "🚨 समस्या रिपोर्ट जमा करें"
         },
         te: {
             nav_issues: "సమస్యలు",
@@ -253,7 +278,28 @@ const i18n = {
             footer_tech_ai: "AI క్లస్టరింగ్ ఇంజిన్",
             footer_tech_bc: "బ్లాక్‌చెయిన్ ఆడిట్ ట్రయల్",
             footer_tech_score: "డైనమిక్ ప్రయారిటీ స్కోరింగ్",
-            footer_copy: "© 2026 RESOLVIT. ప్రజల కోసం పౌర సాంకేతికత."
+            footer_copy: "© 2026 RESOLVIT. ప్రజల కోసం పౌర సాంకేతికత.",
+            
+            // Report Page
+            report_hint: "పౌర పోర్టల్",
+            report_title: "పౌర సమస్యను నివేదించండి",
+            report_subtitle: "మీ సమస్యలను సమర్పించండి మరియు మా AI సిస్టమ్ వాటిని ఇలాంటి నివేదికలతో సమూహపరుస్తుంది, ప్రాధాన్యత స్కోరును కేటాయిస్తుంది మరియు సంబంధిత అధికారికి వెంటనే తెలియజేస్తుంది.",
+            form_section_details: "1. సమస్య వివరాలు",
+            form_label_title: "ಸಮಸ್ಯೆ ಶೀರ್ಷಿಕ *",
+            form_placeholder_title: "ఉదా: బస్ స్టాప్ 4 వద్ద ప్రధాన రహదారిపై పెద్ద గుంత",
+            form_label_category: "వర్గం *",
+            form_opt_roads: "🛣️ రోడ్లు & గుంతలు",
+            form_opt_water: "💧 నీటి సరఫరా",
+            form_opt_electric: "⚡ విద్యుత్",
+            form_opt_sanitation: "🗑️ పారిశుధ్యం & చెత్త",
+            form_opt_safety: "🚨 భద్రతా ప్రమాదం",
+            form_opt_environment: "🌿 పర్యావరణం",
+            form_opt_other: "📋 ఇతర",
+            form_label_impact: "ప్రభావితమైన వ్యక్తుల సంఖ్య *",
+            form_label_desc: "వివరణ *",
+            form_placeholder_desc: "ಸಮಸ್ಯೆಯನ್ನು వివరంగా వివరించండి. ఖచ్చితమైన స్థాన వివరాలు, మీరు ఎప్పుడు గమనించారు మరియు ఏవైనా భద్రతా ఆందోళనలను చేర్చండి...",
+            btn_use_location: "📍 నా ప్రస్తుత స్థానాన్ని ఉపయోగించు",
+            btn_submit_report: "🚨 సమస్య నివేదికను సమర్పించు"
         },
         ta: {
             nav_issues: "பிரச்சினைகள்",
@@ -312,7 +358,28 @@ const i18n = {
             footer_tech_ai: "AI கிளஸ்டரிங் எஞ்சின்",
             footer_tech_bc: "பிளாக்செயின் தணிக்கை தடம்",
             footer_tech_score: "டைனமிக் முன்னுரிமை மதிப்பெண்",
-            footer_copy: "© 2026 RESOLVIT. மக்களுக்கான குடிமக்கள் தொழில்நுட்பம்."
+            footer_copy: "© 2026 RESOLVIT. மக்களுக்கான குடிமக்கள் தொழில்நுட்பம்.",
+            
+            // Report Page
+            report_hint: "குடிமக்கள் போர்டல்",
+            report_title: "ஒரு குடிமைப் பிரச்சினையைப் புகாரளிக்கவும்",
+            report_subtitle: "உங்கள் பிரச்சினைகளைச் சமர்ப்பிக்கவும், எங்கள் AI அமைப்பு அதை ஒத்த அறிக்கைகளுடன் குழுவாக அமைத்து, முன்னுரிமை மதிப்பெண்ணை ஒதுக்கி, உடனடியாக சம்பந்தப்பட்ட அதிகாரிகளுக்குத் தெரிவிக்கும்.",
+            form_section_details: "1. பிரச்சனை ವಿವರங்கள்",
+            form_label_title: "பிரச்சனை தலைப்பு *",
+            form_placeholder_title: "எ.கா: பஸ் ஸ்டாப் 4 அருகே மெயின் റോഡில் பெரிய பள்ளம்",
+            form_label_category: "வகை *",
+            form_opt_roads: "🛣️ சாலைகள் மற்றும் பள்ளங்கள்",
+            form_opt_water: "💧 குடிநீர் விநியோகம்",
+            form_opt_electric: "⚡ மின்சாரம்",
+            form_opt_sanitation: "🗑️ சுகாதாரம் மற்றும் குப்பை",
+            form_opt_safety: "🚨 பாதுகாப்பு ஆபத்து",
+            form_opt_environment: "🌿 சுற்றுச்சூழல்",
+            form_opt_other: "📋 இதர",
+            form_label_impact: "பாதிக்கப்பட்ட மக்களின் எண்ணிக்கை *",
+            form_label_desc: "விளக்கம் *",
+            form_placeholder_desc: "பிரச்சினையை விரிவாக விவரிக்கவும். குறிப்பிட்ட இருப்பிட விவரங்கள், நீங்கள் அதை எப்போது கவனித்தீர்கள் மற்றும் ஏதேனும் பாதுகாப்பு கவலைகளைச் சேர்க்கவும்...",
+            btn_use_location: "📍 எனது தற்போதைய இருப்பிடத்தைப் பயன்படுத்து",
+            btn_submit_report: "🚨 பிரச்சனை அறிக்கையைச் சமர்ப்பி"
         },
         kn: {
             nav_issues: "ಸಮಸ್ಯೆಗಳು",
@@ -371,7 +438,28 @@ const i18n = {
             footer_tech_ai: "AI ಕ್ಲಸ್ಟರಿಂಗ್ ಎಂಜಿನ್",
             footer_tech_bc: "ಬ್ಲಾಕ್‌ಚೈನ್ ಆಡಿಟ್ ಟ್ರಯಲ್",
             footer_tech_score: "ಡೈನಾಮಿಕ್ ಪ್ರಯಾರಿಟಿ ಸ್ಕೋರಿಂಗ್",
-            footer_copy: "© 2026 RESOLVIT. ಜನರಿಗಾಗಿ ನಾಗರಿಕ ತಂತ್ರಜ್ಞಾನ."
+            footer_copy: "© 2026 RESOLVIT. ಜನರಿಗಾಗಿ ನಾಗರಿಕ ತಂತ್ರಜ್ಞಾನ.",
+            
+            // Report Page
+            report_hint: "ನಾಗರಿಕ ಪೋರ್ಟಲ್",
+            report_title: "ನಾಗರಿಕ ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
+            report_subtitle: "ನಿಮ್ಮ ಸಮಸ್ಯೆಗಳನ್ನು ಸಲ್ಲಿಸಿ ಮತ್ತು ನಮ್ಮ AI ವ್ಯವಸ್ಥೆಯು ಅದನ್ನು ಇದೇ ರೀತಿಯ ವರದಿಗಳೊಂದಿಗೆ ಗುಂಪು ಮಾಡುತ್ತದೆ, ಆದ್ಯತೆಯ ಸ್ಕೋರ್ ಅನ್ನು ನಿಯೋಜಿಸುತ್ತದೆ ಮತ್ತು ತಕ್ಷಣವೇ ಸಂಬಂಧಿತ ಅಧಿಕಾರಿಗೆ ತಿಳಿಸುತ್ತದೆ.",
+            form_section_details: "1. ಸಮಸ್ಯೆಯ ವಿವರಗಳು",
+            form_label_title: "ಸಮಸ್ಯೆಯ ಶೀರ್ಷಿಕೆ *",
+            form_placeholder_title: "ಉದಾ: ಬಸ್ ನಿಲ್ದಾಣ 4 ರ ಬಳಿ ಮುಖ್ಯ ರಸ್ತೆಯಲ್ಲಿ ದೊಡ್ಡ ಗುಂಡಿ",
+            form_label_category: "ವರ್ಗ *",
+            form_opt_roads: "🛣️ ರಸ್ತೆಗಳು ಮತ್ತು ಗುಂಡಿಗಳು",
+            form_opt_water: "💧 ನೀರು ಸರಬರಾಜು",
+            form_opt_electric: "⚡ ವಿದ್ಯುತ್",
+            form_opt_sanitation: "🗑️ ನೈರ್ಮಲ್ಯ ಮತ್ತು ಕಸ",
+            form_opt_safety: "🚨 ಸುರಕ್ಷತಾ ಅಪಾಯ",
+            form_opt_environment: "🌿 ಪರಿಸರ",
+            form_opt_other: "📋 ಇತರೆ",
+            form_label_impact: "ಪ್ರಭಾವಿತರಾದ ಜನರ ಸಂಖ್ಯೆ *",
+            form_label_desc: "ವಿವರಣೆ *",
+            form_placeholder_desc: "ಸಮಸ್ಯೆಯನ್ನು ವಿವರವಾಗಿ ವಿವರಿಸಿ. ನಿರ್ದಿಷ್ಟ ಸ್ಥಳದ ವಿವರಗಳು, ನೀವು ಯಾವಾಗ ಗಮನಿಸಿದ್ದೀರಿ ಮತ್ತು ಯಾವುದೇ ಸುರಕ್ಷತೆಯ ಕಾಳಜಿಗಳನ್ನು ಸೇರಿಸಿ...",
+            btn_use_location: "📍 ನನ್ನ ಪ್ರಸ್ತುತ ಸ್ಥಳವನ್ನು ಬಳಸು",
+            btn_submit_report: "🚨 ಸಮಸ್ಯೆ ವರದಿಯನ್ನು ಸಲ್ಲಿಸಿ"
         },
         ml: {
             nav_issues: "വിഷയങ്ങൾ",
@@ -430,7 +518,28 @@ const i18n = {
             footer_tech_ai: "AI ക്ലസ്റ്ററിംഗ് എഞ്ചിൻ",
             footer_tech_bc: "ബ്ലോക്ക്‌ചെയിൻ ഓഡിറ്റ് ട്രയൽ",
             footer_tech_score: "ഡൈനാമിക് പ്രയോറിറ്റി സ്കോറിംഗ്",
-            footer_copy: "© 2026 RESOLVIT. ജനങ്ങൾക്കായി ഒരു പൗര സാങ്കേതികവിദ്യ."
+            footer_copy: "© 2026 RESOLVIT. ജനങ്ങൾക്കായി ഒരു പൗര സാങ്കേതികവിദ്യ.",
+            
+            // Report Page
+            report_hint: "പൗര പോർട്ടൽ",
+            report_title: "ഒരു സിവിക് പ്രശ്നം റിപ്പോർട്ട് ചെയ്യുക",
+            report_subtitle: "നിങ്ങളുടെ പ്രശ്നങ്ങൾ സമർപ്പിക്കുക, ഞങ്ങളുടെ AI സിസ്റ്റം സമാനമായ റിപ്പോർട്ടുകൾക്കൊപ്പം അതിനെ ഗ്രൂപ്പ് ചെയ്യുകയും മുൻഗണനാ സ്കോർ നൽകുകയും ഉടൻ തന്നെ ബന്ധപ്പെട്ട അധികാരിയെ അറിയിക്കുകയും ചെയ്യും.",
+            form_section_details: "1. പ്രശ്നത്തിന്റെ വിവരങ്ങൾ",
+            form_label_title: "പ്രശ്നത്തിന്റെ തലക്കെട്ട് *",
+            form_placeholder_title: "ഉദാ: ബസ് സ്റ്റോപ്പ് 4-ന് സമീപം മെയിൻ റോഡിലെ വലിയ കുഴി",
+            form_label_category: "വിഭാഗം *",
+            form_opt_roads: "🛣️ റോഡുകളും കുഴികളും",
+            form_opt_water: "💧 കുടിവെള്ള വിതരണം",
+            form_opt_electric: "⚡ വൈദ്യുതി",
+            form_opt_sanitation: "🗑️ ശുചിത്വവും മാലിന്യവും",
+            form_opt_safety: "🚨 സുരക്ഷാ ഭീഷണി",
+            form_opt_environment: "🌿 പരിസ്ഥിതി",
+            form_opt_other: "📋 മറ്റുള്ളവ",
+            form_label_impact: "ബാധിച്ച ആളുകളുടെ എണ്ണം *",
+            form_label_desc: "വിവരണം *",
+            form_placeholder_desc: "പ്രശ്നം വിശദമായി വിവരിക്കുക. നിർദ്ദിഷ്ട സ്ഥല വിവരങ്ങൾ, നിങ്ങൾ എപ്പോഴാണ് ഇത് ശ്രദ്ധിച്ചത്, സുരക്ഷാ ആശങ്കകൾ എന്നിവ ഉൾപ്പെടുത്തുക...",
+            btn_use_location: "📍 എന്റെ നിലവിലെ സ്ഥാനം ഉപയോഗിക്കുക",
+            btn_submit_report: "🚨 പ്രശ്ന റിപ്പോർട്ട് സമർപ്പിക്കുക"
         },
         bn: {
             nav_issues: "সমস্যা",
@@ -489,7 +598,28 @@ const i18n = {
             footer_tech_ai: "AI ক্লাস্টারিং ইঞ্জিন",
             footer_tech_bc: "ব্লকচেইন অডিট ট্রেইল",
             footer_tech_score: "ডাইনামিক প্রায়োরিটি স্কোরিং",
-            footer_copy: "© 2026 RESOLVIT. মানুষের জন্য নাগরিক প্রযুক্তি।"
+            footer_copy: "© 2026 RESOLVIT. মানুষের জন্য নাগরিক প্রযুক্তি।",
+            
+            // Report Page
+            report_hint: "নাগরিক পোর্টাল",
+            report_title: "একটি নাগরিক সমস্যার রিপোর্ট করুন",
+            report_subtitle: "আপনার সমস্যা জমা দিন এবং আমাদের AI সিস্টেম এটিকে অনুরূপ রিপোর্টের সাথে ক্লাস্টার করবে, অগ্রাধিকারের স্কোর দেবে এবং অবিলম্বে সংশ্লিষ্ট কর্তৃপক্ষকে অবহিত করবে।",
+            form_section_details: "1. সমস্যার বিবরণ",
+            form_label_title: "সমস্যার শিরোনাম *",
+            form_placeholder_title: "যেমন: বাস স্টপ ৪ এর কাছে মেইন রোডে বড় গর্ত",
+            form_label_category: "বিভাগ *",
+            form_opt_roads: "🛣️ রাস্তা ও গর্ত",
+            form_opt_water: "💧 জল সরবরাহ",
+            form_opt_electric: "⚡ বিদ্যুৎ",
+            form_opt_sanitation: "🗑️ পয়ঃনিষ্কাশন ও আবর্জনা",
+            form_opt_safety: "🚨 নিরাপত্তা ঝুঁকি",
+            form_opt_environment: "🌿 পরিবেশ",
+            form_opt_other: "📋 অন্যান্য",
+            form_label_impact: "প্রভাবিত মানুষের সংখ্যা *",
+            form_label_desc: "বিবরণ *",
+            form_placeholder_desc: "সমস্যাটি বিস্তারিত বর্ণনা করুন। নির্দিষ্ট স্থানের বিবরণ, আপনি কখন এটি লক্ষ্য করেছেন এবং কোনো নিরাপত্তা উদ্বেগ অন্তর্ভুক্ত করুন...",
+            btn_use_location: "📍 আমার বর্তমান অবস্থান ব্যবহার করুন",
+            btn_submit_report: "🚨 সমস্যা রিপোর্ট জমা দিন"
         },
         mr: {
             nav_issues: "समस्या",
@@ -548,7 +678,28 @@ const i18n = {
             footer_tech_ai: "AI क्लस्टरिंग इंजिन",
             footer_tech_bc: "ब्लॉकचेन ऑडिट ट्रेल",
             footer_tech_score: "डायनॅमिक प्रायोरिटी स्कोअरिंग",
-            footer_copy: "© 2026 RESOLVIT. लोकांसाठी नागरी तंत्रज्ञान."
+            footer_copy: "© 2026 RESOLVIT. लोकांसाठी नागरी तंत्रज्ञान.",
+            
+            // Report Page
+            report_hint: "नागरी पोर्टल",
+            report_title: "नागरी समस्येची नोंद करा",
+            report_subtitle: "तुमच्या समस्या सबमिट करा आणि आमची AI प्रणाली इतर तत्सम अहवालांसोबत त्याचे गट बनवेल, प्राधान्य गुण देईल आणि संबंधित प्राधिकरणाला त्वरित सूचित करेल.",
+            form_section_details: "1. समस्येचा तपशील",
+            form_label_title: "समस्येचे शीर्षक *",
+            form_placeholder_title: "उदा. बस स्टॉप ४ जवळ मेन स्ट्रीटवरील मोठा खड्डा",
+            form_label_category: "वर्ग *",
+            form_opt_roads: "🛣️ रस्ते आणि खड्डे",
+            form_opt_water: "💧 पाणी पुरवठा",
+            form_opt_electric: "⚡ वीज",
+            form_opt_sanitation: "🗑️ स्वच्छता आणि कचरा",
+            form_opt_safety: "🚨 सुरक्षा धोका",
+            form_opt_environment: "🌿 पर्यावरण",
+            form_opt_other: "📋 इतर",
+            form_label_impact: "प्रभावित लोकांची संख्या *",
+            form_label_desc: "वर्णन *",
+            form_placeholder_desc: "समस्येचे सविस्तर वर्णन करा. विशिष्ट ठिकाणचा तपशील, समस्येची वेळ आणि कोणत्याही सुरक्षा चिंतेचा समावेश करा...",
+            btn_use_location: "📍 माझे चालू स्थान वापरा",
+            btn_submit_report: "🚨 समस्येचा अहवाल सबमिट करा"
         },
         gu: {
             nav_issues: "મુદ્દાઓ",
@@ -607,7 +758,28 @@ const i18n = {
             footer_tech_ai: "AI ક્લસ્ટરિંગ એન્જિન",
             footer_tech_bc: "બ્લોકચેન ઓડિટ ટ્રેઇલ",
             footer_tech_score: "ડાયનેમિક પ્રાયોરિટી સ્કોરિંગ",
-            footer_copy: "© 2026 RESOLVIT. લોકો માટે નાગરિક ટેકનોલોજી."
+            footer_copy: "© 2026 RESOLVIT. લોકો માટે નાગરિક ટેકનોલોજી.",
+            
+            // Report Page
+            report_hint: "નાગરિક પોર્ટલ",
+            report_title: "નાગરિક સમસ્યાની જાણ કરો",
+            report_subtitle: "તમારી સમસ્યાઓ સબમિટ કરો અને અમારી AI સિસ્ટમ તેને સમાન અહેવાલો સાથે ક્લસ્ટર કરશે, પ્રાધાન્યતા સ્કોર આપશે અને સંબંધિત સત્તાધિકારીને તાત્કાલિક જાણ કરશે.",
+            form_section_details: "1. સમસ્યાની વિગતો",
+            form_label_title: "સમસ્યાનું શીર્ષક *",
+            form_placeholder_title: "દા.ત. બસ સ્ટોપ ૪ નજીક મેઈન રોડ પર મોટો ખાડો",
+            form_label_category: "શ્રેણી *",
+            form_opt_roads: "🛣️ રસ્તા અને ખાડા",
+            form_opt_water: "💧 પાણી પુરવઠો",
+            form_opt_electric: "⚡ વીજળી",
+            form_opt_sanitation: "🗑️ સ્વચ્છતા અને કચરો",
+            form_opt_safety: "🚨 સુરક્ષા જોખમ",
+            form_opt_environment: "🌿 પર્યાવરણ",
+            form_opt_other: "📋 અન્ય",
+            form_label_impact: "અસરગ્રસ્ત લોકોની સંખ્યા *",
+            form_label_desc: "વર્ણन *",
+            form_placeholder_desc: "સમસ્યાનું વિગતવાર વર્ણન કરો. ચોક્કસ સ્થાનની વિગતો, તમે ક્યારે જોયું અને કોઈપણ સુરક્ષા ચિંતાઓ શામેલ કરો...",
+            btn_use_location: "📍 મારું વર્તમાન સ્થાન વાપરો",
+            btn_submit_report: "🚨 સમસ્યા અહેવાલ સબમિટ કરો"
         },
         pa: {
             nav_issues: "ਮੁੱਦੇ",
@@ -666,7 +838,28 @@ const i18n = {
             footer_tech_ai: "AI ਕਲੱਸਟਰਿੰਗ ਇੰਜਣ",
             footer_tech_bc: "ਬਲਾਕਚੈਨ ਆਡਿਟ ਟ੍ਰੇਲ",
             footer_tech_score: "ਡਾਇਨਾਮਿਕ ਪ੍ਰਾਇਰਟੀ ਸਕੋਰਿੰਗ",
-            footer_copy: "© 2026 RESOLVIT. ਲੋਕਾਂ ਲਈ ਨਾਗਰਿਕ ਤਕਨਾਲੋਜੀ।"
+            footer_copy: "© 2026 RESOLVIT. ਲੋਕਾਂ ਲਈ ਨਾਗਰਿਕ ਤਕਨਾਲੋਜੀ।",
+            
+            // Report Page
+            report_hint: "ਨਾਗਰਿਕ ਪੋਰਟਲ",
+            report_title: "ਇੱਕ ਨਾਗਰਿਕ ਸਮੱਸਿਆ ਦੀ ਰਿਪੋਰਟ ਕਰੋ",
+            report_subtitle: "ਆਪਣੀਆਂ ਸਮੱਸਿਆਵਾਂ ਜਮ੍ਹਾਂ ਕਰੋ ਅਤੇ ਸਾਡੀ AI ਪ੍ਰਣਾਲੀ ਇਸਨੂੰ ਸਮਾਨ ਰਿਪੋਰਟਾਂ ਨਾਲ ਜੋੜੇਗੀ, ਇੱਕ ਤਰਜੀਹ ਸਕੋਰ ਦੇਵੇਗੀ, ਅਤੇ ਸਬੰਧਤ ਅਥਾਰਟੀ ਨੂੰ ਤੁਰੰਤ ਸੂਚਿਤ ਕਰੇਗੀ।",
+            form_section_details: "1. ਸਮੱਸਿਆ ਦਾ ਵੇਰਵਾ",
+            form_label_title: "ਸਮੱਸਿਆ ਦਾ ਸਿਰਲੇਖ *",
+            form_placeholder_title: "ਉਦਾਹਰਨ: ਬੱਸ ਸਟਾਪ 4 ਦੇ ਨੇੜੇ ਮੁੱਖ ਸੜਕ 'ਤੇ ਵੱਡਾ ਖੱਡਾ",
+            form_label_category: "ਸ਼੍ਰੇਣੀ *",
+            form_opt_roads: "🛣️ ਸੜਕਾਂ ਅਤੇ ਖੱਡੇ",
+            form_opt_water: "💧 ਪਾਣੀ ਦੀ ਸਪਲਾਈ",
+            form_opt_electric: "⚡ ਬਿਜਲੀ",
+            form_opt_sanitation: "🗑️ ਸਫ਼ਾਈ ਅਤੇ ਕੂੜਾ",
+            form_opt_safety: "🚨 ਸੁਰੱਖਿਆ ਖਤਰਾ",
+            form_opt_environment: "🌿 ਵਾਤਾਵรਣ",
+            form_opt_other: "📋 ਹੋਰ",
+            form_label_impact: "ਪ੍ਰਭਾਵਿਤ ਲੋਕਾਂ ਦੀ ਗਿਣਤੀ *",
+            form_label_desc: "ਵੇਰਵਾ *",
+            form_placeholder_desc: "ਸਮੱਸਿਆ ਦਾ ਵਿਸਥਾਰ ਵਿੱਚ ਵਰਣਨ ਕਰੋ। ਖਾਸ ਸਥਾਨ ਦੇ ਵੇਰਵੇ, ਜਦੋਂ ਤੁਸੀਂ ਇਸਨੂੰ ਦੇਖਿਆ ਸੀ, ਅਤੇ ਕੋਈ ਵੀ ਸੁਰੱਖਿਆ ਚਿੰਤਾਵਾਂ ਸ਼ਾਮਲ ਕਰੋ...",
+            btn_use_location: "📍 ਮੇਰੀ ਮੌਜੂਦਾ ਸਥਿਤੀ ਦੀ ਵਰਤੋਂ ਕਰੋ",
+            btn_submit_report: "🚨 ਸਮੱਸਿਆ ਦੀ ਰਿਪੋਰਟ ਜਮ੍ਹਾਂ ਕਰੋ"
         }
     },
 
