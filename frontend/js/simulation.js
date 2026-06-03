@@ -186,11 +186,8 @@ function updateDemoStatus(text, color) {
 }
 
 function showDemoBadge(text) {
-    removeDemoBadge();
-    const badge = document.createElement("div");
-    badge.id = "demo-sim-badge";
-    badge.textContent = text;
-    document.body.appendChild(badge);
+    // Disabled to prevent floating badge from rendering and cluttering the UI
+    return;
 }
 
 function removeDemoBadge() {
