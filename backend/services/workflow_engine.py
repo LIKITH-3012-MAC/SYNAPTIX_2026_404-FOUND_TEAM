@@ -87,7 +87,8 @@ class WorkflowEngine:
                         title=payload.title,
                         category=category,
                         latitude=payload.latitude,
-                        longitude=payload.longitude
+                        longitude=payload.longitude,
+                        cursor=cursor
                     )
                     if cluster_id:
                         issue["cluster_id"] = cluster_id

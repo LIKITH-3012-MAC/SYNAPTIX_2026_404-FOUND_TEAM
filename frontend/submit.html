@@ -60,7 +60,294 @@
   </script>
   
   <style>
-    .page-header { padding-top: 100px; }
+    .page-header { padding-top: 100px; padding-bottom: 20px; }
+    
+    /* Stepper Wizard Styles */
+    .wizard-progress-container {
+        max-width: 900px;
+        margin: 0 auto 40px auto;
+        padding: 0 10px;
+    }
+    .wizard-progress {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+    }
+    .wizard-progress::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.05);
+        z-index: 1;
+    }
+    .wizard-progress-bar {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        height: 3px;
+        background: var(--accent-gradient, linear-gradient(135deg, #6366f1 0%, #a855f7 100%));
+        z-index: 2;
+        width: 0%;
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .wizard-step-node {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--bg-tertiary, #1e293b);
+        border: 2px solid var(--border, rgba(255, 255, 255, 0.08));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.95rem;
+        z-index: 3;
+        transition: all 0.3s ease;
+        color: var(--text-muted, #64748b);
+        cursor: pointer;
+        position: relative;
+    }
+    .wizard-step-node.active {
+        border-color: var(--accent, #6366f1);
+        color: var(--text-primary, #f8fafc);
+        box-shadow: 0 0 20px var(--accent-glow, rgba(99, 102, 241, 0.4));
+        background: var(--bg-secondary, #0f172a);
+    }
+    .wizard-step-node.completed {
+        border-color: var(--green, #10b981);
+        background: var(--green, #10b981);
+        color: white;
+    }
+    .wizard-step-node-label {
+        position: absolute;
+        top: 50px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        white-space: nowrap;
+        color: var(--text-muted, #64748b);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all 0.3s ease;
+    }
+    .wizard-step-node.active .wizard-step-node-label {
+        color: var(--text-primary, #f8fafc);
+    }
+    .wizard-step-node.completed .wizard-step-node-label {
+        color: var(--green, #10b981);
+    }
+
+    .wizard-steps-container {
+        position: relative;
+    }
+    .wizard-step-panel {
+        display: none;
+        opacity: 0;
+        transform: translateY(15px);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .wizard-step-panel.active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .wizard-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 32px;
+        gap: 16px;
+    }
+
+    /* Category Selection Grid */
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 16px;
+        margin-top: 10px;
+    }
+    .category-card {
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+        border-radius: var(--radius-md, 14px);
+        padding: 20px 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        user-select: none;
+    }
+    .category-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--accent, #6366f1);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .category-card.selected {
+        border-color: var(--accent, #6366f1);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%);
+        box-shadow: 0 0 20px var(--accent-glow, rgba(99, 102, 241, 0.4));
+    }
+    .category-card .category-icon {
+        font-size: 2rem;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    }
+    .category-card .category-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary, #94a3b8);
+    }
+    .category-card.selected .category-title {
+        color: var(--text-primary, #f8fafc);
+    }
+
+    /* Live Priority Dashboard */
+    .priority-dashboard-card {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%);
+        border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+        border-radius: var(--radius-lg, 24px);
+        padding: 24px;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        margin-top: 24px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        flex-wrap: wrap;
+    }
+    .dial-svg-container {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        flex-shrink: 0;
+        margin: 0 auto;
+    }
+    .score-dial {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+    .dial-track {
+        stroke: rgba(255, 255, 255, 0.05);
+    }
+    .dial-progress {
+        stroke-dasharray: 251.2;
+        stroke-dashoffset: 251.2;
+        transition: stroke-dashoffset 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .dial-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .dial-score-label {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--text-primary, #f8fafc);
+        line-height: 1;
+        font-family: 'Outfit', sans-serif;
+    }
+    .dial-status-text {
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-top: 4px;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    .status-low { color: var(--green, #10b981); background: rgba(16, 185, 129, 0.1); }
+    .status-medium { color: var(--yellow, #eab308); background: rgba(234, 179, 8, 0.1); }
+    .status-high { color: var(--orange, #f97316); background: rgba(249, 115, 22, 0.1); }
+    .status-critical { color: var(--red, #ff3e3e); background: rgba(255, 62, 62, 0.1); }
+
+    .dial-info {
+        flex-grow: 1;
+        min-width: 200px;
+    }
+    .dial-info-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary, #f8fafc);
+        margin-bottom: 6px;
+        font-family: 'Outfit', sans-serif;
+    }
+    .dial-info-desc {
+        font-size: 0.85rem;
+        color: var(--text-secondary, #94a3b8);
+        line-height: 1.5;
+    }
+    .dial-breakdown {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 16px;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        padding-top: 16px;
+        width: 100%;
+    }
+
+    /* Drag and Drop Zone */
+    .upload-dropzone {
+        border: 2px dashed rgba(255, 255, 255, 0.1);
+        border-radius: var(--radius-lg, 24px);
+        padding: 40px 24px;
+        text-align: center;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.01);
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+    }
+    .upload-dropzone:hover, .upload-dropzone.dragover {
+        border-color: var(--accent, #6366f1);
+        background: rgba(99, 102, 241, 0.03);
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.05);
+    }
+    .upload-dropzone .upload-icon {
+        font-size: 3rem;
+        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.15));
+        transition: transform 0.3s ease;
+    }
+    .upload-dropzone:hover .upload-icon {
+        transform: translateY(-4px);
+    }
+    .upload-dropzone .upload-text {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary, #f8fafc);
+    }
+    .upload-dropzone .upload-highlight {
+        color: var(--accent, #6366f1);
+        text-decoration: underline;
+    }
+    .upload-dropzone .upload-subtext {
+        font-size: 0.8rem;
+        color: var(--text-muted, #64748b);
+    }
+
+    /* Range slider custom track */
+    input[type=range].slider {
+        background: linear-gradient(to right, var(--green, #10b981) 0%, var(--yellow, #eab308) 50%, var(--red, #ff3e3e) 100%);
+        height: 6px;
+        border-radius: 3px;
+        outline: none;
+    }
   </style>
 
     <!-- Apple devices -->
@@ -139,7 +426,7 @@ Project: Resolvit AI
         <div class="navbar-inner">
             <a href="index.html" class="nav-logo">
                 <img src="resolvit.png" alt="RESOLVIT Logo" class="nav-logo-img">
-        <span>RESOLVIT</span>
+                <span>RESOLVIT</span>
             </a>
             <div class="nav-links">
                 <a href="dashboard.html" class="nav-link" data-i18n="nav_issues">Issues</a>
@@ -163,216 +450,302 @@ Project: Resolvit AI
         </div>
     </div>
 
-    <section class="section" style="padding-top: 60px;">
+    <!-- Stepper Progress Tracker -->
+    <div class="wizard-progress-container">
+        <div class="wizard-progress">
+            <div class="wizard-progress-bar"></div>
+            <div class="wizard-step-node active" onclick="goToStep(1)">
+                1
+                <span class="wizard-step-node-label">Details</span>
+            </div>
+            <div class="wizard-step-node" onclick="goToStep(2)">
+                2
+                <span class="wizard-step-node-label">Priority</span>
+            </div>
+            <div class="wizard-step-node" onclick="goToStep(3)">
+                3
+                <span class="wizard-step-node-label">Location</span>
+            </div>
+            <div class="wizard-step-node" onclick="goToStep(4)">
+                4
+                <span class="wizard-step-node-label">Evidence</span>
+            </div>
+        </div>
+    </div>
+
+    <section class="section" style="padding-top: 20px;">
         <div class="container" style="max-width: 900px;">
 
             <div id="submit-alert"></div>
 
             <!-- Auth required notice -->
-            <div class="alert alert-info" id="auth-notice" style="display:none;">
+            <div class="alert alert-info" id="auth-notice" style="display:none; margin-bottom: 24px;">
                 ℹ️ You need to <strong>login</strong> or <strong>register</strong> to submit an issue.
-                <a href="#" onclick="showAuthModal()" style="color:var(--accent);font-weight:600;margin-left:8px;">Sign
-                    In →</a>
+                <a href="#" onclick="showAuthModal()" style="color:var(--accent);font-weight:600;margin-left:8px;">Sign In →</a>
             </div>
 
-            <form id="issue-form" class="flex flex-col" style="gap: 32px;">
+            <form id="issue-form" class="flex flex-col" style="gap: 32px;" novalidate>
 
-                <!-- Section 1: Basics -->
-                <div class="card glass-premium gpu-accelerate" style="padding: 32px;">
-                    <h3 style="margin-bottom: 24px; display:flex; align-items:center; gap:10px;">
-                        <span
-                            style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">1</span>
-                        <span data-i18n="form_section_details">Issue Details</span>
-                    </h3>
-                    <div class="flex flex-col" style="gap: 20px;">
-                        <div class="form-group">
-                            <label class="form-label" data-i18n="form_label_title">Issue Title <span>*</span></label>
-                            <input type="text" id="title" class="form-input" data-i18n="form_placeholder_title"
-                                placeholder="e.g. Large pothole on Main Street near Bus Stop 4" required
-                                minlength="10" />
+                <div class="wizard-steps-container">
+
+                    <!-- STEP 1: Details -->
+                    <div class="wizard-step-panel active" id="step-1">
+                        <div class="card glass-premium gpu-accelerate" style="padding: 32px;">
+                            <h3 style="margin-bottom: 24px; display:flex; align-items:center; gap:10px;">
+                                <span style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">1</span>
+                                <span data-i18n="form_section_details">Issue Details</span>
+                            </h3>
+                            <div class="flex flex-col" style="gap: 24px;">
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="form_label_title">Issue Title <span>*</span></label>
+                                    <input type="text" id="title" class="form-input" data-i18n="form_placeholder_title"
+                                        placeholder="e.g. Large pothole on Main Street near Bus Stop 4" required
+                                        minlength="10" />
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="form_label_category">Category <span>*</span></label>
+                                    <div class="category-grid">
+                                        <div class="category-card" data-value="Roads">
+                                            <div class="category-icon">Roads</div>
+                                            <div class="category-title" data-i18n="form_opt_roads">🛣️ Roads & Potholes</div>
+                                        </div>
+                                        <div class="category-card" data-value="Water">
+                                            <div class="category-icon">Water</div>
+                                            <div class="category-title" data-i18n="form_opt_water">💧 Water Supply</div>
+                                        </div>
+                                        <div class="category-card" data-value="Electricity">
+                                            <div class="category-icon">Electricity</div>
+                                            <div class="category-title" data-i18n="form_opt_electric">⚡ Electricity</div>
+                                        </div>
+                                        <div class="category-card" data-value="Sanitation">
+                                            <div class="category-icon">Sanitation</div>
+                                            <div class="category-title" data-i18n="form_opt_sanitation">🗑️ Sanitation & Garbage</div>
+                                        </div>
+                                        <div class="category-card" data-value="Safety">
+                                            <div class="category-icon">Safety</div>
+                                            <div class="category-title" data-i18n="form_opt_safety">🚨 Safety Hazard</div>
+                                        </div>
+                                        <div class="category-card" data-value="Environment">
+                                            <div class="category-icon">Environment</div>
+                                            <div class="category-title" data-i18n="form_opt_environment">🌿 Environment</div>
+                                        </div>
+                                        <div class="category-card" data-value="Other">
+                                            <div class="category-icon">Other</div>
+                                            <div class="category-title" data-i18n="form_opt_other">📋 Other</div>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" id="category" required />
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="form_label_desc">Description <span>*</span></label>
+                                    <textarea id="description" class="form-textarea" data-i18n="form_placeholder_desc"
+                                        placeholder="Describe the issue in detail. Include specific location details, when you noticed it, and any safety concerns..."
+                                        required minlength="20" style="min-height: 140px;"></textarea>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;" class="form-row">
+                        
+                        <div class="wizard-footer">
+                            <div></div>
+                            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue to Assessment →</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Urgency & Risk -->
+                    <div class="wizard-step-panel" id="step-2">
+                        <div class="card glass-premium gpu-accelerate" style="padding: 32px;">
+                            <h3 style="margin-bottom: 24px; display:flex; align-items:center; gap:10px;">
+                                <span style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">2</span>
+                                Urgency &amp; Risk Assessment
+                            </h3>
+                            <div class="flex flex-col" style="gap: 24px;">
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-bottom: 8px;" class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Urgency Level <span>*</span> — <span id="urgency-label"
+                                                style="color:var(--accent);font-weight:700;">Medium (3)</span></label>
+                                        <div class="slider-container">
+                                            <input type="range" id="urgency" class="slider" min="1" max="5" value="3"
+                                                oninput="updateUrgency(this.value)" />
+                                            <div class="slider-labels" style="margin-top: 10px;">
+                                                <span>Low</span>
+                                                <span>Medium</span>
+                                                <span>Critical</span>
+                                            </div>
+                                        </div>
+                                        <div style="margin-top: 16px; padding: 12px 16px; background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                                            <span id="urgency-desc" style="font-size:0.85rem; color:var(--text-secondary);">Causes inconvenience but not immediate danger.</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Safety Risk Probability <span>*</span> — <span id="risk-label"
+                                                style="color:var(--orange);font-weight:700;">10%</span></label>
+                                        <div class="slider-container">
+                                            <input type="range" id="safety_risk" class="slider" min="0" max="100" value="10"
+                                                oninput="updateRisk(this.value)" />
+                                            <div class="slider-labels" style="margin-top: 10px;">
+                                                <span>0% - No Risk</span>
+                                                <span>50%</span>
+                                                <span>100% - Critical</span>
+                                            </div>
+                                        </div>
+                                        <div style="margin-top: 16px; padding: 12px 16px; background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                                            <span id="risk-desc" style="font-size:0.85rem; color:var(--text-secondary);">Minimal safety risk to public.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="form_label_impact">Number of People Affected <span>*</span></label>
+                                    <input type="number" id="impact_scale" class="form-input" placeholder="e.g. 200" min="1"
+                                        value="10" required style="max-width: 300px;" />
+                                </div>
+
+                                <!-- Circular Priority Dashboard -->
+                                <div class="priority-dashboard-card">
+                                    <div class="dial-svg-container">
+                                        <svg class="score-dial" viewBox="0 0 100 100">
+                                            <circle class="dial-track" cx="50" cy="50" r="40" fill="none" stroke-width="8"></circle>
+                                            <circle class="dial-progress" cx="50" cy="50" r="40" fill="none" stroke="url(#dial-gradient)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round"></circle>
+                                            <defs>
+                                                <linearGradient id="dial-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                    <stop offset="0%" stop-color="#10b981"></stop>
+                                                    <stop offset="50%" stop-color="#eab308"></stop>
+                                                    <stop offset="100%" stop-color="#ff3e3e"></stop>
+                                                </linearGradient>
+                                            </defs>
+                                        </svg>
+                                        <div class="dial-center">
+                                            <div class="dial-score-label" id="dial-priority-score">--</div>
+                                            <div class="dial-status-text" id="dial-priority-status">LOW</div>
+                                        </div>
+                                    </div>
+                                    <div class="dial-info">
+                                        <div class="dial-info-title">Estimated Priority Score</div>
+                                        <div class="dial-info-desc">Our AI uses this score to rank issues and dispatch immediate notifications to local authorities. The score is computed using details below:</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.8; margin-top: 10px;">
+                                            Impact Scale (40%) + Urgency Level (30%) + SLA Duration (20%) + Safety Hazard (10%)
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Legacy Score Preview kept for fallback checks -->
+                                    <div class="priority-score" id="priority-preview" style="display: none;">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="wizard-footer">
+                            <button type="button" class="btn btn-outline" onclick="prevStep()">← Back</button>
+                            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue to Location →</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Location -->
+                    <div class="wizard-step-panel" id="step-3">
+                        <div class="card glass-premium gpu-accelerate" style="padding: 32px;">
+                            <h3 style="margin-bottom: 24px; display:flex; align-items:center; gap:10px;">
+                                <span style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">3</span>
+                                Location Details
+                            </h3>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;"
+                                class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Latitude <span>*</span></label>
+                                    <input type="number" id="latitude" class="form-input" placeholder="12.9716" step="any"
+                                        required />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Longitude <span>*</span></label>
+                                    <input type="number" id="longitude" class="form-input" placeholder="77.5946" step="any"
+                                        required />
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-4" style="margin-bottom: 20px;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="detectLocation()"
+                                    data-i18n="btn_use_location" style="margin: 0;">
+                                    📍 Use My Current Location
+                                </button>
+                            </div>
+                            
+                            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">Or click on the interactive map below to pin the exact location:</p>
+                            <div id="submit-map"
+                                style="height:320px;border-radius:var(--radius-lg);overflow:hidden;border:2px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+                            </div>
+                        </div>
+                        
+                        <div class="wizard-footer">
+                            <button type="button" class="btn btn-outline" onclick="prevStep()">← Back</button>
+                            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue to Evidence →</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: Photo Evidence & Submit -->
+                    <div class="wizard-step-panel" id="step-4">
+                        <div class="card glass-premium gpu-accelerate" style="padding: 32px;">
+                            <h3 style="margin-bottom: 24px; display:flex; align-items:center; gap:10px;">
+                                <span style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">4</span>
+                                Photo Evidence
+                            </h3>
+
                             <div class="form-group">
-                                <label class="form-label" data-i18n="form_label_category">Category <span>*</span></label>
-                                <select id="category" class="form-select" required>
-                                    <option value="" data-i18n="form_opt_select">Select category...</option>
-                                    <option value="Roads" data-i18n="form_opt_roads">🛣️ Roads & Potholes</option>
-                                    <option value="Water" data-i18n="form_opt_water">💧 Water Supply</option>
-                                    <option value="Electricity" data-i18n="form_opt_electric">⚡ Electricity</option>
-                                    <option value="Sanitation" data-i18n="form_opt_sanitation">🗑️ Sanitation & Garbage</option>
-                                    <option value="Safety" data-i18n="form_opt_safety">🚨 Safety Hazard</option>
-                                    <option value="Environment" data-i18n="form_opt_environment">🌿 Environment</option>
-                                    <option value="Other" data-i18n="form_opt_other">📋 Other</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" data-i18n="form_label_impact">Number of People Affected <span>*</span></label>
-                                <input type="number" id="impact_scale" class="form-input" placeholder="e.g. 200" min="1"
-                                    value="10" required />
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" data-i18n="form_label_desc">Description <span>*</span></label>
-                            <textarea id="description" class="form-textarea" data-i18n="form_placeholder_desc"
-                                placeholder="Describe the issue in detail. Include specific location details, when you noticed it, and any safety concerns..."
-                                required minlength="20" style="min-height: 140px;"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 2: Urgency -->
-                <div class="card glass-premium gpu-accelerate" style="padding: 32px;">
-                    <h3 style="margin-bottom: 24px; display:flex; align-items:center; gap:10px;">
-                        <span
-                            style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">2</span>
-                        Urgency &amp; Risk Assessment
-                    </h3>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px;" class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Urgency Level <span>*</span> — <span id="urgency-label"
-                                    style="color:var(--accent);font-weight:700;">Medium (3)</span></label>
-                            <div class="slider-container">
-                                <input type="range" id="urgency" class="slider" min="1" max="5" value="3"
-                                    oninput="updateUrgency(this.value)" />
-                                <div class="slider-labels">
-                                    <span>1 - Low</span>
-                                    <span>3 - Medium</span>
-                                    <span>5 - Critical</span>
+                                <label class="form-label" style="margin-bottom: 12px;">Upload Photo or Capture</label>
+                                
+                                <!-- Drag and Drop Zone -->
+                                <div class="upload-dropzone" id="upload-zone" style="margin-bottom: 24px;">
+                                    <div class="upload-icon">📁</div>
+                                    <div class="upload-text">Drag & drop photo evidence here, or <span class="upload-highlight">browse files</span></div>
+                                    <div class="upload-subtext">Supports PNG, JPG, JPEG up to 5MB</div>
                                 </div>
-                            </div>
-                            <div
-                                style="margin-top: 12px; padding: 12px 16px; background: var(--bg-secondary); border-radius: var(--radius-md);">
-                                <span id="urgency-desc" style="font-size:0.85rem; color:var(--text-secondary);">Causes
-                                    inconvenience but not immediate danger.</span>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Safety Risk Probability <span>*</span> — <span id="risk-label"
-                                    style="color:var(--orange);font-weight:700;">10%</span></label>
-                            <div class="slider-container">
-                                <input type="range" id="safety_risk" class="slider" min="0" max="100" value="10"
-                                    oninput="updateRisk(this.value)" />
-                                <div class="slider-labels">
-                                    <span>0% - No Risk</span>
-                                    <span>50%</span>
-                                    <span>100% - Critical</span>
+
+                                <div class="flex gap-4" style="margin-bottom: 20px; flex-wrap:wrap; display: none;">
+                                    <button type="button" class="btn btn-primary"
+                                        onclick="document.getElementById('file-gallery').click()" style="flex:1;">
+                                        📁 Upload from Gallery
+                                    </button>
+                                    <button type="button" class="btn btn-outline"
+                                        onclick="document.getElementById('file-camera').click()" style="flex:1;">
+                                        📷 Capture Photo
+                                    </button>
                                 </div>
-                            </div>
-                            <div
-                                style="margin-top: 12px; padding: 12px 16px; background: var(--bg-secondary); border-radius: var(--radius-md);">
-                                <span id="risk-desc" style="font-size:0.85rem; color:var(--text-secondary);">Minimal
-                                    safety risk to public.</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Live Priority Preview -->
-                    <div
-                        style="margin-top: 24px; padding: 20px 24px; border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--blue-50), white); border: 1px solid var(--blue-100);">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <div
-                                    style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-                                    Estimated Priority Score</div>
-                                <div class="priority-score" id="priority-preview" style="font-size:2rem;">--</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Score
-                                    components</div>
-                                <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.8;">
-                                    Impact × 0.4 + Urgency × 0.3<br />+ Days × 0.2 + Safety × 0.1
+                                <!-- Hidden inputs -->
+                                <input type="file" id="file-gallery" accept="image/*" style="display:none;"
+                                    onchange="handleImageSelection(this)" />
+                                <input type="file" id="file-camera" accept="image/*" capture="environment" style="display:none;"
+                                    onchange="handleImageSelection(this)" />
+
+                                <!-- Preview area -->
+                                <div id="image-preview-container"
+                                    style="display:none; position:relative; max-width:100%; width:320px; height:220px; overflow:hidden; border-radius:var(--radius-md); border:2px solid var(--border); margin:0 auto 24px auto; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+                                    <img id="image-preview" src=""
+                                        style="width:100%; height:100%; object-fit:contain; background:var(--bg-secondary);" />
+                                    <button type="button" class="btn btn-sm btn-outline" onclick="removeImage()"
+                                        style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.65); color:white; border:none; padding: 6px 10px; min-width: auto; border-radius: 50%;">✕</button>
                                 </div>
+
+                                <label class="form-label">Or Provide Image URL</label>
+                                <input type="url" id="image_url" class="form-input"
+                                    placeholder="https://example.com/photo.jpg" />
+                                <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">Provide a direct web link to an evidence photo if you cannot upload directly.</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Section 3: Location -->
-                <div class="card glass-premium gpu-accelerate" style="padding: 32px;">
-                    <h3 style="margin-bottom: 24px; display:flex; align-items:center; gap:10px;">
-                        <span
-                            style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">3</span>
-                        Location
-                    </h3>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;"
-                        class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Latitude <span>*</span></label>
-                            <input type="number" id="latitude" class="form-input" placeholder="12.9716" step="any"
-                                required />
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Longitude <span>*</span></label>
-                            <input type="number" id="longitude" class="form-input" placeholder="77.5946" step="any"
-                                required />
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline btn-sm" onclick="detectLocation()"
-                        style="margin-bottom:16px;" data-i18n="btn_use_location">
-                        📍 Use My Current Location
-                    </button>
-                    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:16px;">Or click on the map to pin
-                        the issue location:</p>
-                    <div id="submit-map"
-                        style="height:280px;border-radius:var(--radius-lg);overflow:hidden;border:2px solid var(--border);">
-                    </div>
-                </div>
-
-                <!-- Section 4: Media -->
-                <div class="card glass-premium gpu-accelerate" style="padding: 32px;">
-                    <h3 style="margin-bottom: 24px; display:flex; align-items:center; gap:10px;">
-                        <span
-                            style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">4</span>
-                        Photo Evidence
-                    </h3>
-
-                    <div class="form-group">
-                        <label class="form-label">Upload Photo or Capture</label>
-                        <div class="flex gap-4" style="margin-bottom: 16px; flex-wrap:wrap;">
-                            <button type="button" class="btn btn-primary"
-                                onclick="document.getElementById('file-gallery').click()" style="flex:1;">
-                                📁 Upload from Gallery
-                            </button>
-                            <button type="button" class="btn btn-outline"
-                                onclick="document.getElementById('file-camera').click()" style="flex:1;">
-                                📷 Capture Photo
+                        
+                        <div class="wizard-footer" style="flex-wrap: wrap;">
+                            <button type="button" class="btn btn-outline" onclick="prevStep()">← Back</button>
+                            <button type="submit" class="btn btn-primary btn-lg" id="submit-btn" style="flex: 1; padding: 18px 30px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 24px var(--accent-glow);">
+                                🚨 Submit Issue Report
                             </button>
                         </div>
-
-                        <!-- Hidden inputs -->
-                        <input type="file" id="file-gallery" accept="image/*" style="display:none;"
-                            onchange="handleImageSelection(this)" />
-                        <input type="file" id="file-camera" accept="image/*" capture="environment" style="display:none;"
-                            onchange="handleImageSelection(this)" />
-
-                        <!-- Preview area -->
-                        <div id="image-preview-container"
-                            style="display:none; position:relative; max-width:100%; width:300px; height:200px; overflow:hidden; border-radius:var(--radius-md); border:2px solid var(--border); margin-bottom:16px;">
-                            <img id="image-preview" src=""
-                                style="width:100%; height:100%; object-fit:contain; background:var(--bg-secondary);" />
-                            <button type="button" class="btn btn-sm btn-outline" onclick="removeImage()"
-                                style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); color:white; border:none;">✕</button>
+                        <div style="font-size:0.8rem;color:var(--text-muted);text-align: center; margin-top: 16px; width: 100%;">
+                            By submitting, you confirm this is a real civic issue.
+                            Your report will be publicly visible, clustered, and tracked on RESOLVIT.
                         </div>
-
-                        <label class="form-label">Or Image URL</label>
-                        <input type="url" id="image_url" class="form-input"
-                            placeholder="https://example.com/photo.jpg" />
-                        <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">Upload your photo.
-                            Photo evidence strengthens your report.</div>
                     </div>
+
                 </div>
 
-                <!-- Submit -->
-                <div class="flex items-center gap-4" style="flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary btn-lg" id="submit-btn"
-                        style="flex:1; min-width:200px; padding:20px;" data-i18n="btn_submit_report">
-                        🚨 Submit Issue Report
-                    </button>
-                    <div style="font-size:0.8rem;color:var(--text-muted);flex:1;min-width:200px;">
-                        By submitting, you confirm this is a real civic issue.
-                        Your report will be publicly visible and tracked.
-                    </div>
-                </div>
             </form>
         </div>
     </section>
@@ -473,6 +846,104 @@ Project: Resolvit AI
             5: '🚨 CRITICAL — Immediate danger to life or property!'
         };
 
+        // Stepper Navigation State
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        function validateStep(step) {
+            if (step === 1) {
+                const title = document.getElementById('title').value.trim();
+                const category = document.getElementById('category').value;
+                const desc = document.getElementById('description').value.trim();
+
+                if (title.length < 10) {
+                    showToast("❌ Title must be at least 10 characters long.", "warning");
+                    document.getElementById('title').focus();
+                    return false;
+                }
+                if (!category) {
+                    showToast("❌ Please select a category card.", "warning");
+                    return false;
+                }
+                if (desc.length < 20) {
+                    showToast("❌ Description must be at least 20 characters long.", "warning");
+                    document.getElementById('description').focus();
+                    return false;
+                }
+            } else if (step === 2) {
+                const impact = parseInt(document.getElementById('impact_scale').value);
+                if (isNaN(impact) || impact < 1) {
+                    showToast("❌ Impact scale must be at least 1 person.", "warning");
+                    document.getElementById('impact_scale').focus();
+                    return false;
+                }
+            } else if (step === 3) {
+                const lat = parseFloat(document.getElementById('latitude').value);
+                const lng = parseFloat(document.getElementById('longitude').value);
+                if (isNaN(lat) || isNaN(lng)) {
+                    showToast("❌ Please pin the issue location on the map.", "warning");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function nextStep() {
+            if (!validateStep(currentStep)) return;
+            if (currentStep < totalSteps) {
+                goToStep(currentStep + 1);
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                goToStep(currentStep - 1);
+            }
+        }
+
+        function goToStep(stepNum) {
+            // Cannot jump forward past validation
+            for (let s = 1; s < stepNum; s++) {
+                if (!validateStep(s)) {
+                    goToStep(s);
+                    return;
+                }
+            }
+
+            document.querySelectorAll('.wizard-step-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // Nodes state
+            document.querySelectorAll('.wizard-step-node').forEach((node, idx) => {
+                const nodeStep = idx + 1;
+                node.classList.remove('active', 'completed');
+                if (nodeStep === stepNum) {
+                    node.classList.add('active');
+                } else if (nodeStep < stepNum) {
+                    node.classList.add('completed');
+                }
+            });
+
+            // Update Progress Bar
+            const progressPct = ((stepNum - 1) / (totalSteps - 1)) * 100;
+            document.querySelector('.wizard-progress-bar').style.width = `${progressPct}%`;
+            
+            currentStep = stepNum;
+            const newPanel = document.getElementById(`step-${stepNum}`);
+            if (newPanel) {
+                newPanel.classList.add('active');
+            }
+            
+            // Invalidate map size to allow Leaflet to render correctly
+            if (stepNum === 3) {
+                setTimeout(() => {
+                    const map = MapManager.getMap();
+                    if (map) map.invalidateSize();
+                }, 300);
+            }
+        }
+
         function updateUrgency(v) {
             const labels = { 1: 'Very Low (1)', 2: 'Low (2)', 3: 'Medium (3)', 4: 'High (4)', 5: 'Critical (5)' };
             document.getElementById('urgency-label').textContent = labels[v];
@@ -499,9 +970,43 @@ Project: Resolvit AI
                 0 * 0.2 +
                 (risk / 100 * 100) * 0.1
             ).toFixed(1);
+            
             const el = document.getElementById('priority-preview');
-            el.textContent = score;
-            el.className = 'priority-score ' + (score >= 80 ? 'priority-critical' : score >= 60 ? 'priority-high' : score >= 40 ? 'priority-medium' : 'priority-low');
+            if (el) {
+                el.textContent = score;
+                el.className = 'priority-score ' + (score >= 80 ? 'priority-critical' : score >= 60 ? 'priority-high' : score >= 40 ? 'priority-medium' : 'priority-low');
+            }
+
+            // Update custom dial SVG and labels
+            const dialScore = document.getElementById('dial-priority-score');
+            const dialStatus = document.getElementById('dial-priority-status');
+            const dialProgress = document.querySelector('.dial-progress');
+            
+            if (dialScore) dialScore.textContent = Math.round(score);
+            
+            let statusText = 'LOW';
+            let statusClass = 'status-low';
+            if (score >= 80) {
+                statusText = 'CRITICAL';
+                statusClass = 'status-critical';
+            } else if (score >= 60) {
+                statusText = 'HIGH';
+                statusClass = 'status-high';
+            } else if (score >= 40) {
+                statusText = 'MEDIUM';
+                statusClass = 'status-medium';
+            }
+            
+            if (dialStatus) {
+                dialStatus.textContent = statusText;
+                dialStatus.className = `dial-status-text ${statusClass}`;
+            }
+            
+            if (dialProgress) {
+                const dashArray = 251.2;
+                const offset = dashArray - (score / 100) * dashArray;
+                dialProgress.style.strokeDashoffset = offset;
+            }
         }
 
         document.getElementById('impact_scale').addEventListener('input', updatePriorityPreview);
@@ -598,7 +1103,6 @@ Project: Resolvit AI
 
                 try {
                     await Auth.register(payload);
-                    // Auto login after successful registration
                     const r = await Auth.login(payload.email, payload.password);
 
                     document.getElementById('auth-modal').style.display = 'none';
@@ -624,6 +1128,15 @@ Project: Resolvit AI
 
         document.getElementById('issue-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // Client-side validate all steps first
+            for (let s = 1; s <= 3; s++) {
+                if (!validateStep(s)) {
+                    goToStep(s);
+                    return;
+                }
+            }
+
             const user = Auth.getUser();
             if (!user) { showAuthModal(); return; }
 
@@ -682,15 +1195,23 @@ Project: Resolvit AI
                 }
 
                 document.getElementById('submit-alert').innerHTML = `
-      <div class="alert alert-success" style="font-size:1rem; border:1px solid var(--green); background:var(--bg-secondary);">
+      <div class="alert alert-success" style="font-size:1rem; border:1px solid var(--green); background:var(--bg-secondary); margin-bottom: 24px;">
         <div style="margin-bottom:12px;">✅ <strong>Issue submitted successfully!</strong> Priority Score: <strong style="color:var(--accent);">${issue.priority_score}</strong></div>
         ${issue.cluster_id ? '<div style="margin-bottom:12px; font-size:0.9rem;">🤖 <strong>AI clustered</strong> with a nearby similar issue — combined impact amplified!</div>' : ''}
         <div class="flex gap-4" style="margin-top:16px;">
             <a href="issue.html?id=${issue.id}" class="btn btn-primary btn-sm">View Issue Details</a>
-            <button type="button" class="btn btn-outline btn-sm" onclick="showFeedbackModal()" style="border-color:var(--accent); color:var(--accent);">✨ Give Feedback</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="showFeedbackModal()" style="border-color:var(--accent); color:var(--accent); margin: 0;">✨ Give Feedback</button>
         </div>
       </div>`;
                 document.getElementById('issue-form').reset();
+                removeImage();
+                
+                // Reset category UI selection
+                document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+                document.getElementById('category').value = '';
+                
+                // Go back to step 1
+                goToStep(1);
 
                 // Clear and re-fetch from backend (Integrity Flow)
                 const map = MapManager.getMap();
@@ -702,7 +1223,7 @@ Project: Resolvit AI
 
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } catch (err) {
-                document.getElementById('submit-alert').innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+                document.getElementById('submit-alert').innerHTML = `<div class="alert alert-error" style="margin-bottom: 24px;">❌ ${err.message}</div>`;
             } finally {
                 btn.textContent = '🚨 Submit Issue Report'; btn.disabled = false;
             }
@@ -804,6 +1325,7 @@ Project: Resolvit AI
                             document.getElementById('image-preview').src = URL.createObjectURL(blob);
                             document.getElementById('image-preview-container').style.display = 'block';
                             document.getElementById('image_url').value = '';
+                            showToast("📸 Image evidence loaded successfully!");
                         }, 'image/jpeg', 0.8); // 80% quality compression
                     };
                     img.src = e.target.result;
@@ -825,6 +1347,41 @@ Project: Resolvit AI
              initSubmitMap();
              updatePriorityPreview();
              updateNavAuth();
+             
+             // Category selection card listener
+             document.querySelectorAll('.category-card').forEach(card => {
+                 card.addEventListener('click', () => {
+                     document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+                     card.classList.add('selected');
+                     const val = card.dataset.value;
+                     document.getElementById('category').value = val;
+                     updatePriorityPreview();
+                 });
+             });
+
+             // Drag & Drop event listener
+             const dropzone = document.getElementById('upload-zone');
+             if (dropzone) {
+                 dropzone.addEventListener('dragover', (e) => {
+                     e.preventDefault();
+                     dropzone.classList.add('dragover');
+                 });
+                 dropzone.addEventListener('dragleave', () => {
+                     dropzone.classList.remove('dragover');
+                 });
+                 dropzone.addEventListener('drop', (e) => {
+                     e.preventDefault();
+                     dropzone.classList.remove('dragover');
+                     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                         const fileInput = document.getElementById('file-gallery');
+                         fileInput.files = e.dataTransfer.files;
+                         handleImageSelection(fileInput);
+                     }
+                 });
+                 dropzone.addEventListener('click', () => {
+                     document.getElementById('file-gallery').click();
+                 });
+             }
              
              const user = Auth.getUser();
              if (!user) {

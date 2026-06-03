@@ -41,7 +41,8 @@ def find_nearby_similar_issues(
     title: str,
     category: str,
     latitude: Optional[float],
-    longitude: Optional[float]
+    longitude: Optional[float],
+    cursor = None
 ) -> Optional[dict]:
     """
     Finds the best matching existing issue to cluster this one with.
@@ -50,26 +51,29 @@ def find_nearby_similar_issues(
     if latitude is None or longitude is None:
         return None
 
-    with get_db() as cursor:
-        # Get same-category, unresolved issues within a bounding box (roughly 0.001 deg ≈ 111m)
-        bbox_delta = 0.001
-        cursor.execute(
-            """
-            SELECT id, title, cluster_id, impact_scale, priority_score, latitude, longitude
-            FROM issues
-            WHERE id != %s
-              AND category = %s
-              AND status != 'resolved'
-              AND latitude  BETWEEN %s AND %s
-              AND longitude BETWEEN %s AND %s
-            """,
-            (
-                issue_id, category,
-                latitude  - bbox_delta, latitude  + bbox_delta,
-                longitude - bbox_delta, longitude + bbox_delta
-            )
-        )
+    bbox_delta = 0.001
+    query = """
+        SELECT id, title, cluster_id, impact_scale, priority_score, latitude, longitude
+        FROM issues
+        WHERE id != %s
+          AND category = %s
+          AND status != 'resolved'
+          AND latitude  BETWEEN %s AND %s
+          AND longitude BETWEEN %s AND %s
+    """
+    params = (
+        issue_id, category,
+        latitude  - bbox_delta, latitude  + bbox_delta,
+        longitude - bbox_delta, longitude + bbox_delta
+    )
+
+    if cursor is not None:
+        cursor.execute(query, params)
         candidates = cursor.fetchall()
+    else:
+        with get_db() as conn_cursor:
+            conn_cursor.execute(query, params)
+            candidates = conn_cursor.fetchall()
 
     best_match = None
     best_score = 0.0
@@ -94,86 +98,93 @@ def find_nearby_similar_issues(
     return best_match
 
 
-def cluster_issue(new_issue_id: str, matching_issue: dict):
+def cluster_issue(new_issue_id: str, matching_issue: dict, cursor = None):
     """
     Merge new_issue into the cluster of matching_issue.
     Creates a new cluster if none exists.
     """
-    with get_db() as cursor:
-        existing_cluster_id = matching_issue.get("cluster_id")
+    if cursor is not None:
+        return _cluster_issue_impl(new_issue_id, matching_issue, cursor)
+    else:
+        with get_db() as conn_cursor:
+            return _cluster_issue_impl(new_issue_id, matching_issue, conn_cursor)
 
-        if existing_cluster_id:
-            # Add to existing cluster
-            cursor.execute(
-                """
-                UPDATE issue_clusters
-                SET total_count = total_count + 1,
-                    total_impact = total_impact + (
-                        SELECT impact_scale FROM issues WHERE id = %s
-                    ),
-                    updated_at = NOW()
-                WHERE id = %s
-                """,
-                (new_issue_id, existing_cluster_id)
-            )
-            cluster_id = existing_cluster_id
-        else:
-            # Create new cluster
-            cursor.execute(
-                """
-                INSERT INTO issue_clusters
-                    (representative_issue_id, total_count, total_impact,
-                     centroid_lat, centroid_lon, cluster_radius)
-                VALUES (%s, 2,
-                    (SELECT impact_scale FROM issues WHERE id = %s) +
-                    (SELECT impact_scale FROM issues WHERE id = %s),
-                    %s, %s, %s)
-                RETURNING id
-                """,
-                (
-                    matching_issue["id"],
-                    matching_issue["id"], new_issue_id,
-                    matching_issue["latitude"],
-                    matching_issue["longitude"],
-                    CLUSTER_RADIUS_METERS
-                )
-            )
-            cluster_id = str(cursor.fetchone()["id"])
 
-            # Tag the original issue as clustered
-            cursor.execute(
-                "UPDATE issues SET cluster_id = %s, status = 'clustered' WHERE id = %s",
-                (cluster_id, str(matching_issue["id"]))
-            )
+def _cluster_issue_impl(new_issue_id: str, matching_issue: dict, cursor):
+    existing_cluster_id = matching_issue.get("cluster_id")
 
-        # Tag new issue as clustered
-        cursor.execute(
-            "UPDATE issues SET cluster_id = %s, status = 'clustered' WHERE id = %s",
-            (cluster_id, new_issue_id)
-        )
-
-        # Bump impact_scale on representative issue
+    if existing_cluster_id:
+        # Add to existing cluster
         cursor.execute(
             """
-            UPDATE issues
-            SET impact_scale = impact_scale + (SELECT impact_scale FROM issues WHERE id = %s),
+            UPDATE issue_clusters
+            SET total_count = total_count + 1,
+                total_impact = total_impact + (
+                    SELECT impact_scale FROM issues WHERE id = %s
+                ),
                 updated_at = NOW()
             WHERE id = %s
             """,
-            (new_issue_id, str(matching_issue["id"]))
+            (new_issue_id, existing_cluster_id)
         )
+        cluster_id = existing_cluster_id
+    else:
+        # Create new cluster
+        cursor.execute(
+            """
+            INSERT INTO issue_clusters
+                (representative_issue_id, total_count, total_impact,
+                 centroid_lat, centroid_lon, cluster_radius)
+            VALUES (%s, 2,
+                (SELECT impact_scale FROM issues WHERE id = %s) +
+                (SELECT impact_scale FROM issues WHERE id = %s),
+                %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                matching_issue["id"],
+                matching_issue["id"], new_issue_id,
+                matching_issue["latitude"],
+                matching_issue["longitude"],
+                CLUSTER_RADIUS_METERS
+            )
+        )
+        cluster_id = str(cursor.fetchone()["id"])
+
+        # Tag the original issue as clustered
+        cursor.execute(
+            "UPDATE issues SET cluster_id = %s, status = 'clustered' WHERE id = %s",
+            (cluster_id, str(matching_issue["id"]))
+        )
+
+    # Tag new issue as clustered
+    cursor.execute(
+        "UPDATE issues SET cluster_id = %s, status = 'clustered' WHERE id = %s",
+        (cluster_id, new_issue_id)
+    )
+
+    # Bump impact_scale on representative issue
+    cursor.execute(
+        """
+        UPDATE issues
+        SET impact_scale = impact_scale + (SELECT impact_scale FROM issues WHERE id = %s),
+            updated_at = NOW()
+        WHERE id = %s
+        """,
+        (new_issue_id, str(matching_issue["id"]))
+    )
 
     return cluster_id
 
 
 def attempt_clustering(issue_id: str, title: str, category: str,
-                       latitude: float, longitude: float) -> Optional[str]:
+                       latitude: float, longitude: float, cursor = None) -> Optional[str]:
     """
     Full clustering pipeline: find match → merge → return cluster_id or None.
     """
-    match = find_nearby_similar_issues(issue_id, title, category, latitude, longitude)
+    match = find_nearby_similar_issues(issue_id, title, category, latitude, longitude, cursor=cursor)
     if match:
-        cluster_id = cluster_issue(issue_id, match)
+        cluster_id = cluster_issue(issue_id, match, cursor=cursor)
         print(f"[Clustering] Issue {issue_id} merged into cluster {cluster_id}")
         return cluster_id
     return None
