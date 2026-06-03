@@ -64,9 +64,14 @@ const Auth = {
         window._auth0CallbackHandled = false;
         
         // For ALL OAuth logins (Google, GitHub, Twitter) also sign out from Auth0
-        if (isOAuth && window.Auth0Integration) {
-            Auth0Integration.logout();  // handles Auth0 session + redirect to index.html
-            return;
+        if (isOAuth) {
+            if (window.Auth0Integration) {
+                Auth0Integration.logout();  // handles Auth0 session + redirect to index.html
+                return;
+            } else {
+                window.location.href = 'index.html?logout=true';
+                return;
+            }
         }
         // Email/password: redirect to index
         window.location.href = 'index.html';

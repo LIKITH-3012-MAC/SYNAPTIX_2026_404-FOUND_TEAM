@@ -86,8 +86,14 @@ const Auth0Integration = {
 
       const params = new URLSearchParams(window.location.search);
       const isCallback = params.has("code") && params.has("state");
+      const isLogout = params.has("logout");
 
       try {
+        if (isLogout) {
+          console.log("[Auth0] Logout parameter detected. Initiating Auth0 signout...");
+          await this.logout();
+          return;
+        }
         if (isCallback) {
           console.log("[Auth0] Handling redirect callback...");
           await client.handleRedirectCallback();
