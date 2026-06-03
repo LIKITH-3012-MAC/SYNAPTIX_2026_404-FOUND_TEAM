@@ -59,7 +59,7 @@ def list_my_reports(current_user: dict = Depends(get_current_user)):
     try:
         with get_db() as cursor:
             cursor.execute("SELECT * FROM reports WHERE user_id = %s ORDER BY created_at DESC", (current_user["sub"],))
-            return [_serialize_report(row) for row in cursor.fetchall()]
+            return [_serialize_report(r) for r in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -68,7 +68,7 @@ def admin_list_reports(current_user: dict = Depends(require_roles("admin"))):
     try:
         with get_db() as cursor:
             cursor.execute("SELECT * FROM reports ORDER BY created_at DESC")
-            return [_serialize_report(row) for row in cursor.fetchall()]
+            return [_serialize_report(r) for r in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -84,7 +84,7 @@ def list_assigned_reports(current_user: dict = Depends(require_roles("ngo"))):
                 raise HTTPException(403, "Identity not linked to an active NGO")
             
             cursor.execute("SELECT * FROM reports WHERE assigned_ngo_id = %s ORDER BY created_at DESC", (op_data["ngo_id"],))
-            return [_serialize_report(row) for row in cursor.fetchall()]
+            return [_serialize_report(r) for r in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
