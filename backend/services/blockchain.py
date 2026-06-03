@@ -64,8 +64,8 @@ def log_event(
                 issue_id,
                 event_type,
                 actor_id,
-                json.dumps(old_value) if old_value else None,
-                json.dumps(new_value) if new_value else None,
+                json.dumps(old_value, default=str) if old_value else None,
+                json.dumps(new_value, default=str) if new_value else None,
                 computed_hash,
                 previous_hash,
                 payload["timestamp"]
