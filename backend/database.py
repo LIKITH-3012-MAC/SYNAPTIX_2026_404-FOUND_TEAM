@@ -530,6 +530,17 @@ def execute_schema():
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
         """,
+        """
+        CREATE TABLE IF NOT EXISTS app_feedback (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            ui_rating INTEGER NOT NULL CHECK (ui_rating >= 1 AND ui_rating <= 5),
+            ux_rating INTEGER NOT NULL CHECK (ux_rating >= 1 AND ux_rating <= 5),
+            experience_rating INTEGER NOT NULL CHECK (experience_rating >= 1 AND experience_rating <= 5),
+            comment TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
     ]
 
     for sql in migrations:

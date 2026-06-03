@@ -577,7 +577,6 @@ body {
     padding: 5px;
     border-radius: 50%;
     background: conic-gradient(from 0deg, #00CFFF, #3B82F6, #7C3AED, #9333EA, #00CFFF);
-    animation: rotate-gradient 4s linear infinite;
 }
 
 @keyframes rotate-gradient {
