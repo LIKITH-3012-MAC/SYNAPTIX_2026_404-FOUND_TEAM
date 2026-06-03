@@ -146,13 +146,16 @@
     .wizard-step-panel {
         display: none;
         opacity: 0;
-        transform: translateY(15px);
-        transition: opacity 0.4s ease, transform 0.4s ease;
+        transform: translate3d(0, 15px, 0);
+        transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        will-change: transform, opacity;
+        backface-visibility: hidden;
+        perspective: 1000px;
     }
     .wizard-step-panel.active {
         display: block;
         opacity: 1;
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
     }
     .wizard-footer {
         display: flex;
@@ -934,6 +937,13 @@ Project: Resolvit AI
             if (newPanel) {
                 newPanel.classList.add('active');
             }
+
+            // Smooth Scroll to Top on Step Transition
+            if (window.lenis) {
+                window.lenis.scrollTo(0, { duration: 0.8 });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
             
             // Invalidate map size to allow Leaflet to render correctly
             if (stepNum === 3) {
@@ -1221,7 +1231,11 @@ Project: Resolvit AI
                     MapManager.updateData(freshIssues, Auth.getUser()?.role);
                 }
 
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (window.lenis) {
+                    window.lenis.scrollTo(0, { duration: 0.8 });
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
             } catch (err) {
                 document.getElementById('submit-alert').innerHTML = `<div class="alert alert-error" style="margin-bottom: 24px;">❌ ${err.message}</div>`;
             } finally {

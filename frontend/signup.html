@@ -643,7 +643,11 @@ Project: Resolvit AI
         function goToStep(stepId) {
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
             document.getElementById(`step-${stepId}`).classList.add('active');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (window.lenis) {
+                window.lenis.scrollTo(0, { duration: 0.8 });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         }
 
         function maskEmail(email) {
