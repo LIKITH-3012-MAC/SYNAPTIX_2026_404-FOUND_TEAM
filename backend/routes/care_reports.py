@@ -18,6 +18,18 @@ def generate_complaint_code():
     chars = string.ascii_uppercase + string.digits
     return 'RC-' + ''.join(random.choice(chars) for _ in range(8))
 
+def _serialize_report(row: dict) -> dict:
+    if not row:
+        return None
+    r = dict(row)
+    r["id"] = str(r["id"])
+    r["user_id"] = str(r["user_id"])
+    if r.get("assigned_ngo_id"):
+        r["assigned_ngo_id"] = str(r["assigned_ngo_id"])
+    if r.get("assigned_admin_id"):
+        r["assigned_admin_id"] = str(r["assigned_admin_id"])
+    return r
+
 @router.post("/reports", response_model=ReportResponse, tags=["Care Reports"])
 def create_report(payload: ReportCreate, current_user: dict = Depends(require_roles("citizen", "admin", "ngo"))):
     try:
@@ -38,7 +50,7 @@ def create_report(payload: ReportCreate, current_user: dict = Depends(require_ro
                 "INSERT INTO care_audit_log (actor_user_id, actor_role, action_type, entity_type, entity_id) VALUES (%s, %s, %s, %s, %s)",
                 (current_user["sub"], current_user["role"], "report_created", "report", report["id"])
             )
-            return report
+            return _serialize_report(report)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -47,7 +59,7 @@ def list_my_reports(current_user: dict = Depends(get_current_user)):
     try:
         with get_db() as cursor:
             cursor.execute("SELECT * FROM reports WHERE user_id = %s ORDER BY created_at DESC", (current_user["sub"],))
-            return cursor.fetchall()
+            return [_serialize_report(row) for row in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -56,7 +68,7 @@ def admin_list_reports(current_user: dict = Depends(require_roles("admin"))):
     try:
         with get_db() as cursor:
             cursor.execute("SELECT * FROM reports ORDER BY created_at DESC")
-            return cursor.fetchall()
+            return [_serialize_report(row) for row in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -72,7 +84,7 @@ def list_assigned_reports(current_user: dict = Depends(require_roles("ngo"))):
                 raise HTTPException(403, "Identity not linked to an active NGO")
             
             cursor.execute("SELECT * FROM reports WHERE assigned_ngo_id = %s ORDER BY created_at DESC", (op_data["ngo_id"],))
-            return cursor.fetchall()
+            return [_serialize_report(row) for row in cursor.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -83,7 +95,7 @@ def admin_get_report(report_id: str, current_user: dict = Depends(require_roles(
             cursor.execute("SELECT * FROM reports WHERE id = %s", (report_id,))
             r = cursor.fetchone()
             if not r: raise HTTPException(404, "Report not found")
-            return r
+            return _serialize_report(r)
     except HTTPException: raise
     except Exception as e: raise HTTPException(500, str(e))
 
@@ -101,7 +113,7 @@ def update_report_status(report_id: str, payload: ReportStatusUpdate, current_us
             
             cursor.execute("INSERT INTO report_status_history (report_id, old_status, new_status, changed_by_user_id, changed_by_role, change_reason, note) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                            (report_id, old_status, payload.status, current_user["sub"], current_user["role"], payload.change_reason, payload.note))
-            return {"success": True, "report": rep}
+            return {"success": True, "report": _serialize_report(rep)}
     except Exception as e: raise HTTPException(500, str(e))
 
 @router.post("/admin/reports/{report_id}/assign-ngo", tags=["Care Admin"])
@@ -115,7 +127,7 @@ def assign_ngo(report_id: str, payload: ReportAssignNGO, current_user: dict = De
             
             cursor.execute("INSERT INTO ngo_assignment_log (report_id, ngo_id, assigned_by_admin_id, assignment_reason) VALUES (%s, %s, %s, %s)",
                            (report_id, payload.ngo_id, current_user["sub"], payload.assignment_reason))
-            return rep
+            return _serialize_report(rep)
     except Exception as e: raise HTTPException(500, str(e))
 
 @router.post("/admin/reports/{report_id}/resolve", tags=["Care Admin"])
@@ -139,7 +151,7 @@ def resolve_report(report_id: str, payload: ReportResolve, background_tasks: Bac
                         INSERT INTO care_email_dispatch_log (report_id, recipient_email, template_name, subject, body_snapshot, dispatch_status, sent_by_admin_id)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, (report_id, user["email"], "resolution", "Resolvit Care: Report Resolved", body, "sent", current_user["sub"]))
-            return rep
+            return _serialize_report(rep)
     except Exception as e: raise HTTPException(500, str(e))
 
 @router.post("/reports/{report_id}/notes", tags=["Care Reports"])
@@ -462,7 +474,7 @@ def ngo_update_report_status(report_id: str, payload: ReportStatusUpdate, curren
                 "INSERT INTO care_audit_log (actor_user_id, actor_role, action_type, entity_type, entity_id) VALUES (%s, %s, %s, %s, %s)",
                 (current_user["sub"], current_user["role"], "status_updated", "report", report_id)
             )
-            return {"success": True, "report": rep}
+            return {"success": True, "report": _serialize_report(rep)}
     except HTTPException: raise
     except Exception as e: raise HTTPException(500, str(e))
 

@@ -110,12 +110,13 @@ function renderIssueCard(issue, opts = {}) {
   const clickAction = `event.stopPropagation(); if(typeof DetailManager !== 'undefined') DetailManager.open('${issue.id}'); else window.location.href='issue.html?id=${issue.id}';`;
 
   return `
-    <div class="glass-card-premium issue-card-v2 gpu-accelerate ${isCritical ? 'pulse-critical' : ''} ${isSelected ? 'active-selection-glow' : ''}" 
+    <div class="border-beam-card tech-corners glass-card-premium issue-card-v2 gpu-accelerate ${isCritical ? 'pulse-critical' : ''} ${isSelected ? 'active-selection-glow' : ''}" 
          style="border-left: 5px solid ${band.color}; cursor:${isDemo ? 'default' : 'pointer'}; 
                 content-visibility: auto; contain: layout paint; contain-intrinsic-size: 0 160px; 
                 position:relative;" 
          onclick="${clickAction}">
       
+      <div class="tech-dots"><span class="${isCritical ? 'active' : ''}"></span><span></span><span></span></div>
       ${isDemo ? `<div style="position:absolute;top:10px;right:10px;font-size:0.62rem;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 8px;border-radius:20px;font-weight:700;border:1px solid rgba(99,102,241,0.3);pointer-events:none;">🧠 DEMO</div>` : ''}
 
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">

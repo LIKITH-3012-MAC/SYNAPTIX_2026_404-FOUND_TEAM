@@ -79,6 +79,7 @@
   <link rel="stylesheet" href="css/map-premium.css" />
   <link rel="stylesheet" href="css/intro.css" />
   <link rel="stylesheet" href="css/copilot.css" />
+  <link rel="stylesheet" href="css/landing-premium.css" />
   <style>
     /* ── Optimized Premium Glassmorphism ───────────────────── */
     .hero,
@@ -684,14 +685,16 @@ Project: Resolvit AI
   <section class="hero" id="hero">
     <div class="hero-bg"></div>
     <div class="hero-grid"></div>
-    <div class="hero-content glass-premium gpu-accelerate">
+    <div class="hero-glow-overlay"></div>
+    <div class="hero-content border-beam-card tech-corners gpu-accelerate">
+      <div class="tech-dots"><span class="active"></span><span></span><span></span></div>
       <div class="hero-badge glass-card-premium" data-i18n="hero_badge">
         <span class="hero-badge-dot"></span>
         India's First AI-Powered Civic Resolution NGO
       </div>
 
       <div style="max-width: 780px;">
-        <h1 data-i18n="hero_title">Your Voice.<br />Government Action.</h1>
+        <h1 data-i18n="hero_title" class="glowing-text-sweep">Your Voice.<br />Government Action.</h1>
         <div class="hero-tagline" data-i18n="hero_tagline">"From Complaint to Completion."</div>
         <p class="hero-subtitle" data-i18n="hero_subtitle">
           RESOLVIT connects citizens directly with government authorities.
@@ -709,22 +712,26 @@ Project: Resolvit AI
         </a>
       </div>
 
-      <div class="hero-stats">
-        <div class="stat-item glass-card-premium">
-          <div class="stat-number" id="stat-resolved">0</div>
-          <div class="stat-label" data-i18n="stat_resolved">Issues Resolved</div>
+      <div class="premium-stat-grid">
+        <div class="premium-stat-card border-beam-card">
+          <div class="tech-dots"><span class="active"></span><span></span><span></span></div>
+          <div class="premium-stat-num" id="stat-resolved">0</div>
+          <div class="premium-stat-lbl" data-i18n="stat_resolved">Issues Resolved</div>
         </div>
-        <div class="stat-item glass-card-premium">
-          <div class="stat-number" id="stat-response">0h</div>
-          <div class="stat-label" data-i18n="stat_response">Avg Response Time</div>
+        <div class="premium-stat-card border-beam-card">
+          <div class="tech-dots"><span></span><span class="active"></span><span></span></div>
+          <div class="premium-stat-num" id="stat-response">0h</div>
+          <div class="premium-stat-lbl" data-i18n="stat_response">Avg Response Time</div>
         </div>
-        <div class="stat-item glass-card-premium">
-          <div class="stat-number" id="stat-authorities">0</div>
-          <div class="stat-label" data-i18n="stat_active">Active Authorities</div>
+        <div class="premium-stat-card border-beam-card">
+          <div class="tech-dots"><span></span><span></span><span class="active"></span></div>
+          <div class="premium-stat-num" id="stat-authorities">0</div>
+          <div class="premium-stat-lbl" data-i18n="stat_active">Active Authorities</div>
         </div>
-        <div class="stat-item glass-card-premium">
-          <div class="stat-number" id="stat-impacted">0</div>
-          <div class="stat-label" data-i18n="stat_impacted">Citizens Impacted</div>
+        <div class="premium-stat-card border-beam-card">
+          <div class="tech-dots"><span class="active"></span><span></span><span></span></div>
+          <div class="premium-stat-num" id="stat-impacted">0</div>
+          <div class="premium-stat-lbl" data-i18n="stat_impacted">Citizens Impacted</div>
         </div>
       </div>
     </div>
@@ -773,34 +780,39 @@ Project: Resolvit AI
         </p>
       </div>
 
-      <div class="grid-4">
-        <div class="card glass-card-premium animate-in"
-          style="animation-delay: 0s; text-align: center; padding: 36px 24px;">
-          <div style="font-size: 2.5rem; margin-bottom: 16px;">📍</div>
+      <div class="grid-4 premium-process-grid" style="position:relative;">
+        <div class="process-line"></div>
+        <div class="card border-beam-card tech-corners animate-in"
+          style="animation-delay: 0s; text-align: center; padding: 36px 24px; position:relative; background:rgba(15,23,42,0.45) !important;">
+          <div class="process-step-num">1</div>
+          <div style="font-size: 2.5rem; margin-bottom: 16px; margin-top: 12px;">📍</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_report_title">1. Report</h4>
           <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_report_desc">Citizens submit
             issues with location, photo, and
             urgency rating in seconds.</p>
         </div>
-        <div class="card glass-card-premium animate-in"
-          style="animation-delay: 0.1s; text-align: center; padding: 36px 24px;">
-          <div style="font-size: 2.5rem; margin-bottom: 16px;">🤖</div>
+        <div class="card border-beam-card tech-corners animate-in"
+          style="animation-delay: 0.1s; text-align: center; padding: 36px 24px; position:relative; background:rgba(15,23,42,0.45) !important;">
+          <div class="process-step-num">2</div>
+          <div style="font-size: 2.5rem; margin-bottom: 16px; margin-top: 12px;">🤖</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_ai_title">2. AI Cluster</h4>
           <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_ai_desc">Our AI detects duplicate
             reports within 100m and
             merges them to amplify impact.</p>
         </div>
-        <div class="card glass-card-premium animate-in"
-          style="animation-delay: 0.2s; text-align: center; padding: 36px 24px;">
-          <div style="font-size: 2.5rem; margin-bottom: 16px;">📈</div>
+        <div class="card border-beam-card tech-corners animate-in"
+          style="animation-delay: 0.2s; text-align: center; padding: 36px 24px; position:relative; background:rgba(15,23,42,0.45) !important;">
+          <div class="process-step-num">3</div>
+          <div style="font-size: 2.5rem; margin-bottom: 16px; margin-top: 12px;">📈</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_prioritize_title">3. Prioritize</h4>
           <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_prioritize_desc">Dynamic scoring
             ranks issues by impact, urgency,
             time, and safety risk automatically.</p>
         </div>
-        <div class="card glass-card-premium animate-in"
-          style="animation-delay: 0.3s; text-align: center; padding: 36px 24px;">
-          <div style="font-size: 2.5rem; margin-bottom: 16px;">✅</div>
+        <div class="card border-beam-card tech-corners animate-in"
+          style="animation-delay: 0.3s; text-align: center; padding: 36px 24px; position:relative; background:rgba(15,23,42,0.45) !important;">
+          <div class="process-step-num">4</div>
+          <div style="font-size: 2.5rem; margin-bottom: 16px; margin-top: 12px;">✅</div>
           <h4 style="color: var(--accent); margin-bottom: 8px;" data-i18n="step_resolve_title">4. Resolve</h4>
           <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="step_resolve_desc">Authorities act
             under SLA. Non-compliance
@@ -899,19 +911,31 @@ Project: Resolvit AI
   <!-- ── Trust Bar ───────────────────────────────────────────── -->
   <section style="padding: 60px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
     <div class="container">
-      <div class="flex justify-center items-center gap-8"
-        style="color: var(--text-muted); font-size: 0.9rem; flex-wrap: wrap; text-align: center; gap: 40px;">
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="audit_title">🔐
-            SHA-256
-            Audit</strong><span data-i18n="audit_desc">Immutable blockchain logs</span></div>
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;"
-            data-i18n="clustering_title">🤖 AI
-            Clustering</strong><span data-i18n="clustering_desc">100m radius deduplication</span></div>
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;" data-i18n="sla_title">⏱️ SLA
-            Enforcement</strong><span data-i18n="sla_desc">Auto-escalation on breach</span></div>
-        <div><strong style="color: var(--text-primary); display: block; font-size: 1.1rem;"
-            data-i18n="public_metrics_title">📊 Public
-            Metrics</strong><span data-i18n="public_metrics_desc">Open performance scores</span></div>
+      <div class="grid-4" style="gap:24px;">
+        <div class="card border-beam-card tech-corners" style="padding: 24px; text-align: center; background:rgba(15,23,42,0.45) !important;">
+          <div class="tech-dots"><span class="active"></span><span></span><span></span></div>
+          <div style="font-size: 2.2rem; margin-bottom: 12px;">🔐</div>
+          <h4 style="color: var(--text-primary); margin-bottom: 8px;" data-i18n="audit_title">SHA-256 Audit</h4>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;" data-i18n="audit_desc">Immutable blockchain logs</p>
+        </div>
+        <div class="card border-beam-card tech-corners" style="padding: 24px; text-align: center; background:rgba(15,23,42,0.45) !important;">
+          <div class="tech-dots"><span></span><span class="active"></span><span></span></div>
+          <div style="font-size: 2.2rem; margin-bottom: 12px;">🤖</div>
+          <h4 style="color: var(--text-primary); margin-bottom: 8px;" data-i18n="clustering_title">AI Clustering</h4>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;" data-i18n="clustering_desc">100m radius deduplication</p>
+        </div>
+        <div class="card border-beam-card tech-corners" style="padding: 24px; text-align: center; background:rgba(15,23,42,0.45) !important;">
+          <div class="tech-dots"><span></span><span></span><span class="active"></span></div>
+          <div style="font-size: 2.2rem; margin-bottom: 12px;">⏱️</div>
+          <h4 style="color: var(--text-primary); margin-bottom: 8px;" data-i18n="sla_title">SLA Enforcement</h4>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;" data-i18n="sla_desc">Auto-escalation on breach</p>
+        </div>
+        <div class="card border-beam-card tech-corners" style="padding: 24px; text-align: center; background:rgba(15,23,42,0.45) !important;">
+          <div class="tech-dots"><span class="active"></span><span></span><span></span></div>
+          <div style="font-size: 2.2rem; margin-bottom: 12px;">📊</div>
+          <h4 style="color: var(--text-primary); margin-bottom: 8px;" data-i18n="public_metrics_title">Public Metrics</h4>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;" data-i18n="public_metrics_desc">Open performance scores</p>
+        </div>
       </div>
     </div>
   </section>
