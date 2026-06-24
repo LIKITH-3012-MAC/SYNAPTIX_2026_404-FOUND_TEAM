@@ -4,7 +4,7 @@
 
 import { PRIORITY_LEVELS } from './constants.js';
 
-const PRODUCTION_URL = "https://synaptix-2026-404-found-team-6m5l.onrender.com";
+const PRODUCTION_URL = "https://synaptix-2026-404-found-team-9svx.onrender.com";
 const BASE_URL = (() => {
     const host = window.location.hostname;
     if (!host || host === "localhost" || host === "127.0.0.1") return "http://localhost:8000";
