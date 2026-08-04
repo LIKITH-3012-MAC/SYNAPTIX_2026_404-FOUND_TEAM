@@ -211,12 +211,12 @@ def send_test_push(
         ]
     }
 
-    success = send_single_push(dict(sub_data), test_payload)
+    diag = send_single_push(dict(sub_data), test_payload)
 
     return {
-        "success": success,
-        "message": "Test push notification dispatched successfully!" if success else "Failed to deliver push notification.",
-        "endpoint_preview": sub_data["endpoint"][:40] + "..."
+        "success": diag.get("success", False),
+        "message": "Test push notification dispatched successfully!" if diag.get("success") else f"Failed to deliver push notification: {diag.get('message')}",
+        "diagnostics": diag
     }
 
 

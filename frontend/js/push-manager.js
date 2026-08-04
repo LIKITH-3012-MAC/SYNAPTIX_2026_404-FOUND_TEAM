@@ -79,7 +79,12 @@
 
     try {
       const permission = await Notification.requestPermission();
+      console.group('🔍 PWA Push Diagnostic Audit: Subscription Flow');
+      console.log('1. Permission Status:', permission);
+
       if (permission !== 'granted') {
+        console.warn('Notification permission denied by user.');
+        console.groupEnd();
         showPushToast('Notification permission was denied. You can enable it in browser settings.', false);
         localStorage.setItem(PUSH_STORAGE_KEY, 'false');
         updatePushTogglesUI(false);
@@ -87,9 +92,12 @@
       }
 
       const registration = await navigator.serviceWorker.ready;
-      const publicKey = await fetchVapidPublicKey();
-      const convertedKey = urlBase64ToUint8Array(publicKey);
+      console.log('2. Service Worker Status: Active (Scope: ' + registration.scope + ')');
 
+      const publicKey = await fetchVapidPublicKey();
+      console.log('3. VAPID Public Key:', publicKey ? publicKey.substring(0, 30) + '...' : 'Missing');
+
+      const convertedKey = urlBase64ToUint8Array(publicKey);
       let subscription = await registration.pushManager.getSubscription();
 
       if (!subscription) {
@@ -100,6 +108,8 @@
       }
 
       const subJson = subscription.toJSON();
+      console.log('4. Subscription Object:', subJson);
+
       const userRole = (window.Auth && window.Auth.getRole) ? window.Auth.getRole() : 'citizen';
 
       // Register subscription with backend
@@ -117,13 +127,17 @@
         })
       });
 
+      const dbData = await res.json();
+      console.log('5. Database Save Status:', res.status, dbData);
+      console.groupEnd();
+
       if (res.ok) {
         localStorage.setItem(PUSH_STORAGE_KEY, 'true');
         updatePushTogglesUI(true);
         showPushToast('Push Notifications Enabled! Real-time alerts activated.', true);
         return true;
       } else {
-        throw new Error('Backend failed to register push subscription');
+        throw new Error(dbData.detail || 'Backend failed to register push subscription');
       }
     } catch (err) {
       console.error('[PUSH-CLIENT] Subscription error:', err);
@@ -184,6 +198,11 @@
       const subscription = await registration.pushManager.getSubscription();
       const endpoint = subscription ? subscription.endpoint : null;
 
+      console.group('🔍 PWA Push Diagnostic Audit: Test Delivery Flow');
+      console.log('1. Permission Status:', Notification.permission);
+      console.log('2. Service Worker Ready:', registration.active ? 'Active' : 'Installing');
+      console.log('3. Subscription Object:', subscription ? subscription.toJSON() : null);
+
       const response = await fetch('/api/push/send-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -191,14 +210,21 @@
       });
 
       const data = await response.json();
+      console.log('4. Push Request Status Code:', response.status);
+      console.log('5. Backend Response Data:', data);
+      console.log('6. Push Provider Telemetry:', data.diagnostics || 'No provider telemetry object');
+      console.groupEnd();
+
       if (data.success) {
         showPushToast('⚡ Real OS Test Notification sent! Check your desktop/phone notifications.', true);
       } else {
-        showPushToast('Test push note: ' + (data.detail || data.message || 'Notification dispatched'), true);
+        const detailMsg = (data.diagnostics && data.diagnostics.push_provider_response) 
+          ? data.diagnostics.push_provider_response 
+          : (data.detail || data.message || 'Push provider failure');
+        showPushToast('Push failure: ' + detailMsg, false);
       }
     } catch (err) {
       console.error('[PUSH-CLIENT] Test notification error:', err);
-      // Fallback local test notification if network issue
       if ('serviceWorker' in navigator && Notification.permission === 'granted') {
         const reg = await navigator.serviceWorker.ready;
         reg.showNotification('⚡ RESOLVIT Test Notification', {

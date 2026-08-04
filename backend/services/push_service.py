@@ -1,7 +1,7 @@
 """
-RESOLVIT - Enterprise Web Push Notification Service
+RESOLVIT - Enterprise Web Push Notification Service (Production-Ready)
 Implements RFC 8292 VAPID Web Push protocol, subscription management,
-payload formatting, and batch delivery with stale token auto-pruning.
+payload formatting, detailed diagnostic logging, and stale token auto-pruning.
 """
 
 import os
@@ -18,10 +18,12 @@ logger = logging.getLogger(__name__)
 try:
     from pywebpush import webpush, WebPushException
     from py_vapid import Vapid
+    from cryptography.hazmat.primitives import serialization
+    import base64
     PYWEBPUSH_AVAILABLE = True
 except ImportError:
     PYWEBPUSH_AVAILABLE = False
-    logger.warning("[PUSH] pywebpush or py-vapid not installed. Web push will fallback to simulated delivery.")
+    logger.warning("[PUSH] pywebpush or py-vapid not installed. Web push fallback enabled.")
 
 # ----------------------------------------------------
 # 1. VAPID Keypair Management
@@ -39,30 +41,29 @@ VAPID_CLAIMS_SUB = os.getenv("VAPID_CLAIMS_SUB", "mailto:admin@resolvit.app")
 _vapid_keys_cache = None
 
 
-def get_or_create_vapid_keys() -> Dict[str, str]:
-    """Retrieve existing VAPID keypair or auto-generate a valid pair on boot."""
+def get_vapid_key_filepath() -> str:
+    """Returns absolute path to the local vapid_private.pem key file."""
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "vapid_private.pem"))
+
+
+def get_or_create_vapid_keys() -> Dict[str, Any]:
+    """
+    Retrieve existing VAPID keypair or auto-generate a valid pair on boot.
+    Guarantees private key file is saved to disk so pywebpush can reference it reliably.
+    """
     global _vapid_keys_cache
     if _vapid_keys_cache:
         return _vapid_keys_cache
 
-    pub_key = os.getenv("VAPID_PUBLIC_KEY")
-    priv_key = os.getenv("VAPID_PRIVATE_KEY")
-
-    if pub_key and priv_key:
-        _vapid_keys_cache = {"public_key": pub_key, "private_key": priv_key}
-        return _vapid_keys_cache
+    key_file = get_vapid_key_filepath()
 
     if PYWEBPUSH_AVAILABLE:
         try:
-            from cryptography.hazmat.primitives import serialization
-            import base64
-
-            vapid = Vapid()
-            key_file = os.path.join(os.path.dirname(__file__), "..", "vapid_private.pem")
             if not os.path.exists(key_file):
+                vapid = Vapid()
                 vapid.generate_keys()
                 vapid.save_key(key_file)
-                logger.info(f"[PUSH] Auto-generated new VAPID keypair at {key_file}")
+                logger.info(f"[PUSH] Auto-generated new VAPID keypair file at {key_file}")
             else:
                 vapid = Vapid.from_file(key_file)
 
@@ -72,19 +73,21 @@ def get_or_create_vapid_keys() -> Dict[str, str]:
                 format=serialization.PublicFormat.UncompressedPoint
             )
             public_key_b64 = base64.urlsafe_b64encode(raw_pub).rstrip(b'=').decode('utf-8')
-            private_key_pem = vapid.private_pem().decode('utf-8')
 
             _vapid_keys_cache = {
                 "public_key": public_key_b64,
-                "private_key": private_key_pem
+                "private_key_file": key_file,
+                "vapid_claims_sub": VAPID_CLAIMS_SUB
             }
             return _vapid_keys_cache
         except Exception as e:
-            logger.error(f"[PUSH] Failed to auto-generate VAPID keys: {e}")
+            logger.error(f"[PUSH-KEY-ERROR] Failed to generate/load VAPID key file: {e}")
 
+    # Fallback keypair representation
     _vapid_keys_cache = {
         "public_key": DEFAULT_VAPID_PUBLIC_KEY,
-        "private_key": DEFAULT_VAPID_PRIVATE_KEY
+        "private_key_file": key_file if os.path.exists(key_file) else DEFAULT_VAPID_PRIVATE_KEY,
+        "vapid_claims_sub": VAPID_CLAIMS_SUB
     }
     return _vapid_keys_cache
 
@@ -95,60 +98,110 @@ def get_vapid_public_key() -> str:
 
 
 # ----------------------------------------------------
-# 2. Web Push Transmission Engine
+# 2. Web Push Transmission Engine & Diagnostic Logger
 # ----------------------------------------------------
 def send_single_push(
     subscription_info: Dict[str, Any],
     payload_data: Dict[str, Any],
     ttl: int = 86400
-) -> bool:
+) -> Dict[str, Any]:
     """
     Delivers an encrypted WebPush payload to a single endpoint.
-    Automatically handles 410/404 expired subscription cleanup.
+    Returns comprehensive diagnostic telemetry detailing every step of execution.
     """
     keys = get_or_create_vapid_keys()
+    endpoint = subscription_info.get("endpoint", "")
     
     formatted_sub = {
-        "endpoint": subscription_info["endpoint"],
+        "endpoint": endpoint,
         "keys": {
-            "p256dh": subscription_info["p256dh"],
-            "auth": subscription_info["auth"]
+            "p256dh": subscription_info.get("p256dh", ""),
+            "auth": subscription_info.get("auth", "")
         }
     }
 
     payload_json = json.dumps(payload_data)
 
+    diagnostic_report = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "endpoint_preview": endpoint[:45] + ("..." if len(endpoint) > 45 else ""),
+        "vapid_claims_sub": VAPID_CLAIMS_SUB,
+        "vapid_public_key_preview": keys["public_key"][:30] + "...",
+        "payload_title": payload_data.get("title", ""),
+        "pywebpush_installed": PYWEBPUSH_AVAILABLE
+    }
+
     if not PYWEBPUSH_AVAILABLE:
-        logger.info(f"[PUSH-SIMULATION] Pushed to {subscription_info['endpoint'][:40]}...: {payload_data['title']}")
-        return True
+        logger.info(f"[PUSH-SIMULATION] Simulated delivery to {endpoint[:40]}: {payload_data.get('title')}")
+        diagnostic_report.update({
+            "success": True,
+            "status_code": 200,
+            "simulated": True,
+            "message": "Simulated WebPush delivery (pywebpush missing)"
+        })
+        return diagnostic_report
+
+    private_key_param = keys.get("private_key_file") or keys.get("private_key")
 
     try:
-        webpush(
+        response = webpush(
             subscription_info=formatted_sub,
             data=payload_json,
-            vapid_private_key=keys["private_key"],
+            vapid_private_key=private_key_param,
             vapid_claims={"sub": VAPID_CLAIMS_SUB},
             ttl=ttl
         )
-        return True
+
+        status_code = response.status_code if response else 201
+        response_text = response.text if (response and hasattr(response, 'text')) else "OK"
+
+        logger.info(f"[PUSH-SUCCESS] Delivered WebPush to {endpoint[:40]}: HTTP {status_code}")
+        diagnostic_report.update({
+            "success": True,
+            "status_code": status_code,
+            "push_provider_response": response_text,
+            "message": "Native WebPush notification delivered successfully to push service provider."
+        })
+        return diagnostic_report
+
     except WebPushException as ex:
         status_code = getattr(ex.response, "status_code", None)
-        logger.warning(f"[PUSH-WARN] WebPush error for {subscription_info['endpoint'][:40]}: HTTP {status_code}")
+        response_text = getattr(ex.response, "text", str(ex))
         
+        logger.warning(f"[PUSH-FAIL] WebPush error for {endpoint[:40]}: HTTP {status_code} - {response_text}")
+
+        # If subscription expired or endpoint vanished (404/410), mark inactive in DB
         if status_code in (404, 410):
             try:
                 with get_db() as cursor:
                     cursor.execute(
                         "UPDATE push_subscriptions SET is_active = FALSE WHERE endpoint = %s;",
-                        (subscription_info["endpoint"],)
+                        (endpoint,)
                     )
-                logger.info(f"[PUSH-CLEANUP] Pruned expired subscription: {subscription_info['endpoint'][:40]}")
+                logger.info(f"[PUSH-CLEANUP] Pruned expired subscription (HTTP {status_code}): {endpoint[:40]}")
+                diagnostic_report["pruned_subscription"] = True
             except Exception as db_err:
                 logger.error(f"[PUSH-ERROR] Failed to mark inactive: {db_err}")
-        return False
+
+        diagnostic_report.update({
+            "success": False,
+            "status_code": status_code,
+            "error_type": "WebPushException",
+            "push_provider_response": response_text,
+            "message": f"Push Service Provider returned HTTP {status_code}: {response_text}"
+        })
+        return diagnostic_report
+
     except Exception as general_err:
-        logger.error(f"[PUSH-ERROR] Dispatch exception: {general_err}")
-        return False
+        logger.error(f"[PUSH-ERROR] Dispatch exception for {endpoint[:40]}: {general_err}")
+        diagnostic_report.update({
+            "success": False,
+            "status_code": 500,
+            "error_type": type(general_err).__name__,
+            "push_provider_response": str(general_err),
+            "message": f"Internal Push Engine Error: {str(general_err)}"
+        })
+        return diagnostic_report
 
 
 # ----------------------------------------------------
@@ -171,6 +224,7 @@ def broadcast_push_notification(
 ) -> Dict[str, Any]:
     """
     Broadcasts a rich operating-system notification to target subscribers.
+    Returns detailed delivery diagnostic metrics.
     """
 
     payload = {
@@ -214,14 +268,16 @@ def broadcast_push_notification(
             subscriptions = cursor.fetchall() or []
     except Exception as db_err:
         logger.error(f"[PUSH-DB-ERROR] Failed to query subscriptions: {db_err}")
-        return {"success": False, "error": str(db_err), "sent_count": 0}
+        return {"success": False, "error": str(db_err), "sent_count": 0, "diagnostics": []}
 
     sent_count = 0
     failed_count = 0
+    delivery_diagnostics = []
 
     for sub in subscriptions:
-        success = send_single_push(dict(sub), payload)
-        if success:
+        diag = send_single_push(dict(sub), payload)
+        delivery_diagnostics.append(diag)
+        if diag.get("success"):
             sent_count += 1
         else:
             failed_count += 1
@@ -248,5 +304,6 @@ def broadcast_push_notification(
         "target_filter": target_filter,
         "total_subscribers": len(subscriptions),
         "sent_count": sent_count,
-        "failed_count": failed_count
+        "failed_count": failed_count,
+        "diagnostics": delivery_diagnostics
     }
