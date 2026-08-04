@@ -41,6 +41,7 @@ from routes.chat import router as chat_router
 from routes.ngo_routes import router as ngo_router
 from routes.ngo_workflow import router as ngo_workflow_router
 from routes.care_reports import router as care_reports_router
+from routes.push_routes import router as push_router
 # from routes.twitter_auth import router as twitter_router
 from database import execute_schema
 
@@ -160,6 +161,7 @@ app.include_router(chat_router,       prefix="/api",            tags=["Chatbot"]
 app.include_router(ngo_router,        prefix="/api",            tags=["NGOs"])
 app.include_router(ngo_workflow_router, prefix="/api",          tags=["NGO Assignment Workflow"])
 app.include_router(care_reports_router, prefix="/api/care",       tags=["Care Reports"])
+app.include_router(push_router,         prefix="/api/push",       tags=["Push Notifications"])
 # app.include_router(twitter_router,    prefix="/api/auth/twitter", tags=["Twitter Auth"])
 
 # -----------------------------

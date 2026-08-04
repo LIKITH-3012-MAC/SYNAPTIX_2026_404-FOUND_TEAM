@@ -251,6 +251,43 @@ def execute_schema():
             created_at      TIMESTAMPTZ DEFAULT NOW()
         );
         """,
+        """
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+            endpoint TEXT NOT NULL UNIQUE,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            user_agent TEXT,
+            user_role VARCHAR(32) DEFAULT 'citizen',
+            device_type VARCHAR(32) DEFAULT 'unknown',
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS push_notifications (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            title VARCHAR(255) NOT NULL,
+            body TEXT NOT NULL,
+            icon TEXT,
+            badge TEXT,
+            image TEXT,
+            url TEXT,
+            category VARCHAR(64) DEFAULT 'announcement',
+            priority VARCHAR(32) DEFAULT 'normal',
+            target_type VARCHAR(32) DEFAULT 'all',
+            target_filter TEXT,
+            sent_by UUID REFERENCES users(id) ON DELETE SET NULL,
+            sent_count INTEGER DEFAULT 0,
+            delivered_count INTEGER DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_push_sub_user ON push_subscriptions(user_id);",
+        "CREATE INDEX IF NOT EXISTS idx_push_sub_role ON push_subscriptions(user_role);",
+        "CREATE INDEX IF NOT EXISTS idx_push_sub_active ON push_subscriptions(is_active);",
 
         # User Indexes
         "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);",

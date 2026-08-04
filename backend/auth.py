@@ -93,9 +93,21 @@ def decode_token(token: str) -> dict:
 
 
 # ── FastAPI Auth Dependency ───────────────────────────────────
+bearer_optional_scheme = HTTPBearer(auto_error=False)
+
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> dict:
     """FastAPI dependency: extract and return the current user from JWT."""
     return decode_token(credentials.credentials)
+
+
+def get_optional_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_optional_scheme)) -> Optional[dict]:
+    """FastAPI dependency: extract current user from JWT if present, otherwise return None."""
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        return decode_token(credentials.credentials)
+    except Exception:
+        return None
 
 
 def require_roles(*allowed_roles: str):

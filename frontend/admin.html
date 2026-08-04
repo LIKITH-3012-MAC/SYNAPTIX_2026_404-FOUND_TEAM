@@ -530,6 +530,7 @@ Project: Resolvit AI
             <a class="sidebar-link" onclick="showPanel('care-reports-panel');closeSidebar()">🏥 Care Operations</a>
             <a class="sidebar-link" onclick="showPanel('audit-panel');closeSidebar()">📜 System Audit Log</a>
             <a class="sidebar-link" onclick="showPanel('export-panel');closeSidebar()">📤 Data Export Center</a>
+            <a class="sidebar-link" onclick="showPanel('push-panel');closeSidebar()">🔔 Push Broadcast Center</a>
             <div class="sidebar-sep"></div>
             <a class="sidebar-link" onclick="enterRadarMode()">🌌 Civic Radar Mode</a>
             <div class="sidebar-sep"></div>
@@ -851,6 +852,92 @@ Project: Resolvit AI
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Enterprise Web Push Broadcast Center Panel -->
+            <div class="panel hidden" id="push-panel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
+                    <div>
+                        <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+                            🔔 Enterprise Web Push Broadcast Center
+                            <span class="badge badge-verified" style="font-size:0.75rem;">LIVE VAPID</span>
+                        </h3>
+                        <p style="margin:4px 0 0; color:#94a3b8; font-size:0.85rem;">Dispatch instant operating-system notifications to user devices in background/foreground.</p>
+                    </div>
+                    <button class="btn btn-outline btn-test-push" type="button" style="padding:8px 16px; font-size:0.85rem;">
+                        ⚡ Send Test Push To My Device
+                    </button>
+                </div>
+
+                <form id="push-broadcast-form" onsubmit="handlePushBroadcastSubmit(event)" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Notification Title <span>*</span></label>
+                        <input type="text" id="push-title" class="form-input" placeholder="e.g. 🚨 Emergency Ward 4 Maintenance Notice" required>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Message Body <span>*</span></label>
+                        <textarea id="push-body" class="form-textarea" style="min-height:80px;" placeholder="e.g. Water supply restoration in progress. Expected completion: 4:00 PM." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Target Audience</label>
+                        <select id="push-target-type" class="form-select" onchange="togglePushTargetFilter(this.value)">
+                            <option value="all">🌐 All Subscribers (Broadcast)</option>
+                            <option value="role">👥 Specific Role (Citizens, Authorities, NGOs, Admins)</option>
+                            <option value="user">👤 Specific User ID / Token</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="push-filter-container" style="display:none;">
+                        <label class="form-label" id="push-filter-label">Target Filter</label>
+                        <select id="push-role-filter" class="form-select">
+                            <option value="citizen">Citizens</option>
+                            <option value="authority">Authorities / Officers</option>
+                            <option value="ngo">NGO Coordinators</option>
+                            <option value="admin">Administrators</option>
+                        </select>
+                        <input type="text" id="push-user-filter" class="form-input" placeholder="Paste User UUID or Endpoint..." style="display:none; margin-top:8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Notification Category</label>
+                        <select id="push-category" class="form-select">
+                            <option value="announcement">📢 System Announcement</option>
+                            <option value="maintenance">🛠️ Maintenance & SLA Alert</option>
+                            <option value="ai_task">🤖 AI Task & Workflow Completed</option>
+                            <option value="security">🔒 Security & Account Alert</option>
+                            <option value="workflow">📋 Task Assignment Notice</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Priority Level</label>
+                        <select id="push-priority" class="form-select">
+                            <option value="normal">Normal (Standard OS Sound/Vibration)</option>
+                            <option value="high">🔥 High Priority (Keep-Alive Interaction)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Deep Link URL (Click Navigation Target)</label>
+                        <input type="text" id="push-url" class="form-input" value="/dashboard.html" placeholder="e.g. /issue.html?id=... or /admin.html">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Large Banner Image URL (Optional)</label>
+                        <input type="text" id="push-image" class="form-input" placeholder="https://... (Optional hero image)">
+                    </div>
+
+                    <div style="grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.08); flex-wrap:wrap; gap:12px;">
+                        <div id="push-broadcast-status" style="font-size:0.85rem; color:#94a3b8;">
+                            Ready to broadcast push notifications.
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="btn-submit-push" style="padding:12px 28px;">
+                            🚀 Dispatch Live Web Push
+                        </button>
+                    </div>
+                </form>
             </div>
 
             <!-- Civic Radar Mode (hidden fullscreen) -->
@@ -1263,7 +1350,7 @@ Project: Resolvit AI
                     } catch (e) { showToast(e.message, "error"); }
                 }
 
-                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel", "ngo-panel", "care-reports-panel", "audit-panel", "export-panel"];
+                const panels = ["heatmap-panel","governance-panel","pressure-panel","escalation-panel","performance-panel","analytics-panel","anomaly-panel","users-panel", "ngo-panel", "care-reports-panel", "audit-panel", "export-panel", "push-panel"];
                 const panelTitles = {
                     "heatmap-panel":     ["🗺️ City Heatmap",                "Urban nodes pulse with severity. Hover for full intelligence."],
                     "governance-panel":  ["📊 Governance Health Index",      "Real-time city governance score across 5 dimensions."],
@@ -1276,7 +1363,8 @@ Project: Resolvit AI
                     "ngo-panel":         ["🏢 NGO Management",               "Manage humanitarian organizations and recruit NGO officers."],
                     "care-reports-panel":["🏥 Global Care Operations",        "Oversight of all humanitarian social response complaints."],
                     "audit-panel":       ["📜 System Audit Log",             "Immutable record of system state changes and admin actions."],
-                    "export-panel":      ["📤 Data Export Center",           "Download full DB-backed datasets for civic intelligence analysis."]
+                    "export-panel":      ["📤 Data Export Center",           "Download full DB-backed datasets for civic intelligence analysis."],
+                    "push-panel":        ["🔔 Web Push Broadcast Center",    "Dispatch real-time operating system notifications to user devices."]
                 };
 
                 function showPanel(id) {
@@ -1419,7 +1507,77 @@ Project: Resolvit AI
                         if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#ef4444;">Failed to load history.</td></tr>';
                     }
                 }
+
+                function togglePushTargetFilter(targetType) {
+                    const filterContainer = document.getElementById('push-filter-container');
+                    const roleFilter = document.getElementById('push-role-filter');
+                    const userFilter = document.getElementById('push-user-filter');
+                    const label = document.getElementById('push-filter-label');
+
+                    if (targetType === 'all') {
+                        filterContainer.style.display = 'none';
+                    } else if (targetType === 'role') {
+                        filterContainer.style.display = 'block';
+                        label.textContent = 'Select Target Role';
+                        roleFilter.style.display = 'block';
+                        userFilter.style.display = 'none';
+                    } else if (targetType === 'user') {
+                        filterContainer.style.display = 'block';
+                        label.textContent = 'Enter Target User ID / Endpoint';
+                        roleFilter.style.display = 'none';
+                        userFilter.style.display = 'block';
+                    }
+                }
+
+                async function handlePushBroadcastSubmit(event) {
+                    event.preventDefault();
+                    const statusEl = document.getElementById('push-broadcast-status');
+                    const btn = document.getElementById('btn-submit-push');
+
+                    const title = document.getElementById('push-title').value.trim();
+                    const body = document.getElementById('push-body').value.trim();
+                    const targetType = document.getElementById('push-target-type').value;
+                    const roleFilter = document.getElementById('push-role-filter').value;
+                    const userFilter = document.getElementById('push-user-filter').value.trim();
+                    const category = document.getElementById('push-category').value;
+                    const priority = document.getElementById('push-priority').value;
+                    const url = document.getElementById('push-url').value.trim();
+                    const image = document.getElementById('push-image').value.trim();
+
+                    let targetFilter = null;
+                    if (targetType === 'role') targetFilter = roleFilter;
+                    if (targetType === 'user') targetFilter = userFilter;
+
+                    statusEl.innerHTML = '⏳ Encrypting VAPID payloads & dispatching to push servers...';
+                    statusEl.style.color = '#eab308';
+                    btn.disabled = true;
+
+                    try {
+                        const res = await API.post('/api/push/broadcast', {
+                            title: title,
+                            body: body,
+                            target_type: targetType,
+                            target_filter: targetFilter,
+                            category: category,
+                            priority: priority,
+                            url: url || '/',
+                            image: image || null
+                        });
+
+                        statusEl.innerHTML = `✅ <strong>Broadcast Complete!</strong> Delivered to <strong>${res.sent_count}</strong> active device(s). (Failed/pruned: ${res.failed_count})`;
+                        statusEl.style.color = '#10b981';
+                        showToast(`Push broadcast sent to ${res.sent_count} subscribers!`, "success");
+                    } catch (e) {
+                        statusEl.innerHTML = `❌ Broadcast Failed: ${e.message}`;
+                        statusEl.style.color = '#ef4444';
+                        showToast(e.message, "error");
+                    } finally {
+                        btn.disabled = false;
+                    }
+                }
             </script>
+
+            <script src="js/push-manager.js" defer></script>
 
             <!-- Smooth Scroll & Hardware Acceleration Engine -->
             <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>

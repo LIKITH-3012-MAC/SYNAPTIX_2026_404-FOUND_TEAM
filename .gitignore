@@ -22,6 +22,7 @@ __pycache__/
 # ── Environment Variables / Secrets ───────────────────────────
 .env
 backend/.env
+backend/vapid_private.pem
 *.env.local
 *.env.production
 frontend/js/intelligence/config.js

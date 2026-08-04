@@ -208,6 +208,27 @@ Project: Resolvit AI
                     </div>
                 </div>
             </div>
+
+            <!-- Web Push Notification Settings & Test Card -->
+            <div class="panel-premium" style="margin-top:24px;">
+                <div class="panel-header" style="margin-bottom:12px;">
+                    <div class="panel-title" style="font-size:1.05rem;">
+                        <span>🔔 Web Push Alerts</span>
+                    </div>
+                </div>
+                <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:16px; line-height:1.4;">
+                    Receive instant OS notifications for civic issue updates, SLA escalations, and community alerts.
+                </p>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; background:rgba(255,255,255,0.02); padding:12px 14px; border-radius:10px; border:1px solid var(--border);">
+                    <span class="push-status-text" style="font-size:0.82rem; font-weight:600; color:#94a3b8;">Push Notifications</span>
+                    <label style="position:relative; display:inline-block; width:44px; height:24px;">
+                        <input type="checkbox" class="push-notification-toggle">
+                    </label>
+                </div>
+                <button class="btn btn-outline btn-test-push" type="button" style="width:100%; padding:10px; font-size:0.82rem;">
+                    ⚡ Send Test Push Notification
+                </button>
+            </div>
         </aside>
     </div>
 
@@ -344,6 +365,7 @@ Project: Resolvit AI
             }
         }
     </script>
+    <script src="js/push-manager.js" defer></script>
 </body>
 
 </html>

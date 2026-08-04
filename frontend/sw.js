@@ -30,6 +30,7 @@ const PRECACHE_ASSETS = [
   '/css/profile-premium.css',
   '/css/pwa.css',
   '/js/pwa.js',
+  '/js/push-manager.js',
   '/js/offline-db.js',
   '/js/sync-manager.js',
   '/js/api.js',
@@ -170,4 +171,98 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+// ----------------------------------------------------
+// 5. Enterprise Web Push Event Handler
+// ----------------------------------------------------
+self.addEventListener('push', (event) => {
+  console.log('[PWA SW] Push Notification event received.');
+  
+  let payload = {
+    title: '⚡ RESOLVIT Civic Alert',
+    body: 'You have a new civic intelligence update.',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    data: { url: '/' }
+  };
+
+  if (event.data) {
+    try {
+      payload = Object.assign(payload, event.data.json());
+    } catch (e) {
+      payload.body = event.data.text() || payload.body;
+    }
+  }
+
+  const notificationTitle = payload.title;
+  const notificationOptions = {
+    body: payload.body,
+    icon: payload.icon || '/icons/icon-192x192.png',
+    badge: payload.badge || '/icons/icon-192x192.png',
+    image: payload.image || undefined,
+    tag: payload.category || payload.tag || 'resolvit-push',
+    timestamp: payload.timestamp || Date.now(),
+    vibrate: [100, 50, 100, 50, 100],
+    requireInteraction: payload.priority === 'high',
+    silent: payload.silent || false,
+    data: Object.assign({ url: payload.url || '/' }, payload.data || {}),
+    actions: payload.actions || [
+      { action: 'open', title: 'Open App' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(notificationTitle, notificationOptions)
+  );
+});
+
+// ----------------------------------------------------
+// 6. Push Notification Click & Deep Link Navigation
+// ----------------------------------------------------
+self.addEventListener('notificationclick', (event) => {
+  const notification = event.notification;
+  const action = event.action;
+
+  notification.close();
+
+  if (action === 'dismiss') {
+    return;
+  }
+
+  const targetUrl = (notification.data && notification.data.url) ? notification.data.url : '/';
+  const fullUrl = new URL(targetUrl, self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If tab matching target URL or any tab is open, focus it and navigate
+      for (const client of clientList) {
+        if (client.url === fullUrl && 'focus' in client) {
+          return client.focus();
+        }
+      }
+
+      // If an existing window is open, focus and navigate it
+      if (clientList.length > 0 && 'focus' in clientList[0]) {
+        const client = clientList[0];
+        client.focus();
+        if ('navigate' in client) {
+          return client.navigate(fullUrl);
+        }
+      }
+
+      // If no window is open, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(fullUrl);
+      }
+    })
+  );
+});
+
+// ----------------------------------------------------
+// 7. Push Notification Dismiss Tracking
+// ----------------------------------------------------
+self.addEventListener('notificationclose', (event) => {
+  console.log('[PWA SW] Push Notification closed by user:', event.notification.tag);
 });
