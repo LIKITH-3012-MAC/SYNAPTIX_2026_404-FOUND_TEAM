@@ -31,6 +31,7 @@ const PRECACHE_ASSETS = [
   '/css/pwa.css',
   '/js/pwa.js',
   '/js/push-manager.js',
+  '/js/dev-push-suite.js',
   '/js/offline-db.js',
   '/js/sync-manager.js',
   '/js/api.js',
