@@ -21,6 +21,23 @@
           "value": "application/xml"
         }
       ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -32,7 +49,7 @@
     { "source": "/intelligence", "destination": "/intelligence.html" },
     { "source": "/issue", "destination": "/issue.html" },
     {
-      "source": "/((?!api|sitemap\\.xml|robots\\.txt|favicon\\.ico|resolvit\\.png|.*\\.css|.*\\.js|.*\\.html|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|.*\\.webp|.*\\.woff2?).*)",
+      "source": "/((?!api|sitemap\\.xml|robots\\.txt|favicon\\.ico|resolvit\\.png|manifest\\.json|sw\\.js|.*\\.css|.*\\.js|.*\\.html|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|.*\\.webp|.*\\.woff2?|.*\\.json).*)",
       "destination": "/"
     }
   ]
