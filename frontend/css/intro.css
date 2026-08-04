@@ -244,3 +244,18 @@
         letter-spacing: 3px;
     }
 }
+
+/* ── Extra-Small Screen (320-360px) ─────────────────────────── */
+@media (max-width: 360px) {
+    .intro-panel {
+        padding: 32px 16px;
+        width: 95%;
+    }
+    .intro-title {
+        font-size: 1.8rem;
+    }
+    .intro-tagline {
+        font-size: 0.65rem;
+        letter-spacing: 2px;
+    }
+}

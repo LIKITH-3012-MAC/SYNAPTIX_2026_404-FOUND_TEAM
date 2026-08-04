@@ -605,6 +605,7 @@ body.care-mode {
 
 @media (max-width: 768px) {
   .care-sidebar { transform: translateX(-100%); position: fixed; height: 100dvh;}
+  .care-sidebar.open { transform: translateX(0); z-index: 200; }
   .care-grid-2, .care-grid-3, .care-grid-4 { grid-template-columns: 1fr; }
   .kanban-board { flex-direction: column; overflow-y: auto;}
   .kanban-column { flex: 0 0 auto; height: 400px;}
@@ -693,4 +694,10 @@ body.care-mode {
   transition: background 0.15s ease, border 0.15s ease;
 }
 
+/* ── Extra-small screen padding ── */
+@media (max-width: 480px) {
+  .care-content-scroll {
+    padding: 16px;
+  }
+}
 
